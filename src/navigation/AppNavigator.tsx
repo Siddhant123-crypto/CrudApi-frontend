@@ -11,8 +11,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import RoleSelectionScreen from '../screens/RoleSelectionScreen';
 import NewUserLoginScreen from '../screens/NewUserLoginScreen';
-import CustomerLoginScreen from '../screens/CustomerLoginScreen';
-import FarmerLoginScreen from '../screens/FarmerLoginScreen';
+
 import CustomerRegisterScreen from '../screens/CustomerRegisterScreen';
 import FarmerRegisterScreen from '../screens/FarmerRegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -28,8 +27,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   RoleSelection: undefined;
   NewUserLogin: undefined;
-  CustomerLogin: undefined;
-  FarmerLogin: undefined;
+
   CustomerRegister: undefined;
   FarmerRegister: undefined;
   ForgotPassword: undefined;
@@ -193,8 +191,6 @@ const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection'}) 
     <Stack.Screen name="Welcome" component={WelcomeScreen as any} />
     <Stack.Screen name="RoleSelection" component={RoleSelectionScreen as any} />
     <Stack.Screen name="NewUserLogin" component={NewUserLoginScreen as any} />
-    <Stack.Screen name="CustomerLogin" component={CustomerLoginScreen as any} />
-    <Stack.Screen name="FarmerLogin" component={FarmerLoginScreen as any} />
     <Stack.Screen name="CustomerRegister" component={CustomerRegisterScreen as any} />
     <Stack.Screen name="FarmerRegister" component={FarmerRegisterScreen as any} />
     <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen as any} />

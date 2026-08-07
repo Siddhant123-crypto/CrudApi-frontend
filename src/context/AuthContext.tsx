@@ -5,7 +5,7 @@ import {User} from '../types';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (userData: User, token: string) => Promise<void>;
+  login: (userData: User, token?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUserData: (updatedData: Partial<User>) => Promise<void>;
   isLoggedIn: boolean;
@@ -38,17 +38,19 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({children}) => {
     }
   };
 
-  const login = async (userData: User, token: string) => {
-  try {
-    await AsyncStorage.setItem('userData', JSON.stringify(userData));
-    await AsyncStorage.setItem('userToken', token);
+  const login = async (userData: User, token?: string) => {
+    try {
+      await AsyncStorage.setItem('userData', JSON.stringify(userData));
+      if (token) {
+        await AsyncStorage.setItem('userToken', token);
+      }
 
-    setInitialAuthRoute('Welcome');
-    setUser(userData);
-  } catch (error) {
-    console.log('Error saving user data:', error);
-  }
-};
+      setInitialAuthRoute('Welcome');
+      setUser(userData);
+    } catch (error) {
+      console.log('Error saving user data:', error);
+    }
+  };
 
   const logout = async () => {
     try {

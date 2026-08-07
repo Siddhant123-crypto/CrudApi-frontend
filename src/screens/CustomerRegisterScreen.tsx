@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,18 @@ import {
   Platform,
   Modal,
   Image,
+  ImageBackground,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
-import {userRegister} from '../services/authService';
+import { userRegister } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
-const CustomerRegisterScreen = ({navigation}: any) => {
+const CustomerRegisterScreen = ({ navigation }: any) => {
+  const { login } = useAuth();
   const [formData, setFormData] = useState<Record<string, string>>({
     name: '',
     email: '',
@@ -29,7 +33,7 @@ const CustomerRegisterScreen = ({navigation}: any) => {
     postalCode: '',
     state: '',
   });
-  
+
   const [photo, setPhoto] = useState<any>(null);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
@@ -37,9 +41,9 @@ const CustomerRegisterScreen = ({navigation}: any) => {
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   const updateField = (field: string, value: string) => {
-    setFormData({...formData, [field]: value});
+    setFormData({ ...formData, [field]: value });
     if (errors[field]) {
-      setErrors({...errors, [field]: null});
+      setErrors({ ...errors, [field]: null });
     }
   };
 
@@ -107,7 +111,7 @@ const CustomerRegisterScreen = ({navigation}: any) => {
     setLoading(true);
     try {
       const data = new FormData();
-      
+
       // We pass the JSON stringified registerData as the 'data' part, similar to Farmer
       const registerData = {
         name: formData.name.trim(),
@@ -127,7 +131,7 @@ const CustomerRegisterScreen = ({navigation}: any) => {
         const filename = photo.uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename || '');
         const type = match ? `image/${match[1]}` : `image`;
-        
+
         data.append('photo', {
           uri: photo.uri,
           name: filename,
@@ -135,12 +139,12 @@ const CustomerRegisterScreen = ({navigation}: any) => {
         } as any);
       }
 
-      const result = await userRegister(data);
+      await userRegister(data);
 
       Alert.alert(
         'Success',
-        result.message || 'Registration successful! Please login.',
-        [{text: 'OK', onPress: () => navigation.navigate('CustomerLogin')}],
+        'Registration successful! Please login.',
+        [{ text: 'OK', onPress: () => navigation.navigate('NewUserLogin') }],
       );
     } catch (error: any) {
       const msg =
@@ -154,177 +158,206 @@ const CustomerRegisterScreen = ({navigation}: any) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>🌿</Text>
-          <Text style={styles.appName}>Farm2Home</Text>
-          <Text style={styles.subtitle}>Create your customer account</Text>
-        </View>
-
-        {/* Form */}
-        <View style={styles.formContainer}>
-          
-          {/* Photo Upload Section */}
-          <View style={styles.photoContainer}>
-            <TouchableOpacity onPress={() => setShowPhotoOptions(true)}>
-              {photo ? (
-                <Image source={{uri: photo.uri}} style={styles.photoPreview} />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Text style={styles.photoPlaceholderText}>+ Add Photo</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+    <ImageBackground
+      source={require('../../assets/Customerreg.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled">
+          {/* Header */}
+          <View style={styles.header}>
+            <Image
+              source={require('../farm2home_logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.appName}>Farm2Home</Text>
+            <Text style={styles.subtitle}>Create your customer account</Text>
           </View>
 
-          <CustomInput
-            label="Full Name *"
-            value={formData.name}
-            onChangeText={v => updateField('name', v)}
-            placeholder="Enter your full name"
-            error={errors.name}
-          />
+          {/* Form */}
+          <View style={styles.formContainer}>
 
-          <CustomInput
-            label="Email *"
-            value={formData.email}
-            onChangeText={v => updateField('email', v)}
-            placeholder="Enter your email"
-            keyboardType="email-address"
-            error={errors.email}
-          />
+            {/* Photo Upload Section */}
+            <View style={styles.photoContainer}>
+              <TouchableOpacity onPress={() => setShowPhotoOptions(true)}>
+                {photo ? (
+                  <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    <Ionicons name="person-outline" size={50} color="#BDBDBD" />
+                    <View style={styles.cameraIconBadge}>
+                      <Ionicons name="camera" size={16} color="#FFFFFF" />
+                    </View>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
 
-          <CustomInput
-            label="Mobile Number *"
-            value={formData.mobile}
-            onChangeText={v => updateField('mobile', v)}
-            placeholder="Enter your mobile number"
-            keyboardType="phone-pad"
-            error={errors.mobile}
-          />
+            <CustomInput
+              label="Full Name *"
+              value={formData.name}
+              onChangeText={v => updateField('name', v)}
+              placeholder="Enter your full name"
+              error={errors.name}
+            />
 
-          <CustomInput
-            label="Village"
-            value={formData.village}
-            onChangeText={v => updateField('village', v)}
-            placeholder="Enter your village"
-          />
+            <CustomInput
+              label="Email *"
+              value={formData.email}
+              onChangeText={v => updateField('email', v)}
+              placeholder="Enter your email"
+              keyboardType="email-address"
+              error={errors.email}
+            />
 
-          <CustomInput
-            label="Address"
-            value={formData.address}
-            onChangeText={v => updateField('address', v)}
-            placeholder="Enter your address"
-            multiline
-          />
+            <CustomInput
+              label="Mobile Number *"
+              value={formData.mobile}
+              onChangeText={v => updateField('mobile', v)}
+              placeholder="Enter your mobile number"
+              keyboardType="phone-pad"
+              error={errors.mobile}
+            />
 
-          <CustomInput
-            label="Postal Code"
-            value={formData.postalCode}
-            onChangeText={v => updateField('postalCode', v)}
-            placeholder="Enter postal code"
-            keyboardType="numeric"
-          />
+            <CustomInput
+              label="Village"
+              value={formData.village}
+              onChangeText={v => updateField('village', v)}
+              placeholder="Enter your village"
+            />
 
-          <CustomInput
-            label="State"
-            value={formData.state}
-            onChangeText={v => updateField('state', v)}
-            placeholder="Enter your state"
-          />
+            <CustomInput
+              label="Address"
+              value={formData.address}
+              onChangeText={v => updateField('address', v)}
+              placeholder="Enter your address"
+              multiline
+            />
 
-          <CustomInput
-            label="Password *"
-            value={formData.password}
-            onChangeText={v => updateField('password', v)}
-            placeholder="Create a password"
-            secureTextEntry
-            error={errors.password}
-          />
+            <CustomInput
+              label="Postal Code"
+              value={formData.postalCode}
+              onChangeText={v => updateField('postalCode', v)}
+              placeholder="Enter postal code"
+              keyboardType="numeric"
+            />
 
-          <CustomInput
-            label="Confirm Password *"
-            value={formData.confirmPassword}
-            onChangeText={v => updateField('confirmPassword', v)}
-            placeholder="Confirm your password"
-            secureTextEntry
-            error={errors.confirmPassword}
-          />
+            <CustomInput
+              label="State"
+              value={formData.state}
+              onChangeText={v => updateField('state', v)}
+              placeholder="Enter your state"
+            />
 
-          <CustomButton
-            title="Sign Up"
-            onPress={handleRegister}
-            loading={loading}
-            style={{marginTop: 16}}
-          />
+            <CustomInput
+              label="Password *"
+              value={formData.password}
+              onChangeText={v => updateField('password', v)}
+              placeholder="Create a password"
+              secureTextEntry
+              error={errors.password}
+            />
 
-          <View style={styles.loginRow}>
-            <Text style={styles.loginLabel}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('CustomerLogin')}>
-              <Text style={styles.loginLink}>Sign In</Text>
-            </TouchableOpacity>
+            <CustomInput
+              label="Confirm Password *"
+              value={formData.confirmPassword}
+              onChangeText={v => updateField('confirmPassword', v)}
+              placeholder="Confirm your password"
+              secureTextEntry
+              error={errors.confirmPassword}
+            />
+
+            <CustomButton
+              title="Register"
+              onPress={handleRegister}
+              loading={loading}
+              style={{ marginTop: 16, backgroundColor: '#C8E6C9' }}
+              textStyle={{ color: '#1B5E20', fontWeight: 'bold' }}
+            />
+
+            <View style={styles.loginRow}>
+              <Text style={styles.loginLabel}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('NewUserLogin')}>
+                <Text style={styles.loginLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Photo Options Modal */}
-      <Modal
-        visible={showPhotoOptions}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowPhotoOptions(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose Photo From</Text>
-            
-            <TouchableOpacity style={styles.modalOption} onPress={takePhoto}>
-              <Text style={styles.modalOptionText}>Take Photo</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.modalOption} onPress={pickImage}>
-              <Text style={styles.modalOptionText}>Gallery</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.modalOption} onPress={pickDocument}>
-              <Text style={styles.modalOptionText}>Document</Text>
-            </TouchableOpacity>
+        {/* Photo Options Modal */}
+        <Modal
+          visible={showPhotoOptions}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowPhotoOptions(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Choose Photo From</Text>
 
-            <TouchableOpacity 
-              style={[styles.modalOption, {borderBottomWidth: 0}]} 
-              onPress={() => setShowPhotoOptions(false)}>
-              <Text style={[styles.modalOptionText, {color: 'red'}]}>Cancel</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.modalOption} onPress={takePhoto}>
+                <Text style={styles.modalOptionText}>Take Photo</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.modalOption} onPress={pickImage}>
+                <Text style={styles.modalOptionText}>Gallery</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.modalOption} onPress={pickDocument}>
+                <Text style={styles.modalOptionText}>Document</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalOption, { borderBottomWidth: 0 }]}
+                onPress={() => setShowPhotoOptions(false)}>
+                <Text style={[styles.modalOptionText, { color: 'red' }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(158, 75, 75, 0.19)', // subtle overlay to make form pop
+  },
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9', // Light green background
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingVertical: 40,
+    paddingBottom: 60,
   },
   header: {
     alignItems: 'center',
     marginBottom: 24,
   },
-  logo: {
-    fontSize: 44,
-    marginBottom: 4,
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 8,
+    borderRadius: 40,
   },
   appName: {
     fontSize: 28,
@@ -338,12 +371,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   formContainer: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
     borderRadius: 20,
     padding: 24,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
   },
@@ -352,15 +385,29 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   photoPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#E0E0E0',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#BDBDBD',
+    borderWidth: 2,
+    borderColor: '#C8E6C9',
     borderStyle: 'dashed',
+    position: 'relative',
+  },
+  cameraIconBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#4CAF50',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   photoPlaceholderText: {
     color: '#757575',
@@ -377,13 +424,18 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   loginLabel: {
-    color: '#757575',
+    color: '#212121',
     fontSize: 14,
   },
   loginLink: {
-    color: '#1B5E20',
-    fontSize: 14,
-    fontWeight: '700',
+    backgroundColor: '#C8E6C9',
+    color: '#212121',
+    fontSize: 12,
+    fontWeight: '600',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,

@@ -10,12 +10,13 @@
       "es2017"
     ],
     "moduleResolution": "node16",
-    "ignoreDeprecations": "6.0",
+
     "noEmit": true,
     "strict": true,
     "target": "esnext",
     "resolveJsonModule": true,
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "*": [

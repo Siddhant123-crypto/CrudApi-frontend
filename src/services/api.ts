@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ── Change this to your machine's local IP when testing on a physical device ──
 // For Android emulator use 10.0.2.2, for iOS simulator use localhost
-const BASE_URL = 'http://172.16.23.158:8080';
+const BASE_URL = 'http://172.16.22.86:8080';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -12,7 +12,6 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
 // Request interceptor — attach token if available
 api.interceptors.request.use(
   async config => {
@@ -36,5 +35,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-export {BASE_URL};
+export { BASE_URL };
 export default api;

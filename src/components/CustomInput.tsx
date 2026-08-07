@@ -13,6 +13,7 @@ interface CustomInputProps {
   editable?: boolean;
   style?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
+  leftIcon?: React.ReactNode;
 }
 
 const CustomInput: React.FC<CustomInputProps> = ({
@@ -27,6 +28,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
   editable = true,
   style,
   inputStyle,
+  leftIcon,
 }) => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
@@ -41,6 +43,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
           !!error && styles.errorInput,
           !editable && styles.disabledInput,
         ]}>
+        {leftIcon && <View style={styles.leftIconWrapper}>{leftIcon}</View>}
         <TextInput
           style={[
             styles.input,
@@ -87,15 +90,14 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
+    borderWidth: 1,
+    borderColor: '#C8C8C8',
     paddingHorizontal: 14,
   },
   focusedInput: {
     borderColor: '#1B5E20',
-    backgroundColor: '#FFFFFF',
   },
   errorInput: {
     borderColor: '#D32F2F',
@@ -109,6 +111,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: '#212121',
+  },
+  leftIconWrapper: {
+    marginRight: 10,
   },
   multilineInput: {
     minHeight: 100,

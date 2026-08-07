@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,15 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ProductCard from '../components/ProductCard';
 import LoadingSpinner from '../components/LoadingSpinner';
-import {useAuth} from '../context/AuthContext';
-import {getAllProducts} from '../services/productService';
+import { useAuth } from '../context/AuthContext';
+import { getAllProducts } from '../services/productService';
 
-const FarmerDashboardScreen = ({navigation}: any) => {
-  const {user, logout} = useAuth();
+const FarmerDashboardScreen = ({ navigation }: any) => {
+  const { user, logout } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,12 +49,12 @@ const FarmerDashboardScreen = ({navigation}: any) => {
     setRefreshing(false);
   }, []);
 
-  const renderProduct = ({item, index}: any) => (
-    <View style={[styles.cardWrapper, index % 2 === 0 ? {marginRight: 6} : {marginLeft: 6}]}>
+  const renderProduct = ({ item, index }: any) => (
+    <View style={[styles.cardWrapper, index % 2 === 0 ? { marginRight: 6 } : { marginLeft: 6 }]}>
       <ProductCard
         product={item}
         onPress={() =>
-          navigation.navigate('ProductDetail', {product: item})
+          navigation.navigate('ProductDetail', { product: item })
         }
       />
     </View>
@@ -75,8 +75,8 @@ const FarmerDashboardScreen = ({navigation}: any) => {
               'Exit Dashboard',
               'Are you sure you want to go back to the role selection screen?',
               [
-                {text: 'Cancel', style: 'cancel'},
-                {text: 'Yes', onPress: () => logout()},
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Yes', onPress: () => logout() },
               ]
             );
           }}
@@ -149,7 +149,7 @@ const FarmerDashboardScreen = ({navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
   },
   header: {
     backgroundColor: '#1B5E20',
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
   },
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 5,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
   },

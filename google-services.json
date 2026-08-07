@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "262597076531",
+    "project_id": "farm2home-8174a",
+    "storage_bucket": "farm2home-8174a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:262597076531:android:b76280c306d353d7c86546",
+        "android_client_info": {
+          "package_name": "com.siddhant.farm2home"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEkT2OGS7NQtyhIIYx-w6MeyrBqdoKTds"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

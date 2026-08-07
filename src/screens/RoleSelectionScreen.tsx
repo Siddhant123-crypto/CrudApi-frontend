@@ -1,58 +1,78 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Image, Dimensions, ImageBackground } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 const RoleSelectionScreen = ({ navigation }: any) => {
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Home Button in top right */}
-      <TouchableOpacity 
-        style={styles.homeButton}
-        onPress={() => navigation.navigate('Welcome')}
-      >
-        <Ionicons name="home-outline" size={24} color="#1B5E20" />
-        <Text style={styles.homeButtonText}>Home</Text>
-      </TouchableOpacity>
-
-      <View style={styles.content}>
-        <Image 
-          source={require('../farm2home_logo.png')} 
-          style={styles.logoImage} 
-          resizeMode="contain" 
-        />
-        <Text style={styles.title}>Select Your Role</Text>
-        <Text style={styles.subtitle}>Choose how you want to continue</Text>
-
+    <ImageBackground 
+      source={require('../../assets/Rolle.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+      <SafeAreaView style={styles.container}>
+        {/* Home Button in top right */}
         <TouchableOpacity 
-          style={[styles.button, styles.customerButton]}
-          onPress={() => navigation.navigate('CustomerLogin')}
+          style={styles.homeButton}
+          onPress={() => navigation.navigate('Welcome')}
         >
-          <Text style={styles.buttonText}>I am a Customer</Text>
+          <Ionicons name="home-outline" size={24} color="#1B5E20" />
+          <Text style={styles.homeButtonText}>Home</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.button, styles.farmerButton]}
-          onPress={() => navigation.navigate('FarmerLogin')}
-        >
-          <Text style={styles.buttonText}>I am a Farmer</Text>
-        </TouchableOpacity>
+        <View style={styles.content}>
+          <Image 
+            source={require('../farm2home_logo.png')} 
+            style={styles.logoImage} 
+            resizeMode="contain" 
+          />
+          <Text style={styles.title}>Select Your Role</Text>
+          <Text style={styles.subtitle}>Choose how you want to continue</Text>
 
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>Back to Sign In</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          <TouchableOpacity 
+            style={[styles.button, styles.customerButton]}
+            onPress={() => navigation.navigate('CustomerRegister')}
+          >
+            <Ionicons name="people-outline" size={24} color="#B71C1C" />
+            <Text style={styles.customerButtonText}>I am a Customer</Text>
+            <Ionicons name="chevron-forward-outline" size={24} color="#B71C1C" />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.button, styles.farmerButton]}
+            onPress={() => navigation.navigate('FarmerRegister')}
+          >
+            <Ionicons name="person-outline" size={24} color="#1B5E20" />
+            <Text style={styles.farmerButtonText}>I am a Farmer</Text>
+            <Ionicons name="chevron-forward-outline" size={24} color="#1B5E20" />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.button, styles.backButton]}
+            onPress={() => navigation.navigate('NewUserLogin')}
+          >
+            <Text style={styles.backButtonText}>Back to Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)', // Overlay to make text and buttons readable
+  },
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9', // Light green background
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
@@ -82,37 +102,56 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   button: {
-    width: '100%',
+    width: '90%',
+    flexDirection: 'row',
     paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 16,
     alignItems: 'center',
     marginBottom: 16,
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   customerButton: {
-    backgroundColor: '#1B5E20',
+    backgroundColor: '#FFCDD2', // Cream red
+    borderWidth: 1,
+    borderColor: '#EF9A9A',
   },
-  farmerButton: {
-    backgroundColor: '#E65100',
-  },
-  buttonText: {
-    color: '#FFFFFF',
+  customerButtonText: {
+    color: '#B71C1C',
     fontSize: 18,
     fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  farmerButton: {
+    backgroundColor: '#C8E6C9', // Cream green
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  farmerButtonText: {
+    color: '#1B5E20',
+    fontSize: 18,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
   },
   backButton: {
+    backgroundColor: '#E8F5E9', // Slightly lighter cream green
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
     marginTop: 10,
-    paddingVertical: 10,
+    justifyContent: 'center',
   },
   backButtonText: {
     color: '#1B5E20',
     fontSize: 16,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
+    fontWeight: '700',
+    textAlign: 'center',
+    width: '100%',
   },
   homeButton: {
     position: 'absolute',

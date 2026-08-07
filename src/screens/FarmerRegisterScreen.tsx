@@ -10,14 +10,18 @@ import {
   Platform,
   Modal,
   Image,
+  ImageBackground,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import {farmerRegister} from '../services/authService';
+import {useAuth} from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
 const FarmerRegisterScreen = ({navigation}: any) => {
+  const {login} = useAuth();
   const [formData, setFormData] = useState<Record<string, string>>({
     name: '',
     email: '',
@@ -133,12 +137,12 @@ const FarmerRegisterScreen = ({navigation}: any) => {
         } as any);
       }
 
-      const result = await farmerRegister(data);
+      await farmerRegister(data);
 
       Alert.alert(
         'Success',
-        result.message || 'Registration successful! Please login.',
-        [{text: 'OK', onPress: () => navigation.navigate('FarmerLogin')}],
+        'Registration successful! Please login.',
+        [{ text: 'OK', onPress: () => navigation.navigate('NewUserLogin') }],
       );
     } catch (error: any) {
       console.log('Status:', error.response?.status);
@@ -155,16 +159,27 @@ const FarmerRegisterScreen = ({navigation}: any) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled">
-        {/* Header */}
+    <ImageBackground
+      source={require('../../assets/Farmerreg.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled">
+          {/* Header */}
         
         <View style={styles.header}>
-          <Text style={styles.logo}>🚜</Text>
+          <Image 
+            source={require('../farm2home_logo.png')} 
+            style={styles.logoImage} 
+            resizeMode="contain" 
+          />
           <Text style={styles.appName}>Farm2Home</Text>
           <Text style={styles.subtitle}>Create your farmer account</Text>
         </View>
@@ -179,7 +194,11 @@ const FarmerRegisterScreen = ({navigation}: any) => {
                 <Image source={{uri: photo.uri}} style={styles.photoPreview} />
               ) : (
                 <View style={styles.photoPlaceholder}>
-                  <Text style={styles.photoPlaceholderText}>+ Add Photo</Text>
+                  <Ionicons name="person-outline" size={50} color="#BDBDBD" />
+                  <View style={styles.cameraIconBadge}>
+                    <Ionicons name="camera" size={16} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.photoPlaceholderText}>Tap to upload</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -263,12 +282,13 @@ const FarmerRegisterScreen = ({navigation}: any) => {
             title="Sign Up"
             onPress={handleRegister}
             loading={loading}
-            style={{marginTop: 16}}
+            style={{marginTop: 16, backgroundColor: '#C8E6C9'}}
+            textStyle={{color: '#1B5E20', fontWeight: 'bold'}}
           />
 
           <View style={styles.loginRow}>
             <Text style={styles.loginLabel}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('FarmerLogin')}>
+            <TouchableOpacity onPress={() => navigation.navigate('NewUserLogin')}>
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
@@ -307,31 +327,40 @@ const FarmerRegisterScreen = ({navigation}: any) => {
       </Modal>
 
     </KeyboardAvoidingView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9', // Light green background
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingVertical: 40,
+    paddingBottom: 60,
   },
   header: {
     alignItems: 'center',
     marginBottom: 24,
   },
-  logo: {
-    fontSize: 44,
-    marginBottom: 4,
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 8,
+    borderRadius: 40,
   },
   appName: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#F57F17', // Farmer color
+    color: '#1B5E20', // Green color
     letterSpacing: 1,
   },
   subtitle: {
@@ -340,7 +369,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   formContainer: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
     borderRadius: 20,
     padding: 24,
     elevation: 2,
@@ -348,30 +377,50 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.08,
     shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   photoContainer: {
     alignItems: 'center',
     marginBottom: 20,
   },
   photoPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#E0E0E0',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#BDBDBD',
+    borderWidth: 2,
+    borderColor: '#C8E6C9',
     borderStyle: 'dashed',
+    position: 'relative',
   },
   photoPlaceholderText: {
-    color: '#757575',
+    marginTop: 6,
     fontSize: 12,
+    color: '#757575',
   },
+  cameraIconBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#4CAF50',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+
   photoPreview: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 2,
+    borderColor: '#C8E6C9',
   },
   loginRow: {
     flexDirection: 'row',
@@ -379,13 +428,18 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   loginLabel: {
-    color: '#757575',
+    color: '#212121',
     fontSize: 14,
   },
   loginLink: {
-    color: '#F57F17',
-    fontSize: 14,
-    fontWeight: '700',
+    backgroundColor: '#C8E6C9',
+    color: '#212121',
+    fontSize: 12,
+    fontWeight: '600',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,

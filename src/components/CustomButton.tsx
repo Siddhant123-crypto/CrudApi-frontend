@@ -1,5 +1,5 @@
 import React from 'react';
-import {TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, StyleProp} from 'react-native';
+import {TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, StyleProp, View} from 'react-native';
 
 interface CustomButtonProps {
   title: string;
@@ -9,6 +9,7 @@ interface CustomButtonProps {
   loading?: boolean;
   disabled?: boolean;
   variant?: 'primary' | 'outline' | 'danger';
+  rightIcon?: React.ReactNode;
 }
 
 const CustomButton: React.FC<CustomButtonProps> = ({
@@ -19,6 +20,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   loading = false,
   disabled = false,
   variant = 'primary',
+  rightIcon,
 }) => {
   const getButtonStyle = () => {
     switch (variant) {
@@ -54,7 +56,10 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       {loading ? (
         <ActivityIndicator color="#FFFFFF" size="small" />
       ) : (
-        <Text style={[styles.text, getTextStyle(), textStyle]}>{title}</Text>
+        <View style={styles.contentContainer}>
+          <Text style={[styles.text, getTextStyle(), textStyle]}>{title}</Text>
+          {rightIcon && <View style={styles.rightIconContainer}>{rightIcon}</View>}
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -65,14 +70,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginVertical: 6,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rightIconContainer: {
+    marginLeft: 10,
   },
   primaryButton: {
     backgroundColor: '#1B5E20',

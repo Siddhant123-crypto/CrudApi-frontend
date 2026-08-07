@@ -53,3 +53,20 @@ export const forgotPassword = async (email: string, password: string, confirmPas
   });
   return response.data;
 };
+
+// POST /auth/check-user — { identifier }
+export const checkUser = async (identifier: string) => {
+  const response = await api.post('/auth/check-user', { identifier });
+  return response.data; // { exists: boolean, message: string, role: string | null }
+};
+
+export const googleLogin = async (token: string) => {
+  const response = await api.post('/newuser/google-login', { token });
+  return response.data;
+};
+
+export const keycloakLogin = async (token: string) => {
+  const response = await api.post('/newuser/keycloak-login', { token });
+  return response.data;
+};
+
