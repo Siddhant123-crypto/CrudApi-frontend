@@ -20,7 +20,17 @@ import ProductDetailScreen from '../screens/ProductDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import FarmerDashboardScreen from '../screens/FarmerDashboardScreen';
 import AddProductScreen from '../screens/AddProductScreen';
-import OrdersScreen from '../screens/OrdersScreen';
+import MyProductsScreen from '../screens/MyProductsScreen';
+import EarningsScreen from '../screens/EarningsScreen';
+import CategoryDashboardScreen from '../screens/CategoryDashboardScreen';
+
+// ── New Order Screens ──
+import CheckoutScreen from '../screens/CheckoutScreen';
+import OrderSuccessScreen from '../screens/OrderSuccessScreen';
+import CustomerOrdersScreen from '../screens/CustomerOrdersScreen';
+import CustomerOrderDetailsScreen from '../screens/CustomerOrderDetailsScreen';
+import FarmerOrdersScreen from '../screens/FarmerOrdersScreen';
+import FarmerOrderDetailsScreen from '../screens/FarmerOrderDetailsScreen';
 
 // ── Define Navigation Param Lists ──
 export type AuthStackParamList = {
@@ -37,7 +47,12 @@ export type MainStackParamList = {
   CustomerMain: undefined;
   FarmerMain: undefined;
   ProductDetail: {product: Product};
-  AddProduct: undefined;
+  AddProduct: { product?: any } | undefined;
+  CategoryDashboard: { category: string };
+  Checkout: { orderItems: any[]; totalAmount: number };
+  OrderSuccess: { orderNumber: string; totalAmount: number };
+  CustomerOrderDetails: { orderId: string };
+  FarmerOrderDetails: { orderId: string };
 };
 
 export type CustomerTabParamList = {
@@ -48,7 +63,9 @@ export type CustomerTabParamList = {
 
 export type FarmerTabParamList = {
   Dashboard: undefined;
+  Products: undefined;
   Orders: undefined;
+  Earnings: undefined;
   Profile: undefined;
 };
 
@@ -59,7 +76,7 @@ const FarmerTab = createBottomTabNavigator<FarmerTabParamList>();
 
 // ── Colors ──
 const COLORS = {
-  primary: '#1B5E20',
+  primary: '#2D983A',
   primaryLight: '#4CAF50',
   white: '#FFFFFF',
   grey: '#757575',
@@ -113,7 +130,7 @@ const CustomerTabs = () => {
       />
       <CustomerTab.Screen
         name="Orders"
-        component={OrdersScreen as any}
+        component={CustomerOrdersScreen as any}
         options={{tabBarLabel: 'Orders'}}
       />
       <CustomerTab.Screen
@@ -154,9 +171,13 @@ const FarmerTabs = () => {
           let iconName: any;
 
           if (route.name === 'Dashboard') {
-            iconName = focused ? 'grid' : 'grid-outline';
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Products') {
+            iconName = focused ? 'cube' : 'cube-outline';
           } else if (route.name === 'Orders') {
             iconName = focused ? 'receipt' : 'receipt-outline';
+          } else if (route.name === 'Earnings') {
+            iconName = focused ? 'cash' : 'cash-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           } else {
@@ -172,9 +193,19 @@ const FarmerTabs = () => {
         options={{tabBarLabel: 'Dashboard'}}
       />
       <FarmerTab.Screen
+        name="Products"
+        component={MyProductsScreen as any}
+        options={{tabBarLabel: 'Products'}}
+      />
+      <FarmerTab.Screen
         name="Orders"
-        component={OrdersScreen as any}
+        component={FarmerOrdersScreen as any}
         options={{tabBarLabel: 'Orders'}}
+      />
+      <FarmerTab.Screen
+        name="Earnings"
+        component={EarningsScreen as any}
+        options={{tabBarLabel: 'Earnings'}}
       />
       <FarmerTab.Screen
         name="Profile"
@@ -186,7 +217,7 @@ const FarmerTabs = () => {
 };
 
 // ── Auth Stack (not logged in) ──
-const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection'}) => (
+const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection' | 'NewUserLogin'}) => (
   <Stack.Navigator screenOptions={{headerShown: false}} initialRouteName={initialRoute}>
     <Stack.Screen name="Welcome" component={WelcomeScreen as any} />
     <Stack.Screen name="RoleSelection" component={RoleSelectionScreen as any} />
@@ -224,6 +255,35 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
         headerStyle: {backgroundColor: COLORS.primary},
         headerTintColor: COLORS.white,
       }}
+    />
+    <Stack.Screen
+      name="CategoryDashboard"
+      component={CategoryDashboardScreen as any}
+      options={{
+        headerShown: true,
+        headerStyle: {backgroundColor: COLORS.primary},
+        headerTintColor: COLORS.white,
+      }}
+    />
+    <Stack.Screen
+      name="Checkout"
+      component={CheckoutScreen as any}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
+      name="OrderSuccess"
+      component={OrderSuccessScreen as any}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
+      name="CustomerOrderDetails"
+      component={CustomerOrderDetailsScreen as any}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
+      name="FarmerOrderDetails"
+      component={FarmerOrderDetailsScreen as any}
+      options={{headerShown: false}}
     />
   </Stack.Navigator>
 );

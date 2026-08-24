@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,132 +11,238 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  ImageBackground,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import {useAuth} from '../context/AuthContext';
-import {saveProduct, uploadProductPhoto, updateProduct, getProductImageUrl} from '../services/productService';
+import * as DocumentPicker from 'expo-document-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAuth } from '../context/AuthContext';
+import { saveProductFormData, updateProductFormData } from '../services/productService';
+import { BASE_URL } from '../services/api';
 
 const CATEGORIES = [
-  'Leafy Vegetables',
-  'Vegetables',
-  'Fruits',
+  'Vegetable',
+  'Root Vegetable',
+  'Fruit',
   'Grains',
   'Dairy',
-  'Others',
+  'Wild Forest Vegetable',
 ];
-
-const STATUS_OPTIONS = ['Active', 'Inactive'];
 
 const UNITS = [
   'KG',
   'GRAM',
-  'BUNDLE',
-  'PIECE',
-  'DOZEN',
   'LITER',
   'ML',
+  'PIECE',
+  'DOZEN',
   'BOX',
+  'BUNDLE',
 ];
 
-const AddProductScreen = ({route, navigation}: any) => {
-  const {user} = useAuth();
-  const productToEdit = route.params?.product;
+const AddProductScreen = ({ navigation, route }: any) => {
+  const { user } = useAuth();
 
-  const [productName, setProductName] = useState(productToEdit?.productName || '');
-  const [category, setCategory] = useState(productToEdit?.category || CATEGORIES[0]);
-  const [unit, setUnit] = useState(productToEdit?.unit || UNITS[0]);
-  const [price, setPrice] = useState(productToEdit?.price?.toString() || '');
-  const [quantity, setQuantity] = useState('120');
-  const [quantityUnit, setQuantityUnit] = useState(UNITS[0]); // default unit for quantity
-  const [showQuantityModal, setShowQuantityModal] = useState(false);
-  const [description, setDescription] = useState(productToEdit?.description || '');
-  
-  const [status, setStatus] = useState(productToEdit?.isActive !== false ? 'Active' : 'Inactive');
-  const [city, setCity] = useState(productToEdit?.farmerAddress?.split(',')[0] || '');
-  const [state, setState] = useState('Maharashtra');
-  const [area, setArea] = useState('Near Panchavati, Nashik');
-  
-  const initialPhotoUrl = productToEdit?.productPhoto ? getProductImageUrl(productToEdit.productPhoto) : null;
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(initialPhotoUrl);
+  // ── Edit mode: product passed from MyProductsScreen ──────────────────────
+  const editProduct = route?.params?.product ?? null;
+  const isEditMode  = !!editProduct;
+  const [productName, setProductName] = useState(editProduct?.productName ?? '');
+  const [category, setCategory] = useState(editProduct?.category ?? CATEGORIES[0]);
+  const [unit, setUnit] = useState(editProduct?.unit ?? UNITS[0]);
+  const [price, setPrice] = useState(editProduct?.price != null ? String(editProduct.price) : '');
+  const [quantity, setQuantity] = useState(editProduct?.quantity != null ? String(editProduct.quantity) : '');
+  const [description, setDescription] = useState(editProduct?.description ?? '');
+
+  // New local URIs (null = user did not pick anything new → keep existing)
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedVideoName, setSelectedVideoName] = useState<string>('product_video.mp4');
+  const [removeVideo, setRemoveVideo] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showUnitModal, setShowUnitModal] = useState(false);
+  const [mediaModalVisible, setMediaModalVisible] = useState(false);
+  const [mediaSelectionType, setMediaSelectionType] = useState<'Images' | 'Videos'>('Images');
 
-  const handlePickImage = async () => {
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+  // ── Update header title ─────────────────────────────────────────────────
+  React.useLayoutEffect(() => {
+    navigation.setOptions({ 
+      headerTitle: isEditMode ? 'Edit Product' : 'Add Product',
+      headerStyle: { backgroundColor: '#2D983A', elevation: 0, shadowOpacity: 0 },
+      headerTintColor: '#FFF',
+    });
+  }, [isEditMode, navigation]);
+
+  const requestCameraPermission = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Camera access is required.');
+      return false;
+    }
+    return true;
+  };
+
+  const handlePickMediaFromGallery = async () => {
     try {
-      const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Gallery access is required to pick photos.');
+        Alert.alert('Permission Denied', 'Gallery access is required.');
+        setMediaModalVisible(false);
         return;
       }
+
+      const isVideo = mediaSelectionType === 'Videos';
+
       const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+        // For video mode: open normal system gallery with both images & videos so
+        // the user sees the familiar mixed-media grid (not a Videos-only tab).
+        // For photo mode: images only (unchanged behaviour).
+        mediaTypes: isVideo ? ['images', 'videos'] : 'images',
+        allowsEditing: !isVideo,   // editing only for photos
+        quality: isVideo ? 1 : 0.8,
+        videoMaxDuration: isVideo ? 120 : undefined,
       });
+
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setSelectedPhoto(result.assets[0].uri);
+        const asset = result.assets[0];
+
+        if (isVideo) {
+          // Validate that the user actually selected a video, not a photo.
+          if (asset.type !== 'video') {
+            Alert.alert(
+              'Wrong file type',
+              'Please select a video from the gallery.',
+            );
+            // Don't close the modal — let them try again.
+            return;
+          }
+          setSelectedVideo(asset.uri);
+          setRemoveVideo(false);
+          // Extract filename; ensure .mp4 extension for backend MIME type.
+          const name = asset.uri.split('/').pop() || 'product_video.mp4';
+          setSelectedVideoName(name.endsWith('.mp4') ? name : name.replace(/\.[^.]+$/, '.mp4'));
+        } else {
+          setSelectedPhoto(asset.uri);
+        }
       }
     } catch (error) {
-      console.log('Error picking photo:', error);
-      Alert.alert('Error', 'Failed to pick image from gallery');
+      console.log('Error picking media from gallery:', error);
+      Alert.alert('Error', 'Failed to pick media from gallery');
     }
+    setMediaModalVisible(false);
+  };
+
+  const handlePickMediaFromCamera = async () => {
+    try {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) {
+        setMediaModalVisible(false);
+        return;
+      }
+
+      const isVideo = mediaSelectionType === 'Videos';
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: isVideo ? 'videos' : 'images', // ✅ new non-deprecated API
+        allowsEditing: !isVideo,                   // editing only for photos
+        quality: isVideo ? 1 : 0.8,
+        videoMaxDuration: isVideo ? 120 : undefined,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        if (isVideo) {
+          setSelectedVideo(asset.uri);
+          setRemoveVideo(false);
+          const name = asset.uri.split('/').pop() || 'product_video.mp4';
+          setSelectedVideoName(name.endsWith('.mp4') ? name : `recorded_video_${Date.now()}.mp4`);
+        } else {
+          setSelectedPhoto(asset.uri);
+        }
+      }
+    } catch (error) {
+      console.log('Error capturing media from camera:', error);
+      Alert.alert('Error', 'Failed to capture media. Please try again.');
+    }
+    setMediaModalVisible(false);
+  };
+
+  const handlePickMediaFromDocument = async () => {
+    try {
+      const isVideo = mediaSelectionType === 'Videos';
+      const result = await DocumentPicker.getDocumentAsync({
+        type: isVideo ? 'video/*' : 'image/*', // ✅ video/* for video, image/* for photo
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled === false && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        if (isVideo) {
+          setSelectedVideo(asset.uri);
+          setRemoveVideo(false);
+          // Use actual filename, fallback to .mp4
+          const name = asset.name || asset.uri.split('/').pop() || 'product_video.mp4';
+          setSelectedVideoName(name);
+        } else {
+          setSelectedPhoto(asset.uri);
+        }
+      }
+    } catch (error) {
+      console.log('Error picking document:', error);
+      Alert.alert('Error', 'Failed to pick file from documents');
+    }
+    setMediaModalVisible(false);
   };
 
   const handleSaveProduct = async () => {
-    if (!productName.trim()) {
-      Alert.alert('Validation Error', 'Please enter a product name');
+    if (!productName.trim() || !price.trim() || !quantity.trim()) {
+      Alert.alert('Validation Error', 'Please fill in all required fields');
       return;
     }
-    if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
-      Alert.alert('Validation Error', 'Please enter a valid price greater than 0');
+    if (isNaN(Number(price)) || Number(price) <= 0 || isNaN(Number(quantity)) || Number(quantity) <= 0) {
+      Alert.alert('Validation Error', 'Price and Quantity must be valid numbers greater than 0');
       return;
     }
 
     setLoading(true);
     try {
-      let productPhotoFilename = productToEdit?.productPhoto || '';
-      
-      if (selectedPhoto && !selectedPhoto.startsWith('http')) {
-        productPhotoFilename = await uploadProductPhoto(selectedPhoto);
-      } else if (!selectedPhoto) {
-        productPhotoFilename = '';
-      }
-
-      const address = `${city}, ${state}`;
-
       const productPayload = {
         farmerId: user?.farmerId,
         productName: productName.trim(),
         category,
         price: parseFloat(price),
+        quantity: parseFloat(quantity),
         unit,
         description: description.trim(),
-        productPhoto: productPhotoFilename || null,
-        isActive: status === 'Active',
-        farmerAddress: productToEdit ? productToEdit.farmerAddress : address
+        removeVideo: removeVideo,
       };
 
-      if (productToEdit) {
-        await updateProduct(productToEdit.productId, productPayload);
+      if (isEditMode) {
+        await updateProductFormData(
+          editProduct.productId || editProduct.id,
+          productPayload,
+          selectedPhoto || undefined,
+          selectedVideo || undefined,
+        );
         Alert.alert('Success', 'Product updated successfully!', [
-          {text: 'OK', onPress: () => navigation.goBack()}
+          { text: 'OK', onPress: () => navigation.goBack() }
         ]);
       } else {
-        await saveProduct(productPayload);
+        await saveProductFormData(
+          productPayload,
+          selectedPhoto || undefined,
+          selectedVideo || undefined,
+        );
         Alert.alert('Success', 'Product added successfully!', [
-          {text: 'OK', onPress: () => navigation.goBack()}
+          { text: 'OK', onPress: () => navigation.goBack() }
         ]);
       }
     } catch (error: any) {
       console.log('Error saving product:', error);
-      const serverMsg =
-        error.response?.data?.message ||
-        (typeof error.response?.data === 'string' ? error.response?.data : null) ||
-        error.message ||
-        'Failed to save product. Please try again.';
+      const serverMsg = error.response?.data?.message || 'Failed to save product. Please try again.';
       Alert.alert('Error', serverMsg);
     } finally {
       setLoading(false);
@@ -157,7 +263,7 @@ const AddProductScreen = ({route, navigation}: any) => {
           <FlatList
             data={data}
             keyExtractor={(item) => item}
-            renderItem={({item}) => (
+            renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.modalItem}
                 onPress={() => {
@@ -168,169 +274,259 @@ const AddProductScreen = ({route, navigation}: any) => {
                 <Text style={styles.modalItemText}>{item}</Text>
               </TouchableOpacity>
             )}
+            showsVerticalScrollIndicator={false}
           />
         </View>
       </TouchableOpacity>
     </Modal>
   );
 
+  const getBorderColor = (field: string) => {
+    return focusedInput === field ? '#4CAF50' : '#E8F5E9';
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header Section (Removed double back button) */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{productToEdit ? 'Edit Product' : 'Add Product'}</Text>
-        <Text style={styles.headerSubtitle}>{productToEdit ? 'Update your product details' : 'Enter the details of your produce'}</Text>
-      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-      {/* Main Form Content */}
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.formContainer}>
-        
-        {/* Photo Section */}
-        <View style={styles.photoSection}>
-          {selectedPhoto ? (
-            <Image source={{uri: selectedPhoto}} style={styles.photoPreview} />
-          ) : (
-            <View style={[styles.photoPreview, {backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center'}]}>
-               <Ionicons name="image-outline" size={32} color="#9CA3AF" />
+        <View style={styles.formContainer}>
+            {/* Media Upload Section */}
+            <View style={styles.mediaSection}>
+
+                {/* Photo Card */}
+                <View style={styles.mediaCard}>
+                  <TouchableOpacity
+                    style={styles.mediaCardInner}
+                    onPress={() => {
+                      setMediaSelectionType('Images');
+                      setMediaModalVisible(true);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    {selectedPhoto || (isEditMode && editProduct?.productPhoto) ? (
+                      <>
+                        <Image
+                          source={{ uri: selectedPhoto || `${BASE_URL}/product/image/${editProduct?.productPhoto}` }}
+                          style={styles.mediaImage}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.replaceOverlay}>
+                          <Ionicons name="camera" size={16} color="#FFF" />
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.iconCircle}>
+                          <Ionicons name="image" size={32} color="#4CAF50" />
+                          <View style={[styles.plusBadge, {backgroundColor: '#4CAF50'}]}>
+                            <Ionicons name="add" size={12} color="#FFF" />
+                          </View>
+                        </View>
+                        <Text style={styles.mediaCardTitle}>Add Photo</Text>
+                        <Text style={styles.mediaCardSub}>Upload product image</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Video Card */}
+                <View style={[styles.mediaCard, { borderStyle: selectedVideo ? 'solid' : 'dashed' }]}>
+                  <TouchableOpacity
+                    style={styles.mediaCardInner}
+                    onPress={() => {
+                      setMediaSelectionType('Videos');
+                      setMediaModalVisible(true);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    {selectedVideo || (isEditMode && editProduct?.productVideo && !removeVideo) ? (
+                      <>
+                        <View style={styles.videoPreview}>
+                          <Ionicons name="checkmark-circle" size={32} color="#7B1FA2" />
+                          <Text style={styles.videoSelectedText}>Video Ready</Text>
+                          <Text style={styles.videoFileName} numberOfLines={1} ellipsizeMode="middle">
+                            {selectedVideo ? selectedVideoName : (editProduct?.productVideo ?? '')}
+                          </Text>
+                          <Text style={styles.videoReplaceText}>Tap to replace</Text>
+                        </View>
+                        {/* Remove button */}
+                        <TouchableOpacity
+                          style={styles.removeVideoBtn}
+                          onPress={(e) => {
+                            e.stopPropagation?.();
+                            setSelectedVideo(null);
+                            setSelectedVideoName('product_video.mp4');
+                            if (isEditMode && editProduct?.productVideo) {
+                                setRemoveVideo(true);
+                            }
+                          }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="close" size={12} color="#FFF" />
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.iconCircle}>
+                          <Ionicons name="videocam" size={32} color="#9C27B0" />
+                          <View style={[styles.plusBadge, {backgroundColor: '#9C27B0'}]}>
+                            <Ionicons name="add" size={12} color="#FFF" />
+                          </View>
+                        </View>
+                        <Text style={styles.mediaCardTitle}>Add Video</Text>
+                        <Text style={styles.mediaCardSub}>Upload product video (Optional)</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
             </View>
-          )}
-          <TouchableOpacity style={styles.changePhotoBtn} onPress={handlePickImage}>
-            <Ionicons name="camera-outline" size={28} color="#6B7280" />
-            <Text style={styles.changePhotoText}>{selectedPhoto ? 'Change Photo' : 'Add Photo'}</Text>
-          </TouchableOpacity>
+
+            {/* Form Fields */}
+            <View style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                    <Text style={styles.label}>Product Name *</Text>
+                    <TextInput
+                        style={[styles.input, { borderColor: getBorderColor('productName') }]}
+                        value={productName}
+                        onChangeText={setProductName}
+                        placeholder="Enter product name"
+                        placeholderTextColor="#9CA3AF"
+                        onFocus={() => setFocusedInput('productName')}
+                        onBlur={() => setFocusedInput(null)}
+                    />
+                </View>
+            </View>
+
+            <View style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                    <Text style={styles.label}>Category *</Text>
+                    <TouchableOpacity 
+                        style={[styles.dropdownInput, { borderColor: '#E8F5E9' }]} 
+                        onPress={() => setShowCategoryModal(true)}
+                    >
+                        <Text style={styles.inputText}>{category}</Text>
+                        <Ionicons name="chevron-down" size={20} color="#9CA3AF" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <View style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                    <Text style={styles.label}>Price (₹) *</Text>
+                    <TextInput
+                        style={[styles.input, { borderColor: getBorderColor('price') }]}
+                        value={price}
+                        onChangeText={setPrice}
+                        keyboardType="numeric"
+                        placeholder="Enter price per unit"
+                        placeholderTextColor="#9CA3AF"
+                        onFocus={() => setFocusedInput('price')}
+                        onBlur={() => setFocusedInput(null)}
+                    />
+                </View>
+            </View>
+
+            <View style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                    <Text style={styles.label}>Quantity *</Text>
+                    <TextInput
+                        style={[styles.input, { borderColor: getBorderColor('quantity') }]}
+                        value={quantity}
+                        onChangeText={setQuantity}
+                        keyboardType="numeric"
+                        placeholder="Enter available quantity"
+                        placeholderTextColor="#9CA3AF"
+                        onFocus={() => setFocusedInput('quantity')}
+                        onBlur={() => setFocusedInput(null)}
+                    />
+                </View>
+            </View>
+
+            <View style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                    <Text style={styles.label}>Unit *</Text>
+                    <TouchableOpacity 
+                        style={[styles.dropdownInput, { borderColor: '#E8F5E9' }]} 
+                        onPress={() => setShowUnitModal(true)}
+                    >
+                        <Text style={styles.inputText}>{unit}</Text>
+                        <Ionicons name="chevron-down" size={20} color="#9CA3AF" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <View style={styles.fieldRow}>
+                <View style={styles.fieldContent}>
+                    <Text style={styles.label}>Description (Optional)</Text>
+                    <TextInput
+                        style={[styles.input, { borderColor: getBorderColor('description'), minHeight: 80, textAlignVertical: 'top', paddingTop: 12 }]}
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholder="Enter product description"
+                        placeholderTextColor="#9CA3AF"
+                        multiline
+                        onFocus={() => setFocusedInput('description')}
+                        onBlur={() => setFocusedInput(null)}
+                    />
+                </View>
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProduct} disabled={loading}>
+                {loading ? (
+                    <ActivityIndicator color="#FFF" />
+                ) : (
+                    <>
+                        <Text style={styles.saveBtnText}>
+                          {isEditMode ? 'Update Product' : 'Save Product'}
+                        </Text>
+                    </>
+                )}
+            </TouchableOpacity>
+
         </View>
-
-        {/* Basic Information */}
-        <Text style={styles.sectionTitle}>Basic Information</Text>
-        
-        <Text style={styles.label}>Product Name<Text style={styles.required}>*</Text></Text>
-        <TextInput
-          style={styles.input}
-          value={productName}
-          onChangeText={setProductName}
-          placeholder="e.g. Banana"
-          placeholderTextColor="#9CA3AF"
-        />
-
-        <Text style={styles.label}>Category<Text style={styles.required}>*</Text></Text>
-        <TouchableOpacity style={styles.dropdownContainer} onPress={() => setShowCategoryModal(true)}>
-          <View style={[styles.input, {marginBottom: 0, justifyContent: 'center'}]}>
-            <Text style={{fontSize: 15, color: '#111827'}}>{category}</Text>
-          </View>
-          <Ionicons name="chevron-down" size={20} color="#6B7280" style={styles.dropdownIcon} />
-        </TouchableOpacity>
-
-        <Text style={styles.label}>Unit<Text style={styles.required}>*</Text></Text>
-        <TouchableOpacity style={styles.dropdownContainer} onPress={() => setShowQuantityModal(true)}>
-          <View style={[styles.input, {marginBottom: 0, justifyContent: 'center'}]}>
-            <Text style={{fontSize: 15, color: '#111827'}}>{quantityUnit}</Text>
-          </View>
-          <Ionicons name="chevron-down" size={20} color="#6B7280" style={styles.dropdownIcon} />
-        </TouchableOpacity>
-
-        <Text style={styles.label}>Price (per {quantityUnit})<Text style={styles.required}>*</Text></Text>
-        <View style={styles.inputWithIcon}>
-          <TextInput
-            style={styles.inputInside}
-            value={price}
-            onChangeText={setPrice}
-            keyboardType="numeric"
-            placeholder="20.00"
-            placeholderTextColor="#9CA3AF"
-          />
-          <Text style={styles.currencyIcon}>₹</Text>
-        </View>
-
-        <Text style={styles.label}>Quantity ({quantityUnit})<Text style={styles.required}>*</Text></Text>
-        <TextInput
-          style={styles.input}
-          value={quantity}
-          onChangeText={setQuantity}
-          keyboardType="numeric"
-          placeholder="120"
-          placeholderTextColor="#9CA3AF"
-        />
-
-        {/* Description */}
-        <Text style={styles.sectionTitle}>Description</Text>
-        <Text style={styles.label}>Description<Text style={styles.required}>*</Text></Text>
-        <View style={styles.textAreaContainer}>
-          <TextInput
-            style={styles.textArea}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            placeholder="Fresh and naturally ripened bananas. Rich in nutrients and great for health."
-            placeholderTextColor="#9CA3AF"
-            textAlignVertical="top"
-          />
-          <Text style={styles.charCount}>{description.length}/200</Text>
-        </View>
-
-        {/* Product Status */}
-        <Text style={styles.sectionTitle}>Product Status</Text>
-        <Text style={styles.label}>Status<Text style={styles.required}>*</Text></Text>
-        <TouchableOpacity style={styles.dropdownContainer} onPress={() => setShowStatusModal(true)}>
-          <View style={[styles.input, {marginBottom: 0, backgroundColor: status === 'Active' ? '#ECFDF5' : '#FEE2E2', borderColor: status === 'Active' ? '#D1FAE5' : '#FECACA', justifyContent: 'center'}]}>
-             <Text style={{fontSize: 15, fontWeight: '600', color: status === 'Active' ? '#065F46' : '#991B1B'}}>{status}</Text>
-          </View>
-          <Ionicons name="chevron-down" size={20} color={status === 'Active' ? '#065F46' : '#991B1B'} style={styles.dropdownIcon} />
-        </TouchableOpacity>
-
-        {/* Location */}
-        <Text style={styles.sectionTitle}>Location</Text>
-        
-        <Text style={styles.label}>Village / City<Text style={styles.required}>*</Text></Text>
-        <TextInput
-          style={styles.input}
-          value={city}
-          onChangeText={setCity}
-          placeholder="Nashik"
-          placeholderTextColor="#9CA3AF"
-        />
-
-        <Text style={styles.label}>State<Text style={styles.required}>*</Text></Text>
-        <TextInput
-          style={styles.input}
-          value={state}
-          onChangeText={setState}
-          placeholder="Maharashtra"
-          placeholderTextColor="#9CA3AF"
-        />
-
-        <Text style={styles.label}>Area / Locality</Text>
-        <TextInput
-          style={[styles.input, {marginBottom: 30}]}
-          value={area}
-          onChangeText={setArea}
-          placeholder="Near Panchavati, Nashik"
-          placeholderTextColor="#9CA3AF"
-        />
-
-        {/* Save Button */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProduct} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <>
-              <Ionicons name="save-outline" size={20} color="#FFF" style={{marginRight: 8}} />
-              <Text style={styles.saveBtnText}>{productToEdit ? 'Update Product' : 'Save Product'}</Text>
-            </>
-          )}
-        </TouchableOpacity>
-        
-        <View style={styles.infoRow}>
-          <Ionicons name="information-circle-outline" size={14} color="#6B7280" />
-          <Text style={styles.infoText}>Changes will be updated immediately.</Text>
-        </View>
-        <View style={{height: 40}} />
       </ScrollView>
 
-      {/* Modals for Dropdowns */}
+      {/* Modals */}
       {renderDropdownModal(showCategoryModal, () => setShowCategoryModal(false), CATEGORIES, setCategory, 'Select Category')}
-      {renderDropdownModal(showStatusModal, () => setShowStatusModal(false), STATUS_OPTIONS, setStatus, 'Select Status')}
-      {renderDropdownModal(showQuantityModal, () => setShowQuantityModal(false), ['KG', 'GRAM', 'PIECE', 'BUNDLE', 'LITER'], setQuantityUnit, 'Select Unit')}
+      {renderDropdownModal(showUnitModal, () => setShowUnitModal(false), UNITS, setUnit, 'Select Unit')}
+      
+      {/* Media Selection Modal */}
+      <Modal visible={mediaModalVisible} transparent animationType="slide" onRequestClose={() => setMediaModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMediaModalVisible(false)}>
+          <View style={styles.mediaOptionsContainer}>
+            <Text style={styles.mediaOptionsTitle}>
+              Select {mediaSelectionType === 'Images' ? 'Photo' : 'Video'} Source
+            </Text>
+            
+            <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromCamera}>
+              <Ionicons
+                name={mediaSelectionType === 'Images' ? 'camera-outline' : 'videocam-outline'}
+                size={24}
+                color="#4CAF50"
+              />
+              <Text style={styles.mediaOptionText}>Take {mediaSelectionType === 'Images' ? 'Photo' : 'Video'}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromGallery}>
+              <Ionicons name="image-outline" size={24} color="#4CAF50" />
+              <Text style={styles.mediaOptionText}>Choose from Gallery</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromDocument}>
+              <Ionicons name="document-outline" size={24} color="#4CAF50" />
+              <Text style={styles.mediaOptionText}>Choose from Documents</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.mediaOptionBtn, { borderBottomWidth: 0 }]} onPress={() => setMediaModalVisible(false)}>
+              <Ionicons name="close-circle-outline" size={24} color="#E53935" />
+              <Text style={[styles.mediaOptionText, { color: '#E53935' }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </View>
   );
 };
@@ -338,215 +534,195 @@ const AddProductScreen = ({route, navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#2D983A',
   },
-  header: {
-    backgroundColor: '#1B5E20',
-    paddingTop: 10,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '800',
-    marginLeft: 4,
-  },
-  headerSubtitle: {
-    color: '#D1FAE5',
-    fontSize: 14,
-    marginLeft: 4,
-    marginTop: 4,
+  scrollContent: {
+    flexGrow: 1,
+    backgroundColor: '#2D983A',
   },
   formContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -20,
+    backgroundColor: '#F3F6F3',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: 16,
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 30,
+    paddingBottom: 40,
   },
-  photoSection: {
+  mediaSection: {
     flexDirection: 'row',
-    marginBottom: 24,
+    justifyContent: 'space-between',
+    marginBottom: 30,
   },
-  photoPreview: {
-    width: 140,
-    height: 100,
-    borderRadius: 12,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    resizeMode: 'cover',
+  mediaCard: {
+    width: '47%',
+    height: 130,
+    backgroundColor: '#FFF',
+    borderWidth: 1.5,
+    borderColor: '#E8F5E9',
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
-  changePhotoBtn: {
-    flex: 1,
-    height: 100,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderStyle: 'dashed',
+  mediaCardInner: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+  },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  replaceOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderRadius: 12,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
   },
-  changePhotoText: {
-    color: '#6B7280',
+  videoPreview: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3E5F5',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  videoSelectedText: {
+    color: '#7B1FA2',
+    marginTop: 6,
     fontSize: 13,
-    marginTop: 8,
-    fontWeight: '500',
+    fontWeight: 'bold',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#166534',
-    marginBottom: 16,
-    marginTop: 8,
+  videoFileName: {
+    color: '#9C27B0',
+    marginTop: 4,
+    fontSize: 10,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  videoReplaceText: {
+    color: '#AB47BC',
+    marginTop: 4,
+    fontSize: 10,
+  },
+  removeVideoBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(156,39,176,0.7)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconCircle: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  plusBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFF',
+  },
+  mediaCardTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2E3D2E',
+    marginBottom: 4,
+  },
+  mediaCardSub: {
+    fontSize: 11,
+    color: '#7A8C7A',
+    textAlign: 'center',
+  },
+  fieldRow: {
+    marginBottom: 20,
+  },
+  fieldContent: {
+    flex: 1,
   },
   label: {
-    fontSize: 13,
-    color: '#374151',
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 6,
-  },
-  required: {
-    color: '#EF4444',
+    color: '#2E3D2E',
+    marginBottom: 8,
+    marginLeft: 4,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    height: 52,
+    backgroundColor: '#FFFCF8', // Slightly lighter cream/white
+    color: '#2E3D2E',
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
-    height: 48,
+    elevation: 2, // 3D effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
   },
-  dropdownContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  dropdownIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 14,
-  },
-  inputWithIcon: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  inputInside: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
+  dropdownInput: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    height: 52,
+    backgroundColor: '#FFFCF8',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+  },
+  inputText: {
+    color: '#2E3D2E',
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
-    paddingRight: 40,
-    height: 48,
-  },
-  currencyIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 12,
-    fontSize: 18,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  textAreaContainer: {
-    position: 'relative',
-    marginBottom: 24,
-  },
-  textArea: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
-    height: 100,
-  },
-  charCount: {
-    position: 'absolute',
-    bottom: 8,
-    right: 12,
-    fontSize: 11,
-    color: '#9CA3AF',
   },
   saveBtn: {
-    backgroundColor: '#1B5E20',
-    borderRadius: 12,
+    backgroundColor: '#2E7D32', // Simple green
+    borderRadius: 24,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    marginTop: 20,
+    elevation: 4,
+    shadowColor: '#3D7A50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: '#FFF',
     fontSize: 16,
-    fontWeight: '700',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  quantityInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
-    height: 48,
-    marginRight: 10,
-  },
-  unitDropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 48,
-    backgroundColor: '#FFFFFF',
-    minWidth: 100,
-  },
-  unitDropdownText: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '500',
-    marginRight: 8,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginLeft: 6,
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
@@ -555,29 +731,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    width: '80%',
+    width: '85%',
     backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     maxHeight: '70%',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
+    fontWeight: 'bold',
+    color: '#2E3D2E',
+    marginBottom: 20,
     textAlign: 'center',
   },
   modalItem: {
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F3F6F3',
   },
   modalItemText: {
     fontSize: 16,
-    color: '#374151',
+    color: '#424242',
     textAlign: 'center',
+  },
+  mediaOptionsContainer: {
+    width: '100%',
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    position: 'absolute',
+    bottom: 0,
+  },
+  mediaOptionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2E3D2E',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  mediaOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F6F3',
+  },
+  mediaOptionText: {
+    fontSize: 16,
+    color: '#2E3D2E',
+    marginLeft: 16,
+    fontWeight: '500',
   },
 });
 
 export default AddProductScreen;
+

@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Image, Dimensions, ImageBackground } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-const RoleSelectionScreen = ({ navigation }: any) => {
-
+const RoleSelectionScreen = ({ route, navigation }: any) => {
+  const params = route?.params || {};
   return (
     <ImageBackground 
       source={require('../../assets/Rolle.png')}
@@ -32,7 +32,7 @@ const RoleSelectionScreen = ({ navigation }: any) => {
 
           <TouchableOpacity 
             style={[styles.button, styles.customerButton]}
-            onPress={() => navigation.navigate('CustomerRegister')}
+            onPress={() => navigation.navigate('CustomerRegister', params)}
           >
             <Ionicons name="people-outline" size={24} color="#B71C1C" />
             <Text style={styles.customerButtonText}>I am a Customer</Text>
@@ -41,7 +41,7 @@ const RoleSelectionScreen = ({ navigation }: any) => {
 
           <TouchableOpacity 
             style={[styles.button, styles.farmerButton]}
-            onPress={() => navigation.navigate('FarmerRegister')}
+            onPress={() => navigation.navigate('FarmerRegister', params)}
           >
             <Ionicons name="person-outline" size={24} color="#1B5E20" />
             <Text style={styles.farmerButtonText}>I am a Farmer</Text>

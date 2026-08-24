@@ -22,6 +22,7 @@
     "android": {
       "package": "com.siddhant.farm2home",
       "googleServicesFile": "./google-services.json",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B5E20"

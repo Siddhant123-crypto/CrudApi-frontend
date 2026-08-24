@@ -1,5 +1,14 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, Image, Dimensions, Text } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+  StatusBar,
+  ImageBackground,
+} from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 
 const WelcomeScreen = ({ navigation }: any) => {
   useEffect(() => {
@@ -11,47 +20,39 @@ const WelcomeScreen = ({ navigation }: any) => {
   }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Image 
-          source={require('../farm2home_logo.png')} 
-          style={styles.logoImage} 
-          resizeMode="contain" 
-        />
-        <Text style={styles.tagline}>Nature's Freshness, At Your Doorstep.</Text>
-      </View>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+
+      {/* Full-screen Background Image */}
+      <ImageBackground
+        source={require('../../assets/welcomelogo.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        {/* Loading Spinner at the bottom */}
+        <View style={styles.loaderWrapper}>
+          <ActivityIndicator size="large" color="#2D983A" />
+        </View>
+      </ImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9', // Light green background matching the theme
+    backgroundColor: '#FFFFFF',
   },
-  content: {
+  backgroundImage: {
     flex: 1,
-    justifyContent: 'center',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'flex-end', // Aligns children (loader) to the bottom
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
-  logoImage: {
-    width: Dimensions.get('window').width * 0.65,
-    height: Dimensions.get('window').width * 0.65,
-    borderRadius: (Dimensions.get('window').width * 0.65) / 2,
-    borderWidth: 3,
-    borderColor: '#C8E6C9',
-  },
-  tagline: {
-    marginTop: 24,
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1B5E20',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    letterSpacing: 0.5,
+  loaderWrapper: {
+    paddingBottom: 50, // Space from the bottom edge
   },
 });
 
 export default WelcomeScreen;
-

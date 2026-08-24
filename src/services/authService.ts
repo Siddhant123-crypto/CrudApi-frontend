@@ -1,72 +1,97 @@
 import api from './api';
 
-// POST /auth/login  — { email, password }
+// POST /auth/login
 export const authLogin = async (email: string, password: string) => {
-  const response = await api.post('/auth/login', {email, password});
-  return response.data; // LoginResponse { message, response: LoginData }
+  const response = await api.post('/auth/login', {
+    email,
+    password,
+  });
+
+  return response.data;
 };
 
-// POST /user/login  — { email, password }
+// POST /user/login
 export const userLogin = async (email: string, password: string) => {
-  const response = await api.post('/user/login', {email, password});
+  const response = await api.post('/user/login', {
+    email,
+    password,
+  });
+
   return response.data;
 };
 
 // POST /user/register
 export const userRegister = async (formData: FormData) => {
-  const response = await api.post('/user/register', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  console.log('USER REGISTER API CALL');
+
+  const response = await api.post(
+    '/user/register',
+    formData,
+  );
+
+  console.log(
+    'USER REGISTER RESPONSE:',
+    response.data,
+  );
+
   return response.data;
 };
-
 // POST /farmer/save
 export const farmerRegister = async (formData: FormData) => {
-  const response = await api.post('/farmer/save', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const response = await api.post('/farmer/save', formData);
+
   return response.data;
 };
 
-// POST /farmer/login  — { email, password }
+// POST /farmer/login
 export const farmerLogin = async (email: string, password: string) => {
-  const response = await api.post('/farmer/login', {email, password});
+  const response = await api.post('/farmer/login', {
+    email,
+    password,
+  });
+
   return response.data;
 };
 
-// POST /newuser/login  — { email, password }
+// POST /newuser/login
 export const newUserLogin = async (email: string, password: string) => {
-  const response = await api.post('/newuser/login', {email, password});
+  const response = await api.post('/newuser/login', {
+    email,
+    password,
+  });
+
   return response.data;
 };
 
-// POST /forgotpassword — { email, password, confirmPassword }
-export const forgotPassword = async (email: string, password: string, confirmPassword: string) => {
+// POST /forgotpassword
+export const forgotPassword = async (
+  email: string,
+  password: string,
+  confirmPassword: string,
+) => {
   const response = await api.post('/forgotpassword', {
     email,
     password,
     confirmPassword,
   });
+
   return response.data;
 };
 
-// POST /auth/check-user — { identifier }
+// POST /auth/check-user
 export const checkUser = async (identifier: string) => {
-  const response = await api.post('/auth/check-user', { identifier });
-  return response.data; // { exists: boolean, message: string, role: string | null }
-};
+  const response = await api.post('/auth/check-user', {
+    identifier,
+  });
 
-export const googleLogin = async (token: string) => {
-  const response = await api.post('/newuser/google-login', { token });
   return response.data;
 };
 
-export const keycloakLogin = async (token: string) => {
-  const response = await api.post('/newuser/keycloak-login', { token });
+// POST /auth/google
+export const googleLogin = async (idToken: string) => {
+  const response = await api.post('/auth/google', {
+    idToken,
+  });
+
   return response.data;
 };
-

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+
 import {
   View,
   Text,
@@ -14,15 +15,32 @@ import {
 
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
+
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useAuth } from '../context/AuthContext';
-import { newUserLogin, keycloakLogin } from '../services/authService';
 
-import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
+import {
+  newUserLogin,
+  googleLogin,
+} from '../services/authService';
 
-WebBrowser.maybeCompleteAuthSession();
+import {
+  GoogleSignin,
+} from '@react-native-google-signin/google-signin';
+
+// --------------------------------------------------
+// GOOGLE CONFIG
+// --------------------------------------------------
+
+GoogleSignin.configure({
+  webClientId:
+    '159078840279-7slmnqaleckksrrtr1i35lfnqj0g23v0.apps.googleusercontent.com',
+});
+
+// --------------------------------------------------
+// USER TYPE
+// --------------------------------------------------
 
 type UserData = {
   name: string;
@@ -33,186 +51,36 @@ type UserData = {
   profilePhoto?: string;
 };
 
-const NewUserLoginScreen = ({ navigation }: any) => {
+// --------------------------------------------------
+// COMPONENT
+// --------------------------------------------------
+
+const NewUserLoginScreen = ({
+  navigation,
+}: any) => {
   const { login } = useAuth();
 
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const [identifier, setIdentifier] =
+    useState('');
 
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [password, setPassword] =
+    useState('');
 
-  const [errors, setErrors] = useState<{
-    identifier?: string | null;
-    password?: string | null;
-  }>({});
+  const [loading, setLoading] =
+    useState(false);
 
-  /*
-   * KEYCLOAK DISCOVERY
-   */
+  const [googleLoading, setGoogleLoading] =
+    useState(false);
 
-  const discovery = AuthSession.useAutoDiscovery(
-    'http://172.16.20.43:9090/realms/farm2home',
-  );
+  const [errors, setErrors] =
+    useState<{
+      identifier?: string | null;
+      password?: string | null;
+    }>({});
 
-  /*
-   * GOOGLE LOGIN REQUEST
-   */
-
-  const [request, response, promptAsync] =
-    AuthSession.useAuthRequest(
-      {
-        clientId: 'farm2home-app',
-
-        redirectUri: AuthSession.makeRedirectUri({
-          scheme: 'farm2home',
-        }),
-
-        scopes: ['openid', 'profile', 'email'],
-
-        extraParams: {
-          kc_idp_hint: 'google',
-          prompt: 'select_account',
-        },
-      },
-      discovery,
-    );
-
-  /*
-   * GOOGLE LOGIN RESPONSE
-   */
-
-  useEffect(() => {
-    if (
-      response?.type === 'success' &&
-      response.params.code &&
-      discovery
-    ) {
-      setLoading(true);
-
-      AuthSession.exchangeCodeAsync(
-        {
-          clientId: 'farm2home-app',
-
-          code: response.params.code,
-
-          redirectUri: AuthSession.makeRedirectUri({
-            scheme: 'farm2home',
-          }),
-
-          extraParams:
-            request?.codeChallenge &&
-              request.codeVerifier
-              ? {
-                code_verifier:
-                  request.codeVerifier,
-              }
-              : undefined,
-        },
-
-        discovery,
-      )
-        .then(tokenResult => {
-          handleBackendKeycloakLogin(
-            tokenResult.accessToken,
-          );
-        })
-        .catch(() => {
-          setLoading(false);
-
-          Alert.alert(
-            'Auth Error',
-            'Failed to exchange token with Keycloak',
-          );
-        });
-    } else if (response?.type === 'error') {
-      Alert.alert(
-        'Error',
-        'Google login failed or was cancelled',
-      );
-    }
-  }, [response, discovery, request]);
-
-  /*
-   * KEYCLOAK -> BACKEND LOGIN
-   */
-
-  const handleBackendKeycloakLogin = async (
-    accessToken: string,
-  ) => {
-    setLoading(true);
-
-    try {
-      const result =
-        await keycloakLogin(accessToken);
-
-      if (
-        result.message &&
-        result.message.includes(
-          'Login Successful',
-        ) &&
-        result.response
-      ) {
-        const userData: UserData = {
-          name: result.response.name,
-
-          email: result.response.email,
-
-          role:
-            result.response.role === 'Farmer' ||
-              result.response.role === 'FARMER'
-              ? 'FARMER'
-              : 'USER',
-
-          farmerId:
-            result.response.role === 'Farmer' ||
-              result.response.role === 'FARMER'
-              ? result.response.id
-              : undefined,
-
-          userId:
-            result.response.role === 'Customer' ||
-              result.response.role === 'USER'
-              ? result.response.id
-              : undefined,
-
-          profilePhoto: undefined,
-        };
-
-        await login(userData);
-      } else if (
-        result.message === 'NEW_USER' &&
-        result.response
-      ) {
-        navigation.navigate(
-          'RoleSelection',
-          {
-            email: result.response.email,
-            name: result.response.name,
-          },
-        );
-      } else {
-        Alert.alert(
-          'Login Failed',
-          result.message || 'Login failed',
-        );
-      }
-    } catch (error: any) {
-      console.error(error);
-
-      Alert.alert(
-        'Error',
-        'Unable to login with server: ' +
-        (error.message || 'Unknown error'),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /*
-   * VALIDATION
-   */
+  // --------------------------------------------------
+  // VALIDATION
+  // --------------------------------------------------
 
   const validate = () => {
     const newErrors: Record<
@@ -237,9 +105,9 @@ const NewUserLoginScreen = ({ navigation }: any) => {
     );
   };
 
-  /*
-   * NORMAL LOGIN
-   */
+  // --------------------------------------------------
+  // NORMAL LOGIN
+  // --------------------------------------------------
 
   const handleLogin = async () => {
     if (!validate()) {
@@ -249,60 +117,119 @@ const NewUserLoginScreen = ({ navigation }: any) => {
     setLoading(true);
 
     try {
-      const result = await newUserLogin(
-        identifier.trim(),
-        password,
+      const result =
+        await newUserLogin(
+          identifier.trim(),
+          password,
+        );
+
+      console.log(
+        'NORMAL LOGIN RESPONSE:',
+        result,
       );
 
+      // ----------------------------------------------
+      // SUCCESS
+      // ----------------------------------------------
+
       if (
-        result.message &&
-        result.message.includes(
+        result?.message?.includes(
           'Login Successful',
         ) &&
-        result.response
+        result?.response
       ) {
+        const response =
+          result.response;
+
+        const isFarmer =
+          response.role === 'FARMER' ||
+          response.role === 'Farmer';
+
         const userData: UserData = {
-          name: result.response.name,
+          name:
+            response.name,
 
-          email: result.response.email,
+          email:
+            response.email,
 
-          role:
-            result.response.role === 'Farmer' ||
-              result.response.role === 'FARMER'
-              ? 'FARMER'
-              : 'USER',
+          role: isFarmer
+            ? 'FARMER'
+            : 'USER',
 
-          farmerId:
-            result.response.role === 'Farmer' ||
-              result.response.role === 'FARMER'
-              ? result.response.id
-              : undefined,
+          farmerId: isFarmer
+            ? response.farmerId ||
+              response.id
+            : undefined,
 
-          userId:
-            result.response.role === 'Customer' ||
-              result.response.role === 'USER'
-              ? result.response.id
-              : undefined,
+          userId: !isFarmer
+            ? response.userId ||
+              response.id
+            : undefined,
 
-          profilePhoto: undefined,
+          profilePhoto:
+            response.profilePhoto,
         };
 
-        await login(userData);
-      } else {
-        Alert.alert(
-          'Login Failed',
-          result.message ||
-          'Invalid credentials',
+        console.log(
+          'NORMAL LOGIN USER:',
+          userData,
         );
+
+        console.log(
+          'NORMAL LOGIN TOKEN:',
+          result.accessToken
+            ? 'YES'
+            : 'NO',
+        );
+
+        if (!result.accessToken) {
+          Alert.alert(
+            'Login Error',
+            'Login successful but access token was not received.',
+          );
+
+          return;
+        }
+
+        // --------------------------------------------
+        // SAVE USER + JWT
+        // --------------------------------------------
+
+        await login(
+          userData,
+          result.accessToken,
+        );
+
+        console.log(
+          'NORMAL LOGIN COMPLETED',
+        );
+
+        return;
       }
-    } catch (error: any) {
-      const msg =
-        error.response?.data?.message ||
-        error.response?.data ||
-        'Unable to connect to server. Please try again.';
+
+      // ----------------------------------------------
+      // FAILED
+      // ----------------------------------------------
 
       Alert.alert(
-        'Error',
+        'Login Failed',
+        result?.message ||
+          'Invalid credentials',
+      );
+    } catch (error: any) {
+      console.log(
+        'Normal Login Error:',
+        error,
+      );
+
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        'Unable to connect to server.';
+
+      Alert.alert(
+        'Login Error',
         typeof msg === 'string'
           ? msg
           : 'Login failed',
@@ -312,42 +239,220 @@ const NewUserLoginScreen = ({ navigation }: any) => {
     }
   };
 
-  /*
-   * GOOGLE LOGIN
-   */
+  // --------------------------------------------------
+  // GOOGLE LOGIN
+  // --------------------------------------------------
 
   const handleGoogleLogin = async () => {
-    if (!request || !discovery) {
-      Alert.alert(
-        'Error',
-        'Authentication not ready. Please wait a moment and try again.',
-      );
-
+    if (googleLoading) {
       return;
     }
 
-    try {
-      setGoogleLoading(true);
+    setGoogleLoading(true);
 
-      await promptAsync();
-    } catch (e) {
-      console.error(
-        'Google login error',
-        e,
+    try {
+      // ----------------------------------------------
+      // PLAY SERVICES
+      // ----------------------------------------------
+
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+
+      // ----------------------------------------------
+      // SIGN OUT PREVIOUS ACCOUNT
+      // ----------------------------------------------
+
+      try {
+        await GoogleSignin.signOut();
+      } catch (error) {
+        console.log(
+          'No previous Google session',
+        );
+      }
+
+      // ----------------------------------------------
+      // GOOGLE SIGN IN
+      // ----------------------------------------------
+
+      const googleResult =
+        await GoogleSignin.signIn();
+
+      console.log(
+        'GOOGLE RESULT:',
+        googleResult,
+      );
+
+      // ----------------------------------------------
+      // GET ID TOKEN
+      // ----------------------------------------------
+
+      const idToken =
+        googleResult.data?.idToken;
+
+      if (!idToken) {
+        Alert.alert(
+          'Google Login Failed',
+          'Google ID token was not received.',
+        );
+
+        return;
+      }
+
+      console.log(
+        'GOOGLE ID TOKEN RECEIVED',
+      );
+
+      // ----------------------------------------------
+      // SEND TOKEN TO BACKEND
+      // ----------------------------------------------
+
+      const backendResult =
+        await googleLogin(idToken);
+
+      console.log(
+        'GOOGLE BACKEND RESPONSE:',
+        backendResult,
+      );
+
+      // =================================================
+      // EXISTING USER
+      // =================================================
+
+      if (
+        backendResult?.message?.includes(
+          'Login Successful',
+        ) &&
+        backendResult?.response
+      ) {
+        const response =
+          backendResult.response;
+
+        const isFarmer =
+          response.role === 'FARMER' ||
+          response.role === 'Farmer';
+
+        const userData: UserData = {
+          name:
+            response.name,
+
+          email:
+            response.email,
+
+          role: isFarmer
+            ? 'FARMER'
+            : 'USER',
+
+          farmerId: isFarmer
+            ? response.farmerId ||
+              response.id
+            : undefined,
+
+          userId: !isFarmer
+            ? response.userId ||
+              response.id
+            : undefined,
+
+          profilePhoto:
+            response.profilePhoto,
+        };
+
+        console.log(
+          'GOOGLE EXISTING USER:',
+          userData,
+        );
+
+        console.log(
+          'GOOGLE JWT:',
+          backendResult.accessToken
+            ? 'YES'
+            : 'NO',
+        );
+
+        if (
+          !backendResult.accessToken
+        ) {
+          Alert.alert(
+            'Google Login Error',
+            'Backend login successful but JWT token was not received.',
+          );
+
+          return;
+        }
+
+        // --------------------------------------------
+        // SAVE USER + JWT
+        // --------------------------------------------
+
+        await login(
+          userData,
+          backendResult.accessToken,
+        );
+
+        console.log(
+          'GOOGLE EXISTING USER LOGIN SUCCESS',
+        );
+
+        return;
+      }
+
+      // =================================================
+      // NEW GOOGLE USER
+      // =================================================
+
+      if (
+        backendResult?.message ===
+          'NEW_USER' &&
+        backendResult?.response
+      ) {
+        console.log(
+          'NEW GOOGLE USER',
+        );
+
+        navigation.navigate(
+          'RoleSelection',
+          {
+            email:
+              backendResult.response.email,
+
+            name:
+              backendResult.response.name,
+
+            isGoogleSignUp: true,
+          },
+        );
+
+        return;
+      }
+
+      // =================================================
+      // FAILED
+      // =================================================
+
+      Alert.alert(
+        'Google Login Failed',
+        backendResult?.message ||
+          'Google login failed.',
+      );
+    } catch (error: any) {
+      console.log(
+        'Google Login Error:',
+        error,
       );
 
       Alert.alert(
-        'Error',
-        'Failed to start Google login',
+        'Google Login Error',
+        error?.message ||
+          'Unable to login with Google.',
       );
     } finally {
       setGoogleLoading(false);
     }
   };
 
-  /*
-   * UI
-   */
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
 
   return (
     <ImageBackground
@@ -355,209 +460,279 @@ const NewUserLoginScreen = ({ navigation }: any) => {
       style={styles.backgroundImage}
       resizeMode="cover"
     >
-      <View style={styles.overlay} />
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        behavior={
+          Platform.OS === 'ios'
+            ? 'padding'
+            : 'height'
+        }
+        keyboardVerticalOffset={
+          Platform.OS === 'ios'
+            ? 0
+            : 20
+        }
       >
-
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={
+            styles.scrollContent
+          }
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
+          showsVerticalScrollIndicator={
+            false
+          }
         >
-
           {/* HEADER */}
 
           <View style={styles.header}>
-
-            <View style={styles.logoWrapper}>
+            <View
+              style={styles.logoWrapper}
+            >
               <Image
-                source={require('../farm2home_logo.png')}
+                source={require(
+                  '../farm2home_logo.png',
+                )}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
             </View>
 
-            <View style={styles.titleContainer}>
-              <Text style={styles.welcomeText}>Welcome to</Text>
-              <Text style={styles.appName}>Farm2Home!</Text>
-            </View>
-
-          <Text style={styles.tagline}>
-            Fresh from the farm, straight to
-            your home
-          </Text>
-
-        </View>
-
-        {/* LOGIN CARD */}
-
-        <View style={styles.formContainer}>
-
-          <Text style={styles.formTitle}>
-            Sign In
-          </Text>
-
-          <Text style={styles.formSubtitle}>
-            Use your Farm2Home Account
-          </Text>
-
-          {/* EMAIL / MOBILE */}
-
-          <CustomInput
-            label="Email or Mobile"
-            value={identifier}
-            onChangeText={text => {
-              setIdentifier(text);
-
-              if (errors.identifier) {
-                setErrors({
-                  ...errors,
-                  identifier: null,
-                });
-              }
-            }}
-            placeholder="Enter email or mobile"
-            keyboardType="email-address"
-            error={errors.identifier}
-            leftIcon={<Ionicons name="person-outline" size={20} color="#757575" />}
-          />
-
-          {/* PASSWORD */}
-
-          <CustomInput
-            label="Password"
-            value={password}
-            onChangeText={text => {
-              setPassword(text);
-
-              if (errors.password) {
-                setErrors({
-                  ...errors,
-                  password: null,
-                });
-              }
-            }}
-            placeholder="Enter your password"
-            secureTextEntry
-            error={errors.password}
-            leftIcon={<Ionicons name="lock-closed-outline" size={20} color="#757575" />}
-          />
-
-          {/* FORGOT PASSWORD */}
-
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate(
-                'ForgotPassword',
-              )
-            }
-            style={styles.forgotButton}>
-
-            <Text style={styles.forgotText}>
-              Forgot Password?
+            <Text
+              style={styles.welcomeText}
+            >
+              Welcome to
             </Text>
-
-          </TouchableOpacity>
-
-          {/* SIGN IN + CREATE ACCOUNT */}
-
-          <View style={styles.actionColumn}>
-
-            <CustomButton
-              title="Sign In"
-              onPress={handleLogin}
-              loading={loading}
-              style={{ width: '80%', alignSelf: 'center', backgroundColor: '#C8E6C9', paddingVertical: 12 }}
-              textStyle={{ fontSize: 16, color: '#1B5E20', fontWeight: 'bold' }}
-            />
-
-            <View style={styles.buttonSpacerVertical} />
-
-            <CustomButton
-              title="Create account"
-              onPress={() => navigation.navigate('RoleSelection')}
-              style={{ width: '80%', alignSelf: 'center', backgroundColor: '#E8F5E9', paddingVertical: 12, borderWidth: 1, borderColor: '#C8E6C9' }}
-              textStyle={{ fontSize: 15, color: '#1B5E20', fontWeight: 'bold' }}
-            />
-
-          </View>
-
-          {/* OR */}
-
-          <View
-            style={
-              styles.dividerContainer
-            }>
-
-            <View style={styles.divider} />
-
-            <Text style={styles.orText}>
-              OR
-            </Text>
-
-            <View style={styles.divider} />
-
-          </View>
-
-          {/* GOOGLE LOGIN */}
-
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleLogin}
-            disabled={
-              googleLoading || !request
-            }>
-
-            <Image 
-              source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png' }}
-              style={styles.googleIconImage}
-              resizeMode="contain"
-            />
 
             <Text
-              style={
-                styles.googleButtonText
-              }>
-              {googleLoading
-                ? 'Opening Google...'
-                : 'Continue with Google'}
+              style={styles.appName}
+            >
+              Farm2Home!
             </Text>
 
-          </TouchableOpacity>
+            <Text
+              style={styles.tagline}
+            >
+              Fresh from the farm, straight
+              to your home
+            </Text>
+          </View>
 
-        </View>
+          {/* LOGIN CARD */}
 
+          <View
+            style={styles.formContainer}
+          >
+            <Text
+              style={styles.formTitle}
+            >
+              Sign In
+            </Text>
+
+            <Text
+              style={styles.formSubtitle}
+            >
+              Use your Farm2Home Account
+            </Text>
+
+            {/* EMAIL */}
+
+            <CustomInput
+              label="Email or Mobile"
+              value={identifier}
+              onChangeText={text => {
+                setIdentifier(text);
+
+                if (errors.identifier) {
+                  setErrors({
+                    ...errors,
+                    identifier: null,
+                  });
+                }
+              }}
+              placeholder="Enter email or mobile"
+              keyboardType="email-address"
+              error={errors.identifier}
+              leftIcon={
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color="#757575"
+                />
+              }
+            />
+
+            {/* PASSWORD */}
+
+            <CustomInput
+              label="Password"
+              value={password}
+              onChangeText={text => {
+                setPassword(text);
+
+                if (errors.password) {
+                  setErrors({
+                    ...errors,
+                    password: null,
+                  });
+                }
+              }}
+              placeholder="Enter your password"
+              secureTextEntry
+              error={errors.password}
+              leftIcon={
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color="#757575"
+                />
+              }
+            />
+
+            {/* FORGOT */}
+
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate(
+                  'ForgotPassword',
+                )
+              }
+              style={
+                styles.forgotButton
+              }
+            >
+              <Text
+                style={styles.forgotText}
+              >
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
+
+            {/* BUTTONS */}
+
+            <View
+              style={styles.actionColumn}
+            >
+              <CustomButton
+                title="Sign In"
+                onPress={handleLogin}
+                loading={loading}
+                style={{
+                  width: '80%',
+                  alignSelf: 'center',
+                  backgroundColor:
+                    '#C8E6C9',
+                  paddingVertical: 12,
+                }}
+                textStyle={{
+                  fontSize: 16,
+                  color: '#1B5E20',
+                  fontWeight: 'bold',
+                }}
+              />
+
+              <View
+                style={
+                  styles.buttonSpacerVertical
+                }
+              />
+
+              <CustomButton
+                title="Create account"
+                onPress={() =>
+                  navigation.navigate(
+                    'RoleSelection',
+                  )
+                }
+                style={{
+                  width: '80%',
+                  alignSelf: 'center',
+                  backgroundColor:
+                    '#E8F5E9',
+                  paddingVertical: 12,
+                  borderWidth: 1,
+                  borderColor:
+                    '#C8E6C9',
+                }}
+                textStyle={{
+                  fontSize: 15,
+                  color: '#1B5E20',
+                  fontWeight: 'bold',
+                }}
+              />
+            </View>
+
+            {/* OR */}
+
+            <View
+              style={
+                styles.dividerContainer
+              }
+            >
+              <View
+                style={styles.divider}
+              />
+
+              <Text
+                style={styles.orText}
+              >
+                OR
+              </Text>
+
+              <View
+                style={styles.divider}
+              />
+            </View>
+
+            {/* GOOGLE */}
+
+            <TouchableOpacity
+              style={
+                styles.googleButton
+              }
+              onPress={
+                handleGoogleLogin
+              }
+              disabled={googleLoading}
+            >
+              <Image
+                source={{
+                  uri: 'https://img.icons8.com/color/48/000000/google-logo.png',
+                }}
+                style={
+                  styles.googleIconImage
+                }
+              />
+
+              <Text
+                style={
+                  styles.googleButtonText
+                }
+              >
+                {googleLoading
+                  ? 'Signing in...'
+                  : 'Continue with Google'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
-
       </KeyboardAvoidingView>
     </ImageBackground>
   );
 };
 
-/*
- * STYLES
- */
+// --------------------------------------------------
+// STYLES
+// --------------------------------------------------
 
 const styles = StyleSheet.create({
-
   backgroundImage: {
     flex: 1,
     width: '100%',
     height: '100%',
   },
 
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)', // To ensure readability over the background image
-  },
-
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
 
   scrollContent: {
@@ -565,12 +740,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 22,
     paddingVertical: 28,
-    paddingBottom: 60, // Added padding to prevent Google button from getting clipped
+    paddingBottom: 60,
   },
-
-  /*
-   * HEADER
-   */
 
   header: {
     alignItems: 'center',
@@ -582,13 +753,10 @@ const styles = StyleSheet.create({
     height: 104,
     borderRadius: 52,
     backgroundColor: '#FFFFFF',
-
     alignItems: 'center',
     justifyContent: 'center',
-
     borderWidth: 2,
     borderColor: '#C8E6C9',
-
     marginBottom: 12,
   },
 
@@ -596,11 +764,6 @@ const styles = StyleSheet.create({
     width: 92,
     height: 92,
     borderRadius: 46,
-  },
-
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 4,
   },
 
   welcomeText: {
@@ -613,92 +776,55 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '800',
     color: '#1B5E20',
-    letterSpacing: 0.3,
     marginTop: -4,
   },
 
   tagline: {
     fontSize: 14,
     color: '#4E7D50',
-
     marginTop: 4,
-
     textAlign: 'center',
-
     fontWeight: '500',
   },
 
-  /*
-   * LOGIN CARD
-   */
-
   formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor:
+      'rgba(255,255,255,0.6)',
     borderRadius: 24,
     padding: 24,
     paddingTop: 28,
     width: '92%',
     alignSelf: 'center',
-    shadowColor: '#000',
-
     borderWidth: 1,
     borderColor: '#E4E4E4',
-
     elevation: 3,
-
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-
-    shadowOpacity: 0.08,
-
-    shadowRadius: 8,
   },
 
   formTitle: {
     fontSize: 28,
-
     fontWeight: '700',
-
     color: '#212121',
   },
 
   formSubtitle: {
     fontSize: 15,
-
     color: '#757575',
-
     marginTop: 3,
-
     marginBottom: 20,
-
     fontWeight: '500',
   },
 
-  /*
-   * FORGOT PASSWORD
-   */
-
   forgotButton: {
     alignSelf: 'flex-start',
-
     marginTop: -8,
-
     marginBottom: 16,
   },
 
   forgotText: {
     color: '#1B5E20',
-
     fontSize: 14,
-
     fontWeight: '600',
   },
-
-  /*
-   * ACTION ROW
-   */
 
   actionColumn: {
     flexDirection: 'column',
@@ -711,57 +837,34 @@ const styles = StyleSheet.create({
     height: 12,
   },
 
-  /*
-   * DIVIDER
-   */
-
   dividerContainer: {
     flexDirection: 'row',
-
     alignItems: 'center',
-
     marginVertical: 22,
   },
 
   divider: {
     flex: 1,
-
     height: 1,
-
     backgroundColor: '#DDDDDD',
   },
 
   orText: {
     marginHorizontal: 12,
-
     fontSize: 13,
-
     color: '#777777',
-
     fontWeight: '600',
   },
 
-  /*
-   * GOOGLE BUTTON
-   */
-
   googleButton: {
     height: 52,
-
     borderRadius: 11,
-
     borderWidth: 1,
-
     borderColor: '#DADCE0',
-
     backgroundColor: '#FFFFFF',
-
     flexDirection: 'row',
-
     alignItems: 'center',
-
     justifyContent: 'center',
-
     elevation: 1,
   },
 
@@ -773,12 +876,9 @@ const styles = StyleSheet.create({
 
   googleButtonText: {
     fontSize: 15,
-
     fontWeight: '600',
-
     color: '#333333',
   },
-
 });
 
 export default NewUserLoginScreen;

@@ -27,50 +27,20 @@ const ProductDetailScreen = ({route, navigation}: any) => {
     ? getProductImageUrl(product.productPhoto)
     : null;
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = () => {
     if (!user) {
       Alert.alert('Login Required', 'Please log in to place an order.');
       return;
     }
 
-    setOrdering(true);
-    try {
-      const orderId = 'ord_' + Math.random().toString(36).substr(2, 9);
-      const newOrder = {
-        orderId,
-        productId: product.productId,
-        productName: product.productName,
-        category: product.category,
-        price: product.price,
-        unit: product.unit,
-        quantity,
-        totalPrice: product.price * quantity,
-        status: 'Pending',
-        customerId: user.userId,
-        customerName: user.name,
-        farmerId: product.farmerId,
-        orderDate: new Date().toISOString(),
-      };
-
-      const storedOrders = await AsyncStorage.getItem('@farm2home_orders');
-      const parsedOrders = storedOrders ? JSON.parse(storedOrders) : [];
-      parsedOrders.push(newOrder);
-      await AsyncStorage.setItem('@farm2home_orders', JSON.stringify(parsedOrders));
-
-      Alert.alert(
-        'Order Placed! 🎉',
-        `Successfully placed order for ${quantity} ${product.unit}(s) of ${product.productName}.`,
-        [
-          {text: 'View Orders', onPress: () => navigation.navigate('Orders')},
-          {text: 'Continue Shopping', onPress: () => navigation.goBack()},
-        ],
-      );
-    } catch (error) {
-      console.log('Error placing order:', error);
-      Alert.alert('Error', 'Failed to place order. Please try again.');
-    } finally {
-      setOrdering(false);
-    }
+    // Navigate to Checkout Screen instead of directly placing the order
+    navigation.navigate('Checkout', {
+      orderItems: [{
+        product,
+        quantity
+      }],
+      totalAmount: product.price * quantity,
+    });
   };
 
   const isCustomer = user?.role === 'USER';
@@ -89,11 +59,8 @@ const ProductDetailScreen = ({route, navigation}: any) => {
             </View>
           )}
 
-          {/* Top Bar (Back & Heart) */}
+          {/* Top Bar (Heart only) */}
           <View style={styles.topBar}>
-            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color="#FFF" />
-            </TouchableOpacity>
             {isCustomer && (
               <TouchableOpacity style={styles.iconButton} onPress={() => setIsLiked(!isLiked)}>
                 <Ionicons name={isLiked ? "heart" : "heart-outline"} size={24} color={isLiked ? "#FF5252" : "#FFF"} />
@@ -306,7 +273,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     zIndex: 10,
   },
   iconButton: {
@@ -439,42 +406,55 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#EFEFEF',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   farmerCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F8FAF8',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8F5E9',
   },
   farmerAvatarPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F3F4F6',
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
+    borderWidth: 2,
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   farmerInfo: {
     flex: 1,
   },
   farmerName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#111827',
   },
   farmerSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 6,
+    color: '#2E7D32',
+    fontWeight: '600',
+    marginBottom: 8,
   },
   iconRow: {
     flexDirection: 'row',

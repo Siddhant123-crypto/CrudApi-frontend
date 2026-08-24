@@ -11,9 +11,7 @@ export const saveFarmer = async (farmerData: any, photoUri: string | null) => {
       type: 'image/jpeg',
     });
   }
-  const response = await api.post('/farmer/save', formData, {
-    headers: {'Content-Type': 'multipart/form-data'},
-  });
+  const response = await api.post('/farmer/save', formData);
   return response.data;
 };
 

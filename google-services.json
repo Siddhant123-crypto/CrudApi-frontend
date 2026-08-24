@@ -1,26 +1,44 @@
 {
   "project_info": {
-    "project_number": "262597076531",
-    "project_id": "farm2home-8174a",
-    "storage_bucket": "farm2home-8174a.firebasestorage.app"
+    "project_number": "159078840279",
+    "project_id": "farm2home-e0268",
+    "storage_bucket": "farm2home-e0268.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:262597076531:android:b76280c306d353d7c86546",
+        "mobilesdk_app_id": "1:159078840279:android:101bcde10ee976ac333d92",
         "android_client_info": {
           "package_name": "com.siddhant.farm2home"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "159078840279-0lq6phljovt7cfsatnq320t17juapfgs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.siddhant.farm2home",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "159078840279-7slmnqaleckksrrtr1i35lfnqj0g23v0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDEkT2OGS7NQtyhIIYx-w6MeyrBqdoKTds"
+          "current_key": "AIzaSyBmLbcwT7iUfclrAbBJELz1fTxkOYWXRyk"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "159078840279-7slmnqaleckksrrtr1i35lfnqj0g23v0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
