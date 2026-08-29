@@ -25,9 +25,8 @@ import {
   googleLogin,
 } from '../services/authService';
 
-import {
-  GoogleSignin,
-} from '@react-native-google-signin/google-signin';
+// @ts-ignore
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 // --------------------------------------------------
 // GOOGLE CONFIG

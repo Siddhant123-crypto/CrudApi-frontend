@@ -15,6 +15,8 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api, { BASE_URL } from '../services/api';
+import { StarRating } from '../components/reviews/StarRating';
+import { useWishlist } from '../context/WishlistContext';
 
 const { width } = Dimensions.get('window');
 const PRODUCT_CARD_WIDTH = width / 2 - 24;
@@ -41,10 +43,13 @@ interface ProductItem {
   farmerName?: string;
   qty?: number;
   unit?: string;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export default function CategoryDashboardScreen({ route, navigation }: any) {
   const { category } = route.params;
+  const { toggleWishlist, isInWishlist } = useWishlist();
 
   const [allProducts, setAllProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,9 +64,9 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
     navigation.setOptions({
       headerTitle: category,
       headerStyle: {
-        backgroundColor: '#2D983A',
+        backgroundColor: '#1E3A8A',
         elevation: 6,
-        shadowColor: '#1B5E20',
+        shadowColor: '#1E3A8A',
         shadowOpacity: 0.3,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 3 },
@@ -144,9 +149,17 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
         <View style={styles.freshTag}>
           <Text style={styles.freshTagText}>Fresh</Text>
         </View>
-        <View style={styles.heartIcon}>
-          <Ionicons name="heart-outline" size={18} color="#E74C3C" />
-        </View>
+        <TouchableOpacity 
+          style={styles.heartIcon}
+          onPress={() => toggleWishlist(item.productId)}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name={isInWishlist(item.productId) ? "heart" : "heart-outline"} 
+            size={18} 
+            color={isInWishlist(item.productId) ? "#E53935" : "#E74C3C"} 
+          />
+        </TouchableOpacity>
       </View>
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={1}>
@@ -156,12 +169,8 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
           🌾 {item.farmerName || 'Local Farmer'}
         </Text>
         <View style={styles.ratingRow}>
-          <Ionicons name="star" size={12} color="#F4B400" />
-          <Ionicons name="star" size={12} color="#F4B400" />
-          <Ionicons name="star" size={12} color="#F4B400" />
-          <Ionicons name="star" size={12} color="#F4B400" />
-          <Ionicons name="star-half" size={12} color="#F4B400" />
-          <Text style={styles.ratingText}>4.5</Text>
+          <StarRating rating={Math.round(item.averageRating || 0)} size={12} disabled={true} />
+          <Text style={styles.ratingText}>{item.averageRating ? item.averageRating.toFixed(1) : 'New'}</Text>
         </View>
         <View style={styles.priceRow}>
           <Text style={styles.productPrice}>₹{item.price}</Text>
@@ -199,7 +208,7 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
       {/* ─── PRICE FILTER BUTTONS (pill/chip style) ─── */}
       <View style={styles.priceFilterWrapper}>
         <View style={styles.priceFilterHeader}>
-          <Ionicons name="pricetag" size={16} color="#2D983A" />
+          <Ionicons name="pricetag" size={16} color="#1E3A8A" />
           <Text style={styles.priceFilterTitle}>Price Filter</Text>
         </View>
         <ScrollView
@@ -234,11 +243,11 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
 
       {/* ─── PRODUCTS GRID ─── */}
       {loading ? (
-        <ActivityIndicator size="large" color="#2D983A" style={{ marginTop: 50 }} />
+        <ActivityIndicator size="large" color="#1E3A8A" style={{ marginTop: 50 }} />
       ) : displayedProducts.length === 0 ? (
         <View style={styles.emptyBox}>
           <View style={styles.emptyIconCircle}>
-            <Ionicons name="leaf-outline" size={40} color="#2D983A" />
+            <Ionicons name="leaf-outline" size={40} color="#1E3A8A" />
           </View>
           <Text style={styles.emptyTitle}>No products found</Text>
           <Text style={styles.emptySubtitle}>Try adjusting your filters</Text>
@@ -260,7 +269,7 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F8F4',
+    backgroundColor: '#F8FAFC',
   },
 
   /* ── Search Bar (3D floating) ── */
@@ -277,16 +286,16 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 16,
     // 3D shadow effect
-    shadowColor: '#1B5E20',
+    shadowColor: '#1E3A8A',
     shadowOpacity: 0.12,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
     borderWidth: 1.5,
-    borderColor: '#E0EDE2',
+    borderColor: '#E2E8F0',
   },
   searchContainerFocused: {
-    borderColor: '#2D983A',
+    borderColor: '#1E3A8A',
     shadowOpacity: 0.22,
     shadowRadius: 16,
     elevation: 12,
@@ -295,7 +304,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E3A8A',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -337,17 +346,17 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     backgroundColor: '#FFFFFF',
     // 3D shadow for chips
-    shadowColor: '#1B5E20',
+    shadowColor: '#1E3A8A',
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#DDE8DF',
+    borderColor: '#E2E8F0',
   },
   priceChipActive: {
-    backgroundColor: '#2D983A',
-    borderColor: '#2D983A',
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 8,
@@ -420,7 +429,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#16A34A',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -477,7 +486,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#2D983A',
+    color: '#1E3A8A',
   },
   productUnit: {
     fontSize: 12,
@@ -496,7 +505,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,

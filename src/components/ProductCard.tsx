@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#EFF6FF',
   },
   placeholderText: {
     fontSize: 40,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: 'rgba(27, 94, 32, 0.85)',
+    backgroundColor: 'rgba(30, 58, 138, 0.85)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
@@ -116,12 +116,12 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#212121',
+    color: '#0F172A',
     marginBottom: 4,
   },
   farmerName: {
     fontSize: 12,
-    color: '#757575',
+    color: '#64748B',
     marginBottom: 8,
   },
   priceRow: {
@@ -131,11 +131,11 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1B5E20',
+    color: '#1E3A8A',
   },
   unit: {
     fontSize: 13,
-    color: '#757575',
+    color: '#64748B',
     marginLeft: 4,
   },
 });

@@ -4,9 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface OrderTimelineProps {
   status: string;
+  isFarmer?: boolean;
 }
 
-export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status }) => {
+export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer = false }) => {
   const statuses = [
     { id: 'PENDING', label: 'Order placed, waiting for farmer' },
     { id: 'CONFIRMED', label: 'Farmer accepted your order' },
@@ -43,7 +44,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status }) => {
                 style={[
                   styles.timelineDot,
                   isCompleted ? styles.timelineDotActive : styles.timelineDotInactive,
-                  isCurrent && styles.timelineDotCurrent,
+                  isCurrent && (isFarmer ? styles.timelineDotCurrent : styles.timelineDotCurrentCustomer),
                 ]}
               >
                 {isCompleted && !isCurrent && (
@@ -63,7 +64,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status }) => {
               <Text
                 style={[
                   styles.timelineText,
-                  isCurrent && styles.timelineTextCurrent,
+                  isCurrent && (isFarmer ? styles.timelineTextCurrent : styles.timelineTextCurrentCustomer),
                   !isCompleted && styles.timelineTextInactive,
                 ]}
               >
@@ -111,6 +112,11 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#A7F3D0',
   },
+  timelineDotCurrentCustomer: {
+    backgroundColor: '#1E3A8A',
+    borderWidth: 4,
+    borderColor: '#BFDBFE',
+  },
   timelineLine: {
     width: 2,
     flex: 1,
@@ -138,6 +144,10 @@ const styles = StyleSheet.create({
   timelineTextCurrent: {
     fontWeight: '700',
     color: '#1B5E20',
+  },
+  timelineTextCurrentCustomer: {
+    fontWeight: '700',
+    color: '#1E3A8A',
   },
   timelineTextInactive: {
     color: '#9CA3AF',

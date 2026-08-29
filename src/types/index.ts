@@ -34,8 +34,33 @@ export interface Product {
   unit: string;
   description?: string;
   productPhoto?: string;
+  productVideo?: string;
   isActive?: boolean;
   status?: string;
+  averageRating?: number;
+  reviewCount?: number;
+  harvestDate?: string;
+}
+
+export interface ReviewMedia {
+  mediaId: string;
+  mediaType: 'IMAGE' | 'VIDEO';
+  mediaUrl: string;
+  createdAt: string;
+}
+
+export interface Review {
+  reviewId: string;
+  productId: string;
+  orderId: string;
+  productName: string;
+  customerDisplayName: string;
+  rating: number;
+  reviewText?: string;
+  isVerifiedPurchase: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  media?: ReviewMedia[];
 }
 
 export interface LoginResponse {
@@ -51,4 +76,52 @@ export interface RegisterResponse {
 export interface ApiResponse<T> {
   message: string;
   response: T;
+}
+
+export interface ProductRatingResponse {
+  productId: string;
+  productName: string;
+  averageRating: number;
+  reviewCount: number;
+}
+
+export interface CartItemResponse {
+  cartItemId: string;
+  productId: string;
+  productName: string;
+  imageUrl?: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  subtotal: number;
+}
+
+export interface CartResponse {
+  cartId: string;
+  totalAmount: number;
+  totalItems: number;
+  items: CartItemResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WishlistResponse {
+  wishlistId: string;
+  productId: string;
+  productName: string;
+  category: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  description?: string;
+  productPhoto?: string;
+  productVideo?: string;
+  averageRating?: number;
+  reviewCount?: number;
+  createdAt: string;
+}
+
+export interface WishlistCheckResponse {
+  inWishlist: boolean;
+  wishlistId?: string;
 }

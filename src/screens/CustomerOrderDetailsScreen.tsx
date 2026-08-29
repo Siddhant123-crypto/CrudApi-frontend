@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,18 @@ import {
   Image,
   Modal,
   TextInput,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../services/api';
 import {getProductImageUrl} from '../services/productService';
 import { OrderTimeline } from '../components/orders/OrderTimeline';
+import { OrderStatusBadge } from '../components/orders/OrderStatusBadge';
+import { ReviewForm } from '../components/reviews/ReviewForm';
+import { StarRating } from '../components/reviews/StarRating';
+import { getProductReviews, deleteReview } from '../services/reviewService';
 
 const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
   const {orderId} = route.params;
@@ -28,22 +35,87 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
   const [editReasonText, setEditReasonText] = useState('');
   const [editingReason, setEditingReason] = useState(false);
 
-  const fetchOrderDetails = async () => {
+  const [reviews, setReviews] = useState<Record<string, any>>({});
+  const [reviewFormVisible, setReviewFormVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  const appState = useRef(AppState.currentState);
+
+  const fetchReviewsForOrderItems = async (orderData: any) => {
+    if (orderData && orderData.status === 'DELIVERED') {
+      try {
+        const reviewsMap: Record<string, any> = {};
+        await Promise.all(
+          orderData.items.map(async (item: any) => {
+            if (item.productId) {
+              const productReviews = await getProductReviews(item.productId);
+              const reviewForThisOrder = productReviews.find(
+                (r: any) => r.orderId === orderData.orderId
+              );
+              if (reviewForThisOrder) {
+                reviewsMap[item.productId] = reviewForThisOrder;
+              }
+            }
+          })
+        );
+        setReviews(reviewsMap);
+      } catch (error) {
+        console.log('Error fetching order reviews:', error);
+      }
+    }
+  };
+
+  const fetchOrderDetails = async (isSilent = false) => {
+    // Only show full loading indicator on first load
+    if (!isSilent && !order) {
+      setLoading(true);
+    }
     try {
       const response = await api.get(`/order/${orderId}`);
       setOrder(response.data);
+      await fetchReviewsForOrderItems(response.data);
     } catch (error) {
       console.log('Error fetching order details:', error);
-      Alert.alert('Error', 'Failed to load order details');
-      navigation.goBack();
+      if (!isSilent) {
+        Alert.alert('Error', 'Failed to load order details');
+        navigation.goBack();
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOrderDetails();
-  }, [orderId]);
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      
+      // 1. Fetch immediately on focus
+      fetchOrderDetails(false);
+
+      // 2. Start polling interval
+      const intervalId = setInterval(() => {
+        if (appState.current === 'active' && isMounted) {
+          fetchOrderDetails(true); // Silent refresh
+        }
+      }, 10000);
+
+      // 3. Handle AppState changes
+      const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+        if (appState.current.match(/inactive|background/) && nextAppState === 'active' && isMounted) {
+          // Immediately fetch when coming back to foreground
+          fetchOrderDetails(true);
+        }
+        appState.current = nextAppState;
+      });
+
+      // 4. Cleanup
+      return () => {
+        isMounted = false;
+        clearInterval(intervalId);
+        subscription.remove();
+      };
+    }, [orderId])
+  );
 
   const handleCancelOrder = () => {
     setCancelModalVisible(true);
@@ -88,10 +160,36 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
     }
   };
 
+  const handleDeleteReview = (reviewId: string, productId: string) => {
+    Alert.alert(
+      'Delete Review',
+      'Are you sure you want to delete your review?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteReview(reviewId);
+              Alert.alert('Success', 'Review deleted successfully');
+              const updatedReviews = { ...reviews };
+              delete updatedReviews[productId];
+              setReviews(updatedReviews);
+            } catch (error: any) {
+              console.log('Error deleting review:', error);
+              Alert.alert('Error', error.response?.data?.message || 'Failed to delete review');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1B5E20" />
+        <ActivityIndicator size="large" color="#1E3A8A" />
       </View>
     );
   }
@@ -115,7 +213,10 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
         
         {/* Status Timeline */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Order Status</Text>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
+            <Text style={styles.sectionTitle}>Overall Order Status</Text>
+            <OrderStatusBadge status={order.status} />
+          </View>
           <OrderTimeline status={order.status} />
         </View>
 
@@ -143,17 +244,85 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           {order.items.map((item: any, index: number) => {
             const imageUrl = item.imageUrl ? getProductImageUrl(item.imageUrl) : null;
             return (
-              <View key={index} style={[styles.itemRow, index > 0 && styles.itemRowBorder]}>
-                {imageUrl ? (
-                  <Image source={{uri: imageUrl}} style={styles.itemImage} />
-                ) : (
-                  <View style={styles.placeholderImage}><Text>🌾</Text></View>
-                )}
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.productName}</Text>
-                  <Text style={styles.itemMeta}>{item.quantity} {item.unit} x ₹{item.price}</Text>
+              <View key={index} style={[styles.itemRowContainer, index > 0 && styles.itemRowBorder]}>
+                <View style={styles.itemRow}>
+                  {imageUrl ? (
+                    <Image source={{uri: imageUrl}} style={styles.itemImage} />
+                  ) : (
+                    <View style={styles.placeholderImage}><Text>🌾</Text></View>
+                  )}
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.productName}</Text>
+                    <Text style={styles.itemFarmer}>Farmer: {item.farmerName || 'Local Farmer'}</Text>
+                    <Text style={styles.itemMeta}>{item.quantity} {item.unit} x ₹{item.price}</Text>
+                    <View style={{marginTop: 6}}>
+                      <OrderStatusBadge status={item.status} />
+                    </View>
+                  </View>
+                  <Text style={styles.itemTotal}>₹{item.subtotal.toFixed(2)}</Text>
                 </View>
-                <Text style={styles.itemTotal}>₹{item.subtotal.toFixed(2)}</Text>
+
+                {/* Review status / action */}
+                {item.status === 'DELIVERED' && (
+                  <View style={styles.reviewActionContainer}>
+                    {reviews[item.productId] ? (
+                      <View style={styles.reviewedBox}>
+                        <View style={styles.reviewedHeader}>
+                          <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                          <Text style={styles.reviewedText}>You reviewed this product</Text>
+                        </View>
+                        <View style={styles.reviewedContent}>
+                          <StarRating rating={reviews[item.productId].rating} size={14} disabled={true} />
+                          {reviews[item.productId].reviewText ? (
+                            <Text style={styles.reviewedTextSnippet} numberOfLines={1}>
+                              "{reviews[item.productId].reviewText}"
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.reviewedActions}>
+                          <TouchableOpacity
+                            style={styles.reviewEditBtn}
+                            onPress={() => {
+                              setSelectedProduct(item);
+                              setReviewFormVisible(true);
+                            }}
+                          >
+                            <Text style={styles.reviewEditBtnText}>Edit Review</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.reviewDeleteBtn}
+                            onPress={() => handleDeleteReview(reviews[item.productId].reviewId, item.productId)}
+                          >
+                            <Text style={styles.reviewDeleteBtnText}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={styles.notReviewedBox}>
+                        <Text style={styles.ratePrompt}>How was this product?</Text>
+                        <View style={styles.rateActionRow}>
+                          <StarRating
+                            rating={0}
+                            size={20}
+                            onRatingChange={(newRating) => {
+                              setSelectedProduct({ ...item, productId: item.productId, initialRating: newRating });
+                              setReviewFormVisible(true);
+                            }}
+                          />
+                          <TouchableOpacity
+                            style={styles.writeReviewBtn}
+                            onPress={() => {
+                              setSelectedProduct(item);
+                              setReviewFormVisible(true);
+                            }}
+                          >
+                            <Text style={styles.writeReviewBtnText}>Write a review</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             );
           })}
@@ -292,6 +461,28 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           </View>
         </View>
       </Modal>
+
+      {selectedProduct && (
+        <ReviewForm
+          visible={reviewFormVisible}
+          orderId={order.orderId}
+          productId={selectedProduct.productId}
+          productName={selectedProduct.productName}
+          existingReview={reviews[selectedProduct.productId]}
+          onClose={() => {
+            setReviewFormVisible(false);
+            setSelectedProduct(null);
+          }}
+          onSubmitSuccess={(newReview) => {
+            setReviewFormVisible(false);
+            setSelectedProduct(null);
+            setReviews((prev) => ({
+              ...prev,
+              [newReview.productId]: newReview,
+            }));
+          }}
+        />
+      )}
     </View>
   );
 };
@@ -299,7 +490,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F8FAFC',
   },
   loadingContainer: {
     flex: 1,
@@ -313,9 +504,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E3A8A',
     borderBottomWidth: 1,
-    borderBottomColor: '#2D983A',
+    borderBottomColor: '#1E3A8A',
   },
   backBtn: {
     padding: 4,
@@ -333,10 +524,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#86EFAC',
+    borderColor: '#E2E8F0',
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#1B5E20',
+    shadowColor: '#1E3A8A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -346,10 +537,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#86EFAC',
+    borderColor: '#E2E8F0',
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#1B5E20',
+    shadowColor: '#1E3A8A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -460,7 +651,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -472,6 +663,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#111827',
+  },
+  itemFarmer: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontWeight: '500',
+    marginTop: 2,
   },
   itemMeta: {
     fontSize: 13,
@@ -511,7 +708,7 @@ const styles = StyleSheet.create({
   summaryTotal: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1B5E20',
+    color: '#1E3A8A',
   },
 
   bottomBar: {
@@ -602,6 +799,103 @@ const styles = StyleSheet.create({
   modalConfirmBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '700',
+  },
+  itemRowContainer: {
+    paddingVertical: 12,
+  },
+  reviewActionContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 12,
+    marginTop: 8,
+  },
+  reviewedBox: {
+    width: '100%',
+  },
+  reviewedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  reviewedText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#16A34A',
+    marginLeft: 6,
+  },
+  reviewedContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  reviewedTextSnippet: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontStyle: 'italic',
+    marginLeft: 8,
+    flex: 1,
+  },
+  reviewedActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 8,
+  },
+  reviewEditBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    marginRight: 8,
+  },
+  reviewEditBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  reviewDeleteBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  reviewDeleteBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  notReviewedBox: {
+    width: '100%',
+  },
+  ratePrompt: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: 6,
+  },
+  rateActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  writeReviewBtn: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  writeReviewBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '700',
   },
 });

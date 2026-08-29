@@ -19,7 +19,11 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import api, { BASE_URL } from '../services/api';
+import { StarRating } from '../components/reviews/StarRating';
+import { getUserById } from '../services/userService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const BANNER_WIDTH = screenWidth - 40;
@@ -35,16 +39,46 @@ interface ProductItem {
   productVideo?: string;
   status: string;
   isDelete?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
+  description?: string;
+  harvestDate?: string;
 }
 
 const CustomerDashboard = ({ navigation }: any) => {
   const { logout, user } = useAuth();
+  const { cartCount, addToCart } = useCart();
+  const { wishlist, toggleWishlist, isInWishlist } = useWishlist();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [allProducts, setAllProducts] = useState<ProductItem[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [isFilteredView, setIsFilteredView] = useState(false);
+  const [locationText, setLocationText] = useState('Nashik, Maharashtra');
   const bannerScrollRef = useRef<ScrollView>(null);
+  const searchInputRef = useRef<TextInput>(null);
+
+  const focusSearchInput = () => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  useEffect(() => {
+    const fetchUserLocation = async () => {
+      try {
+        if (user?.userId) {
+          const profile = await getUserById(user.userId);
+          if (profile && profile.village) {
+            setLocationText(`${profile.village}, ${profile.state || 'Maharashtra'}`);
+          }
+        }
+      } catch (error) {
+        console.log('Error fetching user location for header:', error);
+      }
+    };
+    fetchUserLocation();
+  }, [user]);
   
   // Filter states
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -62,12 +96,12 @@ const CustomerDashboard = ({ navigation }: any) => {
 
   // Colorful categories — fixed names to match icons
   const categories = [
-    { name: 'Vegetable',       icon: 'leaf-outline',       color: '#4CAF50', bg: '#E8F5E9' },
-    { name: 'Fruit',           icon: 'nutrition-outline',  color: '#FF9800', bg: '#FFF3E0' },
-    { name: 'Root Vegetable',  icon: 'aperture-outline',   color: '#E91E63', bg: '#FCE4EC' },
-    { name: 'Grains',          icon: 'basket-outline',     color: '#FFC107', bg: '#FFFDE7' },
-    { name: 'Wild Veggies',    icon: 'flower-outline',     color: '#9C27B0', bg: '#F3E5F5' },
-    { name: 'Dairy',           icon: 'water-outline',      color: '#03A9F4', bg: '#E1F5FE' },
+    { name: 'Vegetable',       icon: 'leaf',       color: '#10B981', bg: '#E6F4EA' },
+    { name: 'Fruit',           icon: 'nutrition',  color: '#F59E0B', bg: '#FFF3E0' },
+    { name: 'Root Vegetable',  icon: 'rose',       color: '#EC4899', bg: '#FCE4EC' },
+    { name: 'Grains',          icon: 'basket',     color: '#D97706', bg: '#FEF3C7' },
+    { name: 'Wild Veggies',    icon: 'flower',     color: '#8B5CF6', bg: '#F3E5F5' },
+    { name: 'Dairy',           icon: 'water',      color: '#3B82F6', bg: '#DBEAFE' },
   ];
 
   // ── Fetch all products on focus ─────────────────────────────────────────
@@ -120,20 +154,53 @@ const CustomerDashboard = ({ navigation }: any) => {
   };
 
   const handleSearch = async () => {
-    if (!searchText.trim()) {
+    const term = searchText.trim().toLowerCase();
+    if (!term) {
       fetchAllProducts();
       return;
     }
     try {
       setLoadingProducts(true);
+      // Try API search
       const response = await api.get(`/product/search?keyword=${searchText}`);
-      const raw: ProductItem[] = Array.isArray(response.data) ? response.data : [];
-      const visible = raw.filter(p => p.isDelete !== true && p.status !== 'DELETED');
-      setAllProducts(visible);
+      let results: ProductItem[] = Array.isArray(response.data) ? response.data : [];
+      results = results.filter(p => p.isDelete !== true && p.status !== 'DELETED');
+
+      // Fallback: If API returns empty, search locally in currently loaded products
+      if (results.length === 0) {
+        console.log('API search returned empty. Doing local search fallback...');
+        const localResponse = await api.get('/product/getAll');
+        const rawList: ProductItem[] = Array.isArray(localResponse.data) ? localResponse.data : [];
+        results = rawList.filter(p => 
+          p.isDelete !== true && 
+          p.status !== 'DELETED' &&
+          (p.productName?.toLowerCase().includes(term) || 
+           p.description?.toLowerCase().includes(term) || 
+           p.category?.toLowerCase().includes(term))
+        );
+      }
+
+      setAllProducts(results);
       setIsFilteredView(true);
     } catch (error) {
-      console.log('Error searching products:', error);
-      Alert.alert('Error', 'Failed to search products');
+      console.log('Error searching products, trying local fallback:', error);
+      // Local fallback on API error
+      try {
+        const localResponse = await api.get('/product/getAll');
+        const rawList: ProductItem[] = Array.isArray(localResponse.data) ? localResponse.data : [];
+        const results = rawList.filter(p => 
+          p.isDelete !== true && 
+          p.status !== 'DELETED' &&
+          (p.productName?.toLowerCase().includes(term) || 
+           p.description?.toLowerCase().includes(term) || 
+           p.category?.toLowerCase().includes(term))
+        );
+        setAllProducts(results);
+        setIsFilteredView(true);
+      } catch (fallbackError) {
+        console.log('Local fallback failed too:', fallbackError);
+        Alert.alert('Error', 'Failed to search products');
+      }
     } finally {
       setLoadingProducts(false);
     }
@@ -259,104 +326,83 @@ const CustomerDashboard = ({ navigation }: any) => {
         >
 
           {/* =====================
-              HEADER STRIP
+              UNIFIED HEADER BLOCK
           ===================== */}
-          <View style={styles.topGreenStrip}>
-            <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <View style={styles.headerActions}>
-              {/* NOTIFICATION */}
-              <TouchableOpacity
-                style={styles.headerIconButton}
-                onPress={() => Alert.alert('Notifications', 'No new notifications.')}
-              >
-                <Ionicons name="notifications-outline" size={22} color="#263329" />
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>3</Text>
-                </View>
+          <View style={styles.headerBlock}>
+            {/* Top location & actions row */}
+            <View style={styles.headerTopRow}>
+              {/* Back Arrow */}
+              <TouchableOpacity onPress={handleBackPress} style={styles.backButton} activeOpacity={0.8}>
+                <Ionicons name="arrow-back" size={26} color="#FFFFFF" />
               </TouchableOpacity>
 
-              {/* CART */}
-              <TouchableOpacity
-                style={styles.headerIconButton}
-                onPress={() => Alert.alert('Cart', 'Your cart is empty.')}
-              >
-                <Ionicons name="cart-outline" size={22} color="#263329" />
-                <View style={styles.cartBadge}>
-                  <Text style={styles.badgeText}>2</Text>
+              <View style={styles.locationContainer}>
+                <Ionicons name="location" size={24} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <View style={styles.locationTextContainer}>
+                  <Text style={styles.deliverToText}>Deliver to</Text>
+                  <TouchableOpacity 
+                    style={styles.locationNameRow}
+                    onPress={() => navigation.navigate('Profile')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.locationNameText} numberOfLines={1}>
+                      {locationText}
+                    </Text>
+                    <Ionicons name="chevron-down" size={16} color="#FFFFFF" style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
+              </View>
+
+              <View style={styles.headerActions}>
+                {/* Bell notification */}
+                <TouchableOpacity 
+                  style={styles.headerIconButton} 
+                  onPress={() => Alert.alert('Notifications', 'No new notifications.')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.badgeText}>2</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.headerIconButton} 
+                  onPress={() => navigation.navigate('Cart')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="cart-outline" size={26} color="#FFFFFF" />
+                  {cartCount > 0 && (
+                    <View style={styles.cartBadge}>
+                      <Text style={styles.badgeText}>{cartCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
 
-          {/* =====================
-              HEADER / SEARCH
-          ===================== */}
-          <View style={styles.header}>
-            <Text style={styles.greeting}>
-              Hello, {user?.name || 'Customer'}!
-            </Text>
-            <Text style={styles.subtitle}>Fresh from farms, straight to you</Text>
-
-            {/* SEARCH */}
+            {/* SEARCH BOX */}
             <View style={styles.searchBox}>
-              <Ionicons name="search-outline" size={24} color="#2D983A" onPress={handleSearch} />
+              <Ionicons name="search-outline" size={20} color="#64748B" onPress={handleSearch} style={{ marginRight: 8 }} />
               <TextInput
+                ref={searchInputRef}
                 value={searchText}
                 onChangeText={setSearchText}
                 onSubmitEditing={handleSearch}
-                placeholder="Search products..."
-                placeholderTextColor="#8A938D"
+                placeholder="Search for products..."
+                placeholderTextColor="#94A3B8"
                 style={styles.searchInput}
               />
               <TouchableOpacity 
                 onPress={() => setShowFilterModal(true)}
                 accessibilityLabel="Product Filter"
               >
-                <Ionicons name="options-outline" size={24} color="#2D983A" />
+                <Ionicons name="options-outline" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* =====================
-              CATEGORIES (colorful)
-          ===================== */}
-          <View style={styles.categorySection}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryScroll}
-            >
-              {categories.map((category, index) => {
-                return (
-                  <TouchableOpacity
-                    key={category.name}
-                    style={styles.categoryCard}
-                    onPress={() => openCategory(category.name)}
-                    activeOpacity={0.7}
-                  >
-                    <View
-                      style={[
-                        styles.categoryIconBox,
-                        { backgroundColor: category.bg, borderColor: category.bg },
-                      ]}
-                    >
-                      <Ionicons
-                        name={category.icon as any}
-                        size={26}
-                        color={category.color}
-                      />
-                    </View>
-                    <Text style={styles.categoryText}>
-                      {category.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+          <View style={styles.mainContentCard}>
 
           {/* =====================
               BANNER
@@ -417,6 +463,58 @@ const CustomerDashboard = ({ navigation }: any) => {
           </View>
 
           {/* =====================
+              CATEGORIES (colorful)
+          ===================== */}
+          <View style={styles.categorySection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Text style={styles.sectionTitle}>Categories</Text>
+              </View>
+              <TouchableOpacity onPress={openAllProducts} style={styles.viewAllRow}>
+                <Text style={styles.viewAllText}>View all</Text>
+                <Ionicons name="chevron-forward" size={16} color="#2563EB" style={{ marginLeft: 2 }} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryScroll}
+            >
+              {categories.map((category, index) => {
+                return (
+                  <TouchableOpacity
+                    key={category.name}
+                    style={styles.categoryCard}
+                    onPress={() => openCategory(category.name)}
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={[
+                        styles.categoryIconBox,
+                        { 
+                          backgroundColor: category.bg, 
+                          borderColor: category.color,
+                          borderWidth: 1.5,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={category.icon as any}
+                        size={20}
+                        color={category.color}
+                      />
+                    </View>
+                    <Text style={styles.categoryText} numberOfLines={1}>
+                      {category.name === 'Root Vegetable' ? 'Root Veg' : category.name === 'Wild Veggies' ? 'Wild Veg' : category.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* =====================
               FARMER SHORTS (YouTube-style horizontal videos)
           ===================== */}
           {videoProducts.length > 0 && (
@@ -427,7 +525,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                 </View>
                 <TouchableOpacity style={styles.viewAllRow} onPress={openAllProducts}>
                   <Text style={styles.viewAllText}>View All</Text>
-                  <Ionicons name="chevron-forward" size={18} color="#208A35" />
+                  <Ionicons name="chevron-forward" size={18} color="#2563EB" />
                 </TouchableOpacity>
               </View>
 
@@ -473,7 +571,7 @@ const CustomerDashboard = ({ navigation }: any) => {
 
                     {/* Play button */}
                     <View style={styles.shortPlayBtn}>
-            <View style={styles.shortPlayCircle}>
+                    <View style={styles.shortPlayCircle}>
                         <Ionicons name="play" size={20} color="#FFFFFF" />
                       </View>
                     </View>
@@ -498,106 +596,196 @@ const CustomerDashboard = ({ navigation }: any) => {
           )}
 
           {/* =====================
-              CATEGORY WISE FEEDS
+              PRODUCT FEEDS / SEARCH RESULTS
           ===================== */}
           {loadingProducts ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color="#2D983A" />
+              <ActivityIndicator size="small" color="#1E3A8A" />
               <Text style={styles.loadingText}>Loading products...</Text>
             </View>
-          ) : (
-            categories.map(category => {
-              const categoryProducts = allProducts.filter(p => 
-                p.category?.toLowerCase() === category.name.toLowerCase() && !!p.productPhoto
-              );
+          ) : isFilteredView ? (
+            /* SEARCH RESULTS VIEW */
+            <View style={{ marginBottom: 20 }}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={styles.sectionTitle}>Search Results</Text>
+                </View>
+              </View>
 
-              if (categoryProducts.length === 0) return null;
-
-              return (
-                <View key={category.name} style={{ marginBottom: 20 }}>
-                  <View style={styles.sectionHeader}>
-                    <View style={styles.sectionTitleRow}>
-                      <Text style={styles.sectionTitle}>Fresh {category.name}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => openCategory(category.name)} style={styles.viewAllRow}>
-                      <Text style={styles.viewAllText}>View All</Text>
-                      <Ionicons name="chevron-forward" size={18} color="#208A35" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.productScroll}
-                  >
-                    {categoryProducts.map(product => (
-                      <View key={product.productId} style={styles.productCard}>
-                        {product.status === 'INACTIVE' && (
-                          <View style={styles.inactiveLabel}>
-                            <Text style={styles.inactiveLabelText}>Inactive</Text>
-                          </View>
-                        )}
-                        <TouchableOpacity
-                          activeOpacity={0.95}
-                          onPress={() => openProduct(product.productId)}
-                        >
-                          <View style={styles.productImageWrapper}>
-                            <Image
-                              source={
-                                product.productPhoto
-                                  ? { uri: `${BASE_URL}/product/image/${product.productPhoto}` }
-                                  : { uri: 'https://placehold.co/200x200/E8F5E2/2E9B32?text=Fresh' }
-                              }
-                              style={styles.productImage}
-                              resizeMode="cover"
-                            />
-                            <View style={styles.freshBadge}>
-                              <Text style={styles.freshBadgeText}>Fresh</Text>
-                            </View>
-                            <TouchableOpacity style={styles.favoriteButton}>
-                              <Ionicons name="heart-outline" size={21} color="#26332A" />
-                            </TouchableOpacity>
-                          </View>
-
-                          <View style={styles.productInfo}>
-                            <Text style={styles.productName} numberOfLines={2}>
-                              {product.productName}
-                            </Text>
-                            <Text style={styles.productFarmer}>
-                              by {(product as any).farmerName || 'Farmer'}
-                            </Text>
-                            <Text style={styles.productCategory}>{product.category}</Text>
-                            <View style={styles.ratingRow}>
-                              <Ionicons name="star" size={13} color="#F4B400" />
-                              <Ionicons name="star" size={13} color="#F4B400" />
-                              <Ionicons name="star" size={13} color="#F4B400" />
-                              <Ionicons name="star" size={13} color="#F4B400" />
-                              <Ionicons name="star-half" size={13} color="#F4B400" />
-                              <Text style={styles.ratingText}> 4.5</Text>
-                            </View>
-                            <Text style={styles.priceText}>
-                              ₹{product.price}.00
-                              <Text style={styles.priceUnit}>
-                                {' '}/ {product.unit?.toLowerCase() || 'kg'}
-                              </Text>
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
+              <ScrollView
+                horizontal={false}
+                contentContainerStyle={styles.searchResultsGrid}
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.searchResultsGridInner}>
+                  {allProducts.map(product => (
+                    <TouchableOpacity
+                      key={product.productId}
+                      style={[styles.premiumProductCard, { width: '45%', marginHorizontal: '2.5%', marginBottom: 16 }]}
+                      onPress={() => openProduct(product.productId)}
+                      activeOpacity={0.9}
+                    >
+                      {/* Image Container with light backdrop */}
+                      <View style={styles.premiumImageContainer}>
+                        <Image
+                          source={
+                            product.productPhoto
+                              ? { uri: `${BASE_URL}/product/image/${product.productPhoto}` }
+                              : { uri: 'https://placehold.co/150x120/F8FAFC/1E3A8A?text=Fresh' }
+                          }
+                          style={styles.premiumProductImage}
+                          resizeMode="contain"
+                        />
                         
-                        {/* ADD BUTTON */}
-                        <TouchableOpacity
-                          style={styles.addButton}
-                          onPress={() => openProduct(product.productId)}
+                        {/* Wishlist Heart Icon */}
+                        <TouchableOpacity 
+                          style={styles.premiumHeartBtn}
+                          onPress={() => toggleWishlist(product.productId)}
                         >
-                          <Ionicons name="cart-outline" size={19} color="#258D36" />
-                          <Text style={styles.addButtonText}>Add to Cart</Text>
+                          <Ionicons 
+                            name={isInWishlist(product.productId) ? "heart" : "heart-outline"} 
+                            size={18} 
+                            color={isInWishlist(product.productId) ? "#EF4444" : "#64748B"} 
+                          />
                         </TouchableOpacity>
                       </View>
-                    ))}
-                  </ScrollView>
+
+                      {/* Info Container */}
+                      <View style={styles.premiumInfoContainer}>
+                        <Text style={styles.premiumProductName} numberOfLines={1}>
+                          {product.productName}
+                        </Text>
+                        <Text style={styles.premiumProductUnit}>
+                          1 {product.unit || 'KG'}
+                        </Text>
+                        
+                        <View style={styles.premiumPriceRatingRow}>
+                          <View style={styles.premiumPriceCol}>
+                            <Text style={styles.premiumProductPrice}>₹{product.price}</Text>
+                            <View style={styles.premiumRatingRow}>
+                              <Ionicons name="star" size={12} color="#F59E0B" />
+                              <Text style={styles.premiumRatingText}>
+                                {product.averageRating ? product.averageRating.toFixed(1) : '4.6'}
+                              </Text>
+                            </View>
+                          </View>
+                          
+                          {/* ADD BUTTON */}
+                          <TouchableOpacity
+                            style={styles.premiumAddBtn}
+                            onPress={() => addToCart(product.productId, 1)}
+                          >
+                            <Ionicons name="add" size={20} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              );
-            })
+              </ScrollView>
+            </View>
+          ) : (
+            /* NORMAL DASHBOARD VIEW */
+            <>
+              {/* Fresh Vegetables Section */}
+              <View style={{ marginBottom: 20 }}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleRow}>
+                    <Text style={styles.sectionTitle}>Fresh Vegetables</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => openCategory('Vegetable')} style={styles.viewAllRow}>
+                    <Text style={styles.viewAllText}>View all</Text>
+                    <Ionicons name="chevron-forward" size={16} color="#2563EB" style={{ marginLeft: 2 }} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.premiumProductScroll}
+                >
+                  {allProducts
+                    .filter(p => p.category?.toLowerCase() === 'vegetable' && p.isDelete !== true && p.status !== 'DELETED')
+                    .map(product => (
+                      <TouchableOpacity
+                        key={product.productId}
+                        style={styles.premiumProductCard}
+                        onPress={() => openProduct(product.productId)}
+                        activeOpacity={0.9}
+                      >
+                        {/* Image Container with light backdrop */}
+                        <View style={styles.premiumImageContainer}>
+                          <Image
+                            source={
+                              product.productPhoto
+                                ? { uri: `${BASE_URL}/product/image/${product.productPhoto}` }
+                                : { uri: 'https://placehold.co/150x120/F8FAFC/1E3A8A?text=Fresh' }
+                            }
+                            style={styles.premiumProductImage}
+                            resizeMode="contain"
+                          />
+                          
+                          {/* Wishlist Heart Icon */}
+                          <TouchableOpacity 
+                            style={styles.premiumHeartBtn}
+                            onPress={() => toggleWishlist(product.productId)}
+                          >
+                            <Ionicons 
+                              name={isInWishlist(product.productId) ? "heart" : "heart-outline"} 
+                              size={18} 
+                              color={isInWishlist(product.productId) ? "#EF4444" : "#64748B"} 
+                            />
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* Info Container */}
+                        <View style={styles.premiumInfoContainer}>
+                          <Text style={styles.premiumProductName} numberOfLines={1}>
+                            {product.productName}
+                          </Text>
+                          <Text style={styles.premiumProductUnit}>
+                            1 {product.unit || 'KG'}
+                          </Text>
+                          
+                          <View style={styles.premiumPriceRatingRow}>
+                            <View style={styles.premiumPriceCol}>
+                              <Text style={styles.premiumProductPrice}>₹{product.price}</Text>
+                              <View style={styles.premiumRatingRow}>
+                                <Ionicons name="star" size={12} color="#F59E0B" />
+                                <Text style={styles.premiumRatingText}>
+                                  {product.averageRating ? product.averageRating.toFixed(1) : '4.6'}
+                                </Text>
+                              </View>
+                            </View>
+                            
+                            {/* ADD BUTTON */}
+                            <TouchableOpacity
+                              style={styles.premiumAddBtn}
+                              onPress={() => addToCart(product.productId, 1)}
+                            >
+                              <Ionicons name="add" size={20} color="#FFFFFF" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                </ScrollView>
+              </View>
+
+              {/* FREE DELIVERY BANNER */}
+              <View style={styles.deliveryBanner}>
+                <View style={styles.deliveryLeftRow}>
+                  <Ionicons name="bicycle-outline" size={32} color="#2563EB" />
+                  <View style={styles.deliveryTextCol}>
+                    <Text style={styles.deliveryTitle}>Free Delivery</Text>
+                    <Text style={styles.deliverySubtitle}>On order above ₹499</Text>
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.deliveryShopBtn} onPress={openAllProducts}>
+                  <Text style={styles.deliveryShopBtnText}>Shop Now</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
 
           {isFilteredView && (
@@ -611,7 +799,7 @@ const CustomerDashboard = ({ navigation }: any) => {
           )}
 
           <View style={styles.bottomGap} />
-
+          </View>
         </ScrollView>
 
       {/* FILTER MODAL */}
@@ -705,17 +893,17 @@ export default CustomerDashboard;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E3A8A',
   },
 
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E3A8A',
   },
 
   backToDashButton: {
     flexDirection: 'row',
-    backgroundColor: '#2D983A',
+    backgroundColor: '#F59E0B',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 25,
@@ -746,20 +934,67 @@ const styles = StyleSheet.create({
   // HEADER
   // =====================
 
-  topGreenStrip: {
-    backgroundColor: '#2D983A',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: 28,
+  // HEADER
+  // =====================
+
+  headerBlock: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
   },
 
   backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
+    marginRight: 10,
     justifyContent: 'center',
+    alignItems: 'center',
+    width: 32,
+    height: 32,
+  },
+
+  mainContentCard: {
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 16,
+    flex: 1,
+  },
+
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+
+  locationTextContainer: {
+    flexDirection: 'column',
+  },
+
+  deliverToText: {
+    fontSize: 11,
+    color: '#BFDBFE',
+    fontWeight: '600',
+  },
+
+  locationNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+
+  locationNameText: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    maxWidth: 160,
   },
 
   headerActions: {
@@ -768,136 +1003,112 @@ const styles = StyleSheet.create({
   },
 
   headerIconButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: '#FFFFFF',
+    marginLeft: 18,
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 9,
-    position: 'relative',
   },
 
   notificationBadge: {
     position: 'absolute',
-    top: 0,
-    right: -1,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#ED3D3D',
+    top: -5,
+    right: -5,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   cartBadge: {
     position: 'absolute',
-    top: 0,
-    right: -1,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#2E983A',
+    top: -5,
+    right: -5,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
   },
 
-  header: {
-    backgroundColor: '#E8F5D8',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 22,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-  },
-
-  greeting: {
-    marginTop: 22,
-    fontSize: 29,
-    fontWeight: '800',
-    color: '#112017',
-  },
-
-  subtitle: {
-    marginTop: 4,
-    fontSize: 14,
-    color: '#4A564E',
-  },
-
-  // Search — no filter icon
   searchBox: {
-    marginTop: 20,
-    minHeight: 59,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
-    paddingLeft: 16,
-    paddingRight: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#62705F',
-    shadowOpacity: 0.12,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 3 },
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 50,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
   },
 
   searchInput: {
     flex: 1,
-    marginHorizontal: 9,
-    paddingVertical: 0,
+    marginHorizontal: 8,
     fontSize: 14,
-    color: '#233126',
+    color: '#0F172A',
+    padding: 0,
   },
 
   // =====================
-  // CATEGORIES (colorful)
+  // CATEGORIES
   // =====================
 
   categorySection: {
-    marginTop: 16,
+    marginTop: 20,
   },
 
   categoryScroll: {
     paddingHorizontal: 20,
-    paddingBottom: 4,
+    paddingTop: 12,
+    paddingBottom: 6,
   },
 
   categoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    width: 58,
+    height: 82,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 18,
-    paddingBottom: 5,
+    marginRight: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
 
   activeCategoryCard: {},
 
   categoryIconBox: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
   },
 
   categoryText: {
-    marginTop: 8,
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#4C564F',
+    marginTop: 6,
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#0F172A',
     textAlign: 'center',
-    maxWidth: 60,
+    maxWidth: 54,
   },
 
   activeIndicator: {
@@ -1045,7 +1256,7 @@ const styles = StyleSheet.create({
   },
 
   viewAllText: {
-    color: '#228D36',
+    color: '#2563EB',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1209,7 +1420,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 14,
-    backgroundColor: '#2D9C3C',
+    backgroundColor: '#16A34A',
   },
 
   freshBadgeText: {
@@ -1251,7 +1462,7 @@ const styles = StyleSheet.create({
   productCategory: {
     marginTop: 3,
     fontSize: 11,
-    color: '#2D983A',
+    color: '#1E3A8A',
     fontWeight: '600',
   },
 
@@ -1286,8 +1497,8 @@ const styles = StyleSheet.create({
     minHeight: 38,
     borderRadius: 19,
     borderWidth: 1,
-    borderColor: '#B9DDB6',
-    backgroundColor: '#F6FCF3',
+    borderColor: '#F59E0B',
+    backgroundColor: '#F59E0B',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1295,7 +1506,7 @@ const styles = StyleSheet.create({
 
   addButtonText: {
     marginLeft: 5,
-    color: '#278D36',
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
   },
@@ -1445,8 +1656,8 @@ const styles = StyleSheet.create({
     borderColor: '#E8F5D8',
   },
   filterChipActive: {
-    backgroundColor: '#2D983A',
-    borderColor: '#2D983A',
+    backgroundColor: '#1E3A8A',
+    borderColor: '#1E3A8A',
   },
   filterChipText: {
     fontSize: 13,
@@ -1472,12 +1683,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2D983A',
+    borderColor: '#2563EB',
     alignItems: 'center',
     marginRight: 10,
   },
   resetButtonText: {
-    color: '#2D983A',
+    color: '#2563EB',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -1485,13 +1696,191 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#F59E0B',
     alignItems: 'center',
     marginLeft: 10,
   },
   applyButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // =====================
+  // PREMIUM PRODUCTS
+  // =====================
+
+  premiumProductScroll: {
+    paddingLeft: 20,
+    paddingRight: 10,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+
+  premiumProductCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: 165,
+    marginRight: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
+  premiumImageContainer: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+
+  premiumProductImage: {
+    width: '85%',
+    height: '85%',
+  },
+
+  premiumHeartBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
+  premiumInfoContainer: {
+    marginTop: 8,
+  },
+
+  premiumProductName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+
+  premiumProductUnit: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+
+  premiumPriceRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+
+  premiumPriceCol: {
+    flexDirection: 'column',
+  },
+
+  premiumProductPrice: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+
+  premiumRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+
+  premiumRatingText: {
+    fontSize: 11,
+    color: '#64748B',
+    marginLeft: 3,
+    fontWeight: '600',
+  },
+
+  premiumAddBtn: {
+    backgroundColor: '#F59E0B',
+    borderRadius: 8,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  searchResultsGrid: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 20,
+  },
+
+  searchResultsGridInner: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+
+  // =====================
+  // DELIVERY BANNER
+  // =====================
+
+  deliveryBanner: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 40,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+
+  deliveryLeftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  deliveryTextCol: {
+    marginLeft: 12,
+  },
+
+  deliveryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+
+  deliverySubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+
+  deliveryShopBtn: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+
+  deliveryShopBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '700',
   },
 });

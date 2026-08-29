@@ -87,7 +87,6 @@ const CheckoutScreen = ({route, navigation}: any) => {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={{width: 24}} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -172,9 +171,9 @@ const CheckoutScreen = ({route, navigation}: any) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Method</Text>
           <View style={[styles.card, styles.paymentCard]}>
-            <Ionicons name="cash-outline" size={24} color="#1B5E20" style={{marginRight: 12}} />
+            <Ionicons name="cash-outline" size={24} color="#2563EB" style={{marginRight: 12}} />
             <Text style={styles.paymentText}>Cash on Delivery (COD)</Text>
-            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" style={{marginLeft: 'auto'}} />
+            <Ionicons name="checkmark-circle" size={24} color="#2563EB" style={{marginLeft: 'auto'}} />
           </View>
         </View>
 
@@ -205,16 +204,15 @@ const CheckoutScreen = ({route, navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E3A8A',
   },
   backButton: {
     padding: 4,
@@ -223,6 +221,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    marginLeft: 16,
   },
   scrollContent: {
     padding: 20,
@@ -256,7 +255,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 10,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -277,7 +276,7 @@ const styles = StyleSheet.create({
   itemTotal: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1B5E20',
+    color: '#1E3A8A',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -311,9 +310,9 @@ const styles = StyleSheet.create({
   paymentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderColor: '#4CAF50',
+    borderColor: '#2563EB',
     borderWidth: 1.5,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#EFF6FF',
   },
   paymentText: {
     fontSize: 15,
@@ -345,10 +344,10 @@ const styles = StyleSheet.create({
   totalAmount: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1B5E20',
+    color: '#1E3A8A',
   },
   placeOrderBtn: {
-    backgroundColor: '#1B5E20',
+    backgroundColor: '#F59E0B',
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
@@ -371,7 +370,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backBtn: {
-    backgroundColor: '#1B5E20',
+    backgroundColor: '#2563EB',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,

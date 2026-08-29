@@ -14,6 +14,7 @@ import {useAuth} from '../context/AuthContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../services/api';
 import {getProductImageUrl} from '../services/productService';
+import { getFarmerItemsStatus } from '../services/orderService';
 import { OrderEmptyState } from '../components/orders/OrderEmptyState';
 import { OrderSkeleton } from '../components/orders/OrderSkeleton';
 
@@ -64,7 +65,10 @@ const FarmerOrdersScreen = ({navigation}: any) => {
     if (filter === 'All') return orders;
     const activeTab = tabs.find(t => t.id === filter);
     if (!activeTab) return orders;
-    return orders.filter(o => activeTab.statuses.includes(o.status));
+    return orders.filter(o => {
+      const fStatus = getFarmerItemsStatus(o.items || []);
+      return activeTab.statuses.includes(fStatus);
+    });
   };
 
   const renderOrderCard = ({item}: {item: any}) => {
@@ -76,9 +80,10 @@ const FarmerOrdersScreen = ({navigation}: any) => {
       ? getProductImageUrl(rawImageUrl)
       : null;
 
-    const isCancelled = item.status === 'CANCELLED';
-    const isAccepted = item.status !== 'PENDING' && !isCancelled;
-    const isNew = item.status === 'PENDING';
+    const fStatus = getFarmerItemsStatus(item.items || []);
+    const isCancelled = fStatus === 'CANCELLED';
+    const isAccepted = fStatus !== 'PENDING' && !isCancelled;
+    const isNew = fStatus === 'PENDING';
 
     return (
       <TouchableOpacity 
@@ -104,16 +109,16 @@ const FarmerOrdersScreen = ({navigation}: any) => {
             </Text>
             <View style={[
               styles.statusBadge,
-              item.status === 'PENDING' && { backgroundColor: '#FFF3E0' },
-              item.status === 'CANCELLED' && { backgroundColor: '#FFCDD2' },
-              (item.status !== 'PENDING' && item.status !== 'CANCELLED') && { backgroundColor: '#C8E6C9' }
+              fStatus === 'PENDING' && { backgroundColor: '#FFF3E0' },
+              fStatus === 'CANCELLED' && { backgroundColor: '#FFCDD2' },
+              (fStatus !== 'PENDING' && fStatus !== 'CANCELLED') && { backgroundColor: '#C8E6C9' }
             ]}>
               <Text style={[
                 styles.statusText,
-                item.status === 'PENDING' && { color: '#F57C00' },
-                item.status === 'CANCELLED' && { color: '#C62828' },
-                (item.status !== 'PENDING' && item.status !== 'CANCELLED') && { color: '#2E7D32' }
-              ]}>{item.status}</Text>
+                fStatus === 'PENDING' && { color: '#F57C00' },
+                fStatus === 'CANCELLED' && { color: '#C62828' },
+                (fStatus !== 'PENDING' && fStatus !== 'CANCELLED') && { color: '#2E7D32' }
+              ]}>{fStatus}</Text>
             </View>
           </View>
         </View>
@@ -141,7 +146,10 @@ const FarmerOrdersScreen = ({navigation}: any) => {
                 {mainItem?.productName || 'Product'}
               </Text>
               {moreItemsCount > 0 && (
-                <Text style={styles.moreItemsText}>+ {moreItemsCount} more item(s)</Text>
+                <View style={styles.moreItemsBadge}>
+                  <Ionicons name="layers-outline" size={13} color="#1E88E5" />
+                  <Text style={styles.moreItemsText}>+{moreItemsCount} more item{moreItemsCount > 1 ? 's' : ''}</Text>
+                </View>
               )}
             </View>
             <View style={styles.amountContainer}>
@@ -158,7 +166,7 @@ const FarmerOrdersScreen = ({navigation}: any) => {
     <View style={styles.container}>
       <View style={[styles.header, {flexDirection: 'row', alignItems: 'center'}]}>
         <TouchableOpacity style={{padding: 4}} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, {marginLeft: 16}]}>Order Management</Text>
       </View>
@@ -205,10 +213,10 @@ const FarmerOrdersScreen = ({navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6', // slightly darker bg for farmer app contrast
+    backgroundColor: '#F8FAFC', // match farmer app bg
   },
   header: {
-    backgroundColor: '#2D983A', // Match Farmer Dashboard green
+    backgroundColor: '#1E5631', // Match Farmer Dashboard green
 
     paddingHorizontal: 20,
     paddingTop: 50,
@@ -233,7 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   tabBtnActive: {
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E5631',
   },
   tabText: {
     fontSize: 14,
@@ -356,10 +364,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
+  moreItemsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
   moreItemsText: {
     fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
+    fontWeight: '700',
+    color: '#1E88E5',
+    marginLeft: 4,
   },
   amountContainer: {
     alignItems: 'flex-end',

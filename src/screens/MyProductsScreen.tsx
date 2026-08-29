@@ -40,6 +40,9 @@ interface Product {
   createdOn?: string;
   updatedOn?: string;
   farmerId?: string;
+  averageRating?: number;
+  reviewCount?: number;
+  harvestDate?: string;
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -249,6 +252,14 @@ const MyProductsScreen = ({ navigation }: any) => {
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryText}>{product.category}</Text>
               </View>
+              {product.averageRating !== undefined && product.averageRating !== null && product.reviewCount ? (
+                <View style={[styles.categoryBadge, { marginLeft: 8, backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="star" size={12} color="#D97706" style={{ marginRight: 2 }} />
+                  <Text style={[styles.categoryText, { color: '#D97706' }]}>
+                    {product.averageRating.toFixed(1)} ({product.reviewCount})
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
             {/* Info grid */}
@@ -285,6 +296,13 @@ const MyProductsScreen = ({ navigation }: any) => {
                     <Ionicons name="pencil-outline" size={16} color="#6C746D" />
                   </View>
                   <Text style={styles.actionBtnText}>Edit</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionBtn} onPress={() => navigation?.navigate('FarmerProductReviews', { product })}>
+                  <View style={[styles.actionIconCircle, { backgroundColor: '#FEF3C7' }]}>
+                    <Ionicons name="star-outline" size={16} color="#D97706" />
+                  </View>
+                  <Text style={styles.actionBtnText}>Reviews</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(product)}>
@@ -445,12 +463,12 @@ const MyProductsScreen = ({ navigation }: any) => {
               style={styles.menuButton}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="arrow-back-outline" size={24} color="#FFFFFF" />
+              <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
             </TouchableOpacity>
 
             <View style={styles.titleBlock}>
-              <Text style={[styles.headerTitle, {color: '#FFFFFF'}]} numberOfLines={1}>My Products</Text>
-              <Text style={[styles.headerSubtitle, {color: '#E8F5E9'}]} numberOfLines={1}>
+              <Text style={styles.headerTitle} numberOfLines={1}>My Products</Text>
+              <Text style={styles.headerSubtitle} numberOfLines={1}>
                 Manage your added products
               </Text>
             </View>
@@ -461,8 +479,8 @@ const MyProductsScreen = ({ navigation }: any) => {
             onPress={() => navigation?.navigate('AddProduct')}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={18} color="#2E7D32" />
-            <Text style={[styles.addButtonText, {color: '#2E7D32'}]}>Add Product</Text>
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>Add Product</Text>
           </TouchableOpacity>
         </View>
 
@@ -497,13 +515,13 @@ const styles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E5631', // updated
     paddingTop: Platform.OS === 'android' ? 16 : 0,
   },
 
   container: {
     flex: 1,
-    backgroundColor: '#F4F9F1',
+    backgroundColor: '#F8FAFC', // updated
   },
 
   listContent: {
@@ -524,7 +542,7 @@ const styles = StyleSheet.create({
 
   // ── HEADER ──────────────────────────────────────────────────────────────
   header: {
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E5631', // updated
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 28 : 16,
     paddingBottom: 24,
@@ -559,20 +577,20 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#172018',
+    color: '#FFFFFF', // text on dark green
     flexShrink: 1,
   },
 
   headerSubtitle: {
     marginTop: 2,
     fontSize: 12,
-    color: '#6C746D',
+    color: '#E2E8F0', // lighter text on dark green
   },
 
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5D8',
+    backgroundColor: '#F5A623', // Orange yellow
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -586,7 +604,7 @@ const styles = StyleSheet.create({
 
   addButtonText: {
     marginLeft: 6,
-    color: '#2E7D32',
+    color: '#FFFFFF', // updated
     fontSize: 13,
     fontWeight: '700',
   },

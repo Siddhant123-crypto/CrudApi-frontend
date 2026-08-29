@@ -28,7 +28,6 @@ const CATEGORIES = [
   'Dairy',
   'Wild Forest Vegetable',
 ];
-
 const UNITS = [
   'KG',
   'GRAM',
@@ -47,11 +46,12 @@ const AddProductScreen = ({ navigation, route }: any) => {
   const editProduct = route?.params?.product ?? null;
   const isEditMode  = !!editProduct;
   const [productName, setProductName] = useState(editProduct?.productName ?? '');
-  const [category, setCategory] = useState(editProduct?.category ?? CATEGORIES[0]);
+  const [category, setCategory] = useState(editProduct?.category ?? route?.params?.category ?? CATEGORIES[0]);
   const [unit, setUnit] = useState(editProduct?.unit ?? UNITS[0]);
   const [price, setPrice] = useState(editProduct?.price != null ? String(editProduct.price) : '');
   const [quantity, setQuantity] = useState(editProduct?.quantity != null ? String(editProduct.quantity) : '');
   const [description, setDescription] = useState(editProduct?.description ?? '');
+  const [harvestDate, setHarvestDate] = useState(editProduct?.harvestDate ?? '');
 
   // New local URIs (null = user did not pick anything new → keep existing)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -62,6 +62,8 @@ const AddProductScreen = ({ navigation, route }: any) => {
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showUnitModal, setShowUnitModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [mediaSelectionType, setMediaSelectionType] = useState<'Images' | 'Videos'>('Images');
 
@@ -71,8 +73,13 @@ const AddProductScreen = ({ navigation, route }: any) => {
   React.useLayoutEffect(() => {
     navigation.setOptions({ 
       headerTitle: isEditMode ? 'Edit Product' : 'Add Product',
-      headerStyle: { backgroundColor: '#2D983A', elevation: 0, shadowOpacity: 0 },
+      headerStyle: { backgroundColor: '#1E5631', elevation: 0, shadowOpacity: 0 },
       headerTintColor: '#FFF',
+      headerLeft: () => (
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 16, marginRight: 16 }}>
+          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+      ),
     });
   }, [isEditMode, navigation]);
 
@@ -198,8 +205,8 @@ const AddProductScreen = ({ navigation, route }: any) => {
   };
 
   const handleSaveProduct = async () => {
-    if (!productName.trim() || !price.trim() || !quantity.trim()) {
-      Alert.alert('Validation Error', 'Please fill in all required fields');
+    if (!productName.trim() || !price.trim() || !quantity.trim() || !harvestDate.trim()) {
+      Alert.alert('Validation Error', 'Please fill in all required fields (including Harvest Date)');
       return;
     }
     if (isNaN(Number(price)) || Number(price) <= 0 || isNaN(Number(quantity)) || Number(quantity) <= 0) {
@@ -217,6 +224,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
         quantity: parseFloat(quantity),
         unit,
         description: description.trim(),
+        harvestDate: harvestDate.trim(),
         removeVideo: removeVideo,
       };
 
@@ -247,6 +255,108 @@ const AddProductScreen = ({ navigation, route }: any) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ── Calendar Picker Helper Methods ─────────────────────────────────────────
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (year: number, month: number) => {
+    const day = new Date(year, month, 1).getDay();
+    return day === 0 ? 6 : day - 1; // Mon = 0, Sun = 6
+  };
+
+  const handleSelectDay = (day: number) => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    setHarvestDate(`${year}-${mm}-${dd}`);
+    setShowCalendarModal(false);
+  };
+
+  const handlePrevMonth = () => {
+    setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1));
+  };
+
+  const renderCalendarModal = () => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const dayNames = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
+    const totalDays = getDaysInMonth(year, month);
+    const firstDayIndex = getFirstDayOfMonth(year, month);
+
+    const daysArray = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      daysArray.push(null);
+    }
+    for (let i = 1; i <= totalDays; i++) {
+      daysArray.push(i);
+    }
+
+    return (
+      <Modal visible={showCalendarModal} transparent animationType="fade" onRequestClose={() => setShowCalendarModal(false)}>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowCalendarModal(false)}
+        >
+          <View style={styles.calendarContainer} onStartShouldSetResponder={() => true}>
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity onPress={handlePrevMonth} style={styles.calNavBtn}>
+                <Ionicons name="chevron-back" size={20} color="#2D983A" />
+              </TouchableOpacity>
+              <Text style={styles.calendarTitle}>{monthNames[month]} {year}</Text>
+              <TouchableOpacity onPress={handleNextMonth} style={styles.calNavBtn}>
+                <Ionicons name="chevron-forward" size={20} color="#2D983A" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.weekDaysRow}>
+              {dayNames.map(d => (
+                <Text key={d} style={styles.weekDayLabel}>{d}</Text>
+              ))}
+            </View>
+
+            <View style={styles.daysGrid}>
+              {daysArray.map((day, index) => {
+                if (day === null) {
+                  return <View key={`empty-${index}`} style={styles.emptyDayCell} />;
+                }
+                const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isSelected = harvestDate === formattedDate;
+
+                return (
+                  <TouchableOpacity
+                    key={`day-${day}`}
+                    style={[styles.dayCell, isSelected && styles.selectedDayCell]}
+                    onPress={() => handleSelectDay(day)}
+                  >
+                    <Text style={[styles.dayText, isSelected && styles.selectedDayText]}>
+                      {day}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            
+            <TouchableOpacity style={styles.calCancelBtn} onPress={() => setShowCalendarModal(false)}>
+              <Text style={styles.calCancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
   };
 
   const renderDropdownModal = (
@@ -456,7 +566,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
                 </View>
             </View>
 
-            <View style={styles.fieldRow}>
+            <View style={[styles.fieldRow, { marginBottom: 28 }]}>
                 <View style={styles.fieldContent}>
                     <Text style={styles.label}>Description (Optional)</Text>
                     <TextInput
@@ -469,6 +579,30 @@ const AddProductScreen = ({ navigation, route }: any) => {
                         onFocus={() => setFocusedInput('description')}
                         onBlur={() => setFocusedInput(null)}
                     />
+                </View>
+            </View>
+
+            <View style={[styles.fieldRow, { marginTop: 4 }]}>
+                <View style={styles.fieldContent}>
+                    <Text style={styles.label}>Harvest Date *</Text>
+                    <View style={[styles.inputRowContainer, { borderColor: getBorderColor('harvestDate') }]}>
+                        <TextInput
+                            style={styles.inputFlex}
+                            value={harvestDate}
+                            onChangeText={setHarvestDate}
+                            placeholder="Enter harvest date (e.g. 2026-08-27)"
+                            placeholderTextColor="#9CA3AF"
+                            onFocus={() => setFocusedInput('harvestDate')}
+                            onBlur={() => setFocusedInput(null)}
+                        />
+                        <TouchableOpacity
+                            style={styles.inputCalendarIcon}
+                            onPress={() => setShowCalendarModal(true)}
+                            accessibilityLabel="Choose Date from Calendar"
+                        >
+                            <Ionicons name="calendar-outline" size={22} color="#9CA3AF" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 
@@ -491,6 +625,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
       {/* Modals */}
       {renderDropdownModal(showCategoryModal, () => setShowCategoryModal(false), CATEGORIES, setCategory, 'Select Category')}
       {renderDropdownModal(showUnitModal, () => setShowUnitModal(false), UNITS, setUnit, 'Select Unit')}
+      {renderCalendarModal()}
       
       {/* Media Selection Modal */}
       <Modal visible={mediaModalVisible} transparent animationType="slide" onRequestClose={() => setMediaModalVisible(false)}>
@@ -534,14 +669,14 @@ const AddProductScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E5631', // updated to match dashboard
   },
   scrollContent: {
     flexGrow: 1,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E5631',
   },
   formContainer: {
-    backgroundColor: '#F3F6F3',
+    backgroundColor: '#FFFFFF', // cleaner white for form area
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     marginTop: 16,
@@ -706,7 +841,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   saveBtn: {
-    backgroundColor: '#2E7D32', // Simple green
+    backgroundColor: '#1E5631', // updated to primary theme
     borderRadius: 24,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -714,7 +849,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 20,
     elevation: 4,
-    shadowColor: '#3D7A50',
+    shadowColor: '#1E5631',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -782,6 +917,143 @@ const styles = StyleSheet.create({
     color: '#2E3D2E',
     marginLeft: 16,
     fontWeight: '500',
+  },
+
+  // ── Calendar Input and Modal Styles ────────────────────────────────────────
+  harvestDateCard: {
+    marginTop: 28,
+    marginBottom: 24,
+    backgroundColor: '#F0FBF1',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#C8E6C9',
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#2D983A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  harvestDateTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  harvestDateLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1B5E20',
+    marginLeft: 8,
+  },
+  harvestDateHint: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginLeft: 26,
+  },
+  inputRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 16,
+    height: 52,
+    backgroundColor: '#FFFCF8',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+  },
+  inputFlex: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 16,
+    color: '#2E3D2E',
+    fontSize: 15,
+  },
+  inputCalendarIcon: {
+    paddingRight: 16,
+    paddingLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 50,
+  },
+  calendarContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '85%',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  calNavBtn: {
+    padding: 6,
+  },
+  calendarTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  weekDaysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 8,
+  },
+  weekDayLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    width: 32,
+    textAlign: 'center',
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  dayCell: {
+    width: '14.28%',
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    marginVertical: 2,
+  },
+  selectedDayCell: {
+    backgroundColor: '#2D983A',
+  },
+  dayText: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  selectedDayText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  emptyDayCell: {
+    width: '14.28%',
+    height: 38,
+  },
+  calCancelBtn: {
+    marginTop: 16,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  calCancelBtnText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

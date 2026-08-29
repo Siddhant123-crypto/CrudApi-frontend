@@ -35,3 +35,27 @@ export const farmerCancelOrder = async (orderId: string) => {
     throw error;
   }
 };
+
+export const getFarmerItemsStatus = (items: any[]): string => {
+  if (!items || items.length === 0) return 'PENDING';
+  
+  const statuses = items.map(item => item.status);
+  
+  const allCancelled = statuses.every(s => s === 'CANCELLED');
+  if (allCancelled) return 'CANCELLED';
+  
+  const allDeliveredOrCancelled = statuses.every(s => s === 'DELIVERED' || s === 'CANCELLED');
+  if (allDeliveredOrCancelled) return 'DELIVERED';
+  
+  const allOutForDeliveryOrBeyond = statuses.every(s => s === 'OUT_FOR_DELIVERY' || s === 'DELIVERED' || s === 'CANCELLED');
+  if (allOutForDeliveryOrBeyond) return 'OUT_FOR_DELIVERY';
+  
+  const allProcessingOrBeyond = statuses.every(s => s === 'PROCESSING' || s === 'OUT_FOR_DELIVERY' || s === 'DELIVERED' || s === 'CANCELLED');
+  if (allProcessingOrBeyond) return 'PROCESSING';
+  
+  const allConfirmedOrBeyond = statuses.every(s => s === 'CONFIRMED' || s === 'PROCESSING' || s === 'OUT_FOR_DELIVERY' || s === 'DELIVERED' || s === 'CANCELLED');
+  if (allConfirmedOrBeyond) return 'CONFIRMED';
+  
+  return 'PENDING';
+};
+

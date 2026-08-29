@@ -12,6 +12,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../services/api';
 import {getProductImageUrl} from '../services/productService';
+import { getFarmerItemsStatus } from '../services/orderService';
 import { OrderStatusBadge } from '../components/orders/OrderStatusBadge';
 import { OrderTimeline } from '../components/orders/OrderTimeline';
 
@@ -71,12 +72,14 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
 
   if (!order) return null;
 
+  const fStatus = getFarmerItemsStatus(order.items || []);
+
   const getAvailableActions = () => {
-    if (order.status === 'PENDING') {
+    if (fStatus === 'PENDING') {
       return (
         <>
           <TouchableOpacity 
-            style={[styles.actionBtn, {backgroundColor: '#10B981', flex: 1, marginRight: 8}]} 
+            style={[styles.actionBtn, {backgroundColor: '#1E5631', flex: 1, marginRight: 8}]} 
             onPress={() => updateStatus('CONFIRMED')}
             disabled={updating}>
             <Text style={styles.actionBtnText}>Accept Order</Text>
@@ -90,30 +93,30 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
         </>
       );
     }
-    if (order.status === 'CONFIRMED') {
+    if (fStatus === 'CONFIRMED') {
       return (
         <TouchableOpacity 
-          style={[styles.actionBtn, {backgroundColor: '#8B5CF6', width: '100%'}]} 
+          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]} 
           onPress={() => updateStatus('PROCESSING')}
           disabled={updating}>
           <Text style={styles.actionBtnText}>Start Processing</Text>
         </TouchableOpacity>
       );
     }
-    if (order.status === 'PROCESSING') {
+    if (fStatus === 'PROCESSING') {
       return (
         <TouchableOpacity 
-          style={[styles.actionBtn, {backgroundColor: '#F59E0B', width: '100%'}]} 
+          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]} 
           onPress={() => updateStatus('OUT_FOR_DELIVERY')}
           disabled={updating}>
           <Text style={styles.actionBtnText}>Mark as Out for Delivery</Text>
         </TouchableOpacity>
       );
     }
-    if (order.status === 'OUT_FOR_DELIVERY') {
+    if (fStatus === 'OUT_FOR_DELIVERY') {
       return (
         <TouchableOpacity 
-          style={[styles.actionBtn, {backgroundColor: '#3B82F6', width: '100%'}]} 
+          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]} 
           onPress={() => updateStatus('DELIVERED')}
           disabled={updating}>
           <Text style={styles.actionBtnText}>Confirm Delivery</Text>
@@ -127,7 +130,7 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="chevron-back-outline" size={28} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           Customer Product Detail
@@ -159,12 +162,15 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
 
         {/* Status Card */}
         <View style={styles.card}>
-          <Text style={[styles.sectionTitle, {marginBottom: 16}]}>Current Status</Text>
-          <OrderTimeline status={order.status} />
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
+            <Text style={styles.sectionTitle}>Current Status</Text>
+            <OrderStatusBadge status={fStatus} />
+          </View>
+          <OrderTimeline status={fStatus} isFarmer={true} />
         </View>
 
         {/* Cancellation Reason Card (if cancelled) */}
-        {order.status === 'CANCELLED' && (
+        {fStatus === 'CANCELLED' && (
           <View style={[styles.card, {borderColor: '#FCA5A5', backgroundColor: '#FEF2F2'}]}>
             <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
               <Ionicons name="warning" size={20} color="#DC2626" />
@@ -191,6 +197,9 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.productName}</Text>
                   <Text style={styles.itemMeta}>{item.quantity} {item.unit} x ₹{item.price}</Text>
+                  <View style={{marginTop: 6}}>
+                    <OrderStatusBadge status={item.status} />
+                  </View>
                 </View>
                 <Text style={styles.itemTotal}>₹{item.subtotal.toFixed(2)}</Text>
               </View>
@@ -207,7 +216,7 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
       </ScrollView>
 
       {/* Action Buttons */}
-      {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+      {fStatus !== 'DELIVERED' && fStatus !== 'CANCELLED' && (
         <View style={styles.bottomBar}>
           {updating ? (
             <View style={{padding: 16, alignItems: 'center'}}>
@@ -227,7 +236,7 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0FDF4', // Cream green
+    backgroundColor: '#F8FAFC', // Cream green -> match dashboard
   },
   loadingContainer: {
     flex: 1,
@@ -241,7 +250,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E5631',
   },
   backBtn: {
     padding: 4,

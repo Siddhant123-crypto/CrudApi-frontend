@@ -30,7 +30,7 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
     <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="checkmark-circle" size={100} color="#4CAF50" />
+          <Ionicons name="checkmark-circle" size={100} color="#16A34A" />
         </View>
         <Text style={styles.title}>Order Placed Successfully!</Text>
         <Text style={styles.subtitle}>
@@ -69,7 +69,7 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
   },
   content: {
     flex: 1,
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: 30,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#EFF6FF',
     borderRadius: 80,
     padding: 10,
   },
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   primaryBtn: {
-    backgroundColor: '#1B5E20',
+    backgroundColor: '#F59E0B',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -144,13 +144,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   secondaryBtn: {
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#2563EB',
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
   secondaryBtnText: {
-    color: '#374151',
+    color: '#2563EB',
     fontSize: 16,
     fontWeight: '700',
   },

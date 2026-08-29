@@ -7,11 +7,15 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import CustomButton from '../components/CustomButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {useAuth} from '../context/AuthContext';
-import {getUserById} from '../services/userService';
+import {getUserById, updateUser, uploadUserPhoto} from '../services/userService';
 import {getFarmerById} from '../services/farmerService';
 import {BASE_URL} from '../services/api';
 
@@ -19,6 +23,17 @@ const ProfileScreen = () => {
   const {user, logout} = useAuth();
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Edit states
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [village, setVillage] = useState('');
+  const [address, setAddress] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [stateVal, setStateVal] = useState('');
+  const [selectedPhotoUri, setSelectedPhotoUri] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -40,6 +55,76 @@ const ProfileScreen = () => {
     }
   };
 
+  const startEditing = () => {
+    setName(profileData?.name || '');
+    setMobile(profileData?.mobile || '');
+    setVillage(profileData?.village || '');
+    setAddress(profileData?.address || '');
+    setPostalCode(profileData?.postalCode || '');
+    setStateVal(profileData?.state || '');
+    setSelectedPhotoUri(null);
+    setIsEditing(true);
+  };
+
+  const handlePickImage = async () => {
+    if (!isEditing) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to upload profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setSelectedPhotoUri(result.assets[0].uri);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Name is required');
+      return;
+    }
+    setSaving(true);
+    try {
+      // 1. Update text fields
+      const updatedData = {
+        name,
+        mobile,
+        village,
+        address,
+        postalCode,
+        state: stateVal,
+        email: profileData.email,
+      };
+      
+      if (user?.userId) {
+        await updateUser(user.userId, updatedData);
+
+        // 2. Upload photo if selected
+        if (selectedPhotoUri) {
+          await uploadUserPhoto(user.userId, selectedPhotoUri);
+        }
+      }
+
+      Alert.alert('Success', 'Profile updated successfully');
+      setIsEditing(false);
+      setSelectedPhotoUri(null);
+      fetchProfile();
+    } catch (error: any) {
+      console.log('Error updating profile:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       {text: 'Cancel', style: 'cancel'},
@@ -55,23 +140,34 @@ const ProfileScreen = () => {
     ? `${BASE_URL}/user/image/${profileData.profilePhoto}`
     : null;
 
+  const isFarmer = user?.role === 'FARMER';
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, !isFarmer && { backgroundColor: '#F8FAFC' }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          {photoUrl ? (
-            <Image source={{uri: photoUrl}} style={styles.avatar} />
+      <View style={[styles.header, !isFarmer && { backgroundColor: '#1E3A8A' }]}>
+        <TouchableOpacity 
+          onPress={handlePickImage} 
+          disabled={!isEditing} 
+          style={styles.avatarWrapper}
+        >
+          {selectedPhotoUri || photoUrl ? (
+            <Image source={{uri: (selectedPhotoUri || photoUrl) ?? undefined}} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
+            <View style={[styles.avatarPlaceholder, !isFarmer && { backgroundColor: '#2563EB' }]}>
               <Text style={styles.avatarText}>
                 {(user?.name || 'U').charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
-        </View>
+          {isEditing && (
+            <View style={[styles.cameraIconContainer, !isFarmer && { backgroundColor: '#1E3A8A' }]}>
+              <Ionicons name="camera" size={16} color="#FFFFFF" />
+            </View>
+          )}
+        </TouchableOpacity>
         <Text style={styles.name}>{profileData?.name || user?.name}</Text>
-        <Text style={styles.email}>{profileData?.email || user?.email}</Text>
+        <Text style={[styles.email, !isFarmer && { color: '#BFDBFE' }]}>{profileData?.email || user?.email}</Text>
         <View style={styles.roleBadge}>
           <Text style={styles.roleText}>
             {user?.role === 'FARMER' ? '🌾 Farmer' : '🏠 Customer'}
@@ -79,32 +175,124 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-      {/* Details */}
-      <View style={styles.detailsContainer}>
-        <Text style={styles.sectionTitle}>Personal Information</Text>
+      {/* Details Form / View */}
+      {isEditing ? (
+        <View style={styles.detailsContainer}>
+          <Text style={styles.sectionTitle}>Edit Personal Information</Text>
 
-        <DetailRow label="Mobile" value={profileData?.mobile || 'N/A'} />
-        <DetailRow label="Village" value={profileData?.village || 'N/A'} />
-        <DetailRow label="Address" value={profileData?.address || 'N/A'} />
-        <DetailRow
-          label="Postal Code"
-          value={profileData?.postalCode || 'N/A'}
-        />
-        <DetailRow label="State" value={profileData?.state || 'N/A'} />
-        <DetailRow
-          label="Status"
-          value={profileData?.status || 'N/A'}
-        />
-      </View>
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Name</Text>
+            <TextInput
+              style={styles.textInput}
+              value={name}
+              onChangeText={setName}
+              placeholder="Full Name"
+            />
+          </View>
 
-      {/* Logout */}
-      <View style={styles.logoutContainer}>
-        <CustomButton
-          title="Logout"
-          onPress={handleLogout}
-          variant="danger"
-        />
-      </View>
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Mobile</Text>
+            <TextInput
+              style={styles.textInput}
+              value={mobile}
+              onChangeText={setMobile}
+              placeholder="Mobile"
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Village</Text>
+            <TextInput
+              style={styles.textInput}
+              value={village}
+              onChangeText={setVillage}
+              placeholder="Village"
+            />
+          </View>
+
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Address</Text>
+            <TextInput
+              style={styles.textInput}
+              value={address}
+              onChangeText={setAddress}
+              placeholder="Address"
+              multiline
+            />
+          </View>
+
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Postal Code</Text>
+            <TextInput
+              style={styles.textInput}
+              value={postalCode}
+              onChangeText={setPostalCode}
+              placeholder="Postal Code"
+              keyboardType="number-pad"
+            />
+          </View>
+
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>State</Text>
+            <TextInput
+              style={styles.textInput}
+              value={stateVal}
+              onChangeText={setStateVal}
+              placeholder="State"
+            />
+          </View>
+        </View>
+      ) : (
+        <View style={styles.detailsContainer}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+
+          <DetailRow label="Mobile" value={profileData?.mobile || 'N/A'} />
+          <DetailRow label="Village" value={profileData?.village || 'N/A'} />
+          <DetailRow label="Address" value={profileData?.address || 'N/A'} />
+          <DetailRow label="Postal Code" value={profileData?.postalCode || 'N/A'} />
+          <DetailRow label="State" value={profileData?.state || 'N/A'} />
+          <DetailRow label="Status" value={profileData?.status || 'N/A'} />
+        </View>
+      )}
+
+      {/* Buttons */}
+      {isEditing ? (
+        <View style={styles.actionButtonsContainer}>
+          <CustomButton
+            title={saving ? "Saving..." : "Save Changes"}
+            onPress={handleSave}
+            disabled={saving}
+            variant="primary"
+            style={{ marginBottom: 12, backgroundColor: '#1E3A8A' }}
+          />
+          <CustomButton
+            title="Cancel"
+            onPress={() => {
+              setIsEditing(false);
+              setSelectedPhotoUri(null);
+            }}
+            variant="outline"
+            disabled={saving}
+          />
+        </View>
+      ) : (
+        <View style={styles.actionButtonsContainer}>
+          {!isFarmer && (
+            <CustomButton
+              title="Edit Profile"
+              onPress={startEditing}
+              variant="primary"
+              style={{ marginBottom: 12, backgroundColor: '#1E3A8A' }}
+            />
+          )}
+          <CustomButton
+            title="Logout"
+            onPress={handleLogout}
+            variant="danger"
+          />
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -129,7 +317,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
-  avatarContainer: {
+  avatarWrapper: {
+    position: 'relative',
     marginBottom: 14,
   },
   avatar: {
@@ -153,6 +342,19 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#1B5E20',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   name: {
     fontSize: 22,
@@ -212,7 +414,26 @@ const styles = StyleSheet.create({
     maxWidth: '60%',
     textAlign: 'right',
   },
-  logoutContainer: {
+  inputRow: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
+  },
+  actionButtonsContainer: {
     paddingHorizontal: 20,
     paddingBottom: 40,
   },

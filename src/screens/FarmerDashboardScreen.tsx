@@ -9,18 +9,30 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
-  TextInput
+  TextInput,
+  Linking,
+  SafeAreaView
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { getAllProducts, getProductImageUrl } from '../services/productService';
-import { getFarmerOrders, acceptOrder, farmerCancelOrder } from '../services/orderService';
+import { getFarmerOrders, acceptOrder, farmerCancelOrder, getFarmerItemsStatus } from '../services/orderService';
 import { BASE_URL } from '../services/api';
+
+const categories = [
+  { name: 'Vegetable', icon: 'leaf-outline', bg: '#E6F4EA', color: '#1E8E3E' },
+  { name: 'Fruit', icon: 'nutrition-outline', bg: '#FCE8E6', color: '#D93025' },
+  { name: 'Root Veg', icon: 'flower-outline', bg: '#FCEFE2', color: '#E8710A' },
+  { name: 'Grains', icon: 'basket-outline', bg: '#FFF0D4', color: '#F9AB00' },
+  { name: 'Wild Veg', icon: 'rose-outline', bg: '#F3E8FD', color: '#9334E6' },
+  { name: 'Dairy', icon: 'water-outline', bg: '#E8F0FE', color: '#1A73E8' },
+];
 
 const FarmerDashboardScreen = ({ navigation }: any) => {
   const { user, logout, setInitialAuthRoute } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
+  const [allGlobalProducts, setAllGlobalProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,9 +40,9 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
   const [searchText, setSearchText] = useState('');
 
   const carouselImages = [
-    require('../../assets/vagis1.png'),
-    require('../../assets/vagis2.png'),
-    require('../../assets/vagis3.png'),
+    require('../../assets/vagis4.png'),
+    require('../../assets/vagis5.png'),
+    require('../../assets/vagis6.png'),
   ];
 
   useEffect(() => {
@@ -46,6 +58,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
         getAllProducts(),
         getFarmerOrders()
       ]);
+      setAllGlobalProducts(allProducts);
       const myProducts = allProducts.filter((p: any) => p.farmerId === user?.farmerId);
       setProducts(myProducts);
       setOrders(farmerOrders);
@@ -90,441 +103,475 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
     }
   };
 
-  const totalEarnings = products.reduce((acc, curr) => acc + (curr.price * 10), 0); // Mock data for earnings
+  const openCategory = (categoryName: string) => {
+    navigation.navigate('FarmerCategoryDashboard', { category: categoryName });
+  };
+
+  const handlePlayVideo = (videoFilename: string) => {
+    const videoUrl = `${BASE_URL}/product/video/${videoFilename}`;
+    Linking.openURL(videoUrl).catch(() =>
+      Alert.alert('Error', 'Could not open video. Please try again.')
+    );
+  };
+
+  const videoProducts = allGlobalProducts.filter(p => !!p.productVideo);
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1B5E20']} />}
-      >
-        {/* =========================
-            HEADER STRIP
-        ========================= */}
-        <View style={styles.topGreenStrip}>
-          <TouchableOpacity 
-            onPress={async () => {
-              setInitialAuthRoute('NewUserLogin');
-              await logout();
-            }}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => Alert.alert('Notifications', 'No new notifications')} style={styles.headerIconButton}>
-              <Ionicons name="notifications-outline" size={22} color="#FFF" />
-              <View style={styles.notificationBadge}>
-                <Text style={styles.badgeText}>3</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#176B2C']} />}
+        >
+          {/* =========================
+              CURVED HEADER (Green Theme)
+          ========================= */}
+          <View style={styles.headerBlock}>
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity 
+                onPress={async () => {
+                  setInitialAuthRoute('NewUserLogin');
+                  await logout();
+                }}
+                style={styles.backButton}
+              >
+                <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
+              </TouchableOpacity>
 
-        {/* =========================
-            HEADER
-        ========================= */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>
-            Hello, {user?.name || 'Farmer'}!
-          </Text>
-          <Text style={styles.subtitle}>
-            Grow Quality, Earn Trust
-          </Text>
+              <View style={styles.locationContainer}>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.locationTextContainer}>
+                  <Text style={styles.locationNameText} numberOfLines={1}>
+                    Welcome, {user?.name || 'Farmer'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-          {/* SEARCH */}
-          <View style={styles.searchBox}>
-            <Ionicons name="search-outline" size={24} color="#2D983A" />
-            <TextInput
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search your products..."
-              placeholderTextColor="#8A938D"
-              style={styles.searchInput}
-            />
-          </View>
-        </View>
+              <TouchableOpacity style={styles.headerIconButton} onPress={() => Alert.alert('Notifications', 'No new notifications.')}>
+                <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.badgeText}>2</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
 
-        {/* Stats Card Overlapping Hero */}
-        <View style={styles.statsCardContainer}>
-          <View style={styles.statsCard}>
-            <View style={styles.statItem}>
-              <View style={styles.statIconWrapper}>
-                 <Ionicons name="basket" size={20} color="#4CAF50" />
-              </View>
-              <Text style={styles.statValue}>{products.length > 0 ? products.length : '12'}</Text>
-              <Text style={styles.statLabel}>Products</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIconWrapper}>
-                 <Ionicons name="bag-handle" size={20} color="#FFC107" />
-              </View>
-              <Text style={styles.statValue}>28</Text>
-              <Text style={styles.statLabel}>Orders</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIconWrapper}>
-                 <Ionicons name="eye" size={20} color="#2196F3" />
-              </View>
-              <Text style={styles.statValue}>350</Text>
-              <Text style={styles.statLabel}>Views</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIconWrapper}>
-                 <Text style={{color: '#4CAF50', fontWeight: 'bold', fontSize: 16}}>₹</Text>
-              </View>
-              <Text style={styles.statValue}>12,450</Text>
-              <Text style={styles.statLabel}>Earnings</Text>
+            {/* SEARCH BOX INSIDE CURVED HEADER */}
+            <View style={styles.searchBox}>
+              <Ionicons name="search-outline" size={20} color="#64748B" style={{ marginRight: 8 }} />
+              <TextInput
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Search your products..."
+                placeholderTextColor="#94A3B8"
+                style={styles.searchInput}
+              />
             </View>
           </View>
-        </View>
 
-        <View style={styles.contentPadding}>
-          {/* Fresh Produce Promo Banner */}
-          <ImageBackground
-             source={carouselImages[currentImageIndex]}
-             style={styles.promoCardBg}
-             imageStyle={styles.promoCardImage}
-             resizeMode="cover"
-          >
-             <View style={styles.promoOverlay} />
-             <View style={styles.promoContentWrapper}>
-               <View style={styles.promoTextContent}>
-                  <Text style={[styles.promoTitle, { color: '#FFF' }]}>Fresh Produce</Text>
-                  <Text style={[styles.promoSubtitle, { color: '#E8F5E9' }]}>From My Farm</Text>
-                  <Text style={[styles.promoSubtitle, { color: '#E8F5E9' }]}>To Your Table</Text>
-                  <TouchableOpacity 
-                     style={styles.promoButton}
-                     onPress={() => navigation.navigate('Products')} 
-                  >
-                    <Text style={styles.promoButtonText}>View My Products</Text>
-                    <Ionicons name="arrow-forward" size={16} color="#FFF" style={{marginLeft: 4}} />
-                  </TouchableOpacity>
-               </View>
-             </View>
-             
-             {/* Carousel Dots */}
-             <View style={styles.carouselDotsContainer}>
-                {carouselImages.map((_, index) => (
-                  <View 
-                    key={index} 
-                    style={[
-                      styles.carouselDot, 
-                      currentImageIndex === index ? styles.carouselDotActive : styles.carouselDotInactive
-                    ]} 
-                  />
-                ))}
-             </View>
-          </ImageBackground>
-
-          {/* Quick Actions */}
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsContainer}>
-             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('AddProduct')}>
-                <View style={[styles.actionIconBg, {backgroundColor: '#E8F5E9'}]}>
-                   <Ionicons name="add" size={28} color="#2E7D32" />
-                </View>
-                <Text style={styles.actionLabel}>Add Product</Text>
-             </TouchableOpacity>
-
-             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Products')}>
-                <View style={[styles.actionIconBg, {backgroundColor: '#E3F2FD'}]}>
-                   <Ionicons name="storefront" size={24} color="#1976D2" />
-                </View>
-                <Text style={styles.actionLabel}>My Products</Text>
-             </TouchableOpacity>
-
-             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Orders')}>
-                <View style={[styles.actionIconBg, {backgroundColor: '#FFF3E0'}]}>
-                   <Ionicons name="receipt" size={24} color="#F57C00" />
-                </View>
-                <Text style={styles.actionLabel}>Orders</Text>
-             </TouchableOpacity>
-
-             <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Earnings')}>
-                <View style={[styles.actionIconBg, {backgroundColor: '#F3E5F5'}]}>
-                   <Ionicons name="pie-chart" size={24} color="#7B1FA2" />
-                </View>
-                <Text style={styles.actionLabel}>Analytics</Text>
-             </TouchableOpacity>
-          </View>
-
-          {/* Recent Orders */}
-          <View style={styles.sectionHeaderRow}>
-             <Text style={styles.sectionTitle}>Recent Orders</Text>
-             <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
-                <Text style={styles.viewAllText}>View All</Text>
-             </TouchableOpacity>
-          </View>
-
-          <View style={styles.ordersList}>
-             {orders.length === 0 ? (
-               <Text style={{ textAlign: 'center', color: '#888', marginTop: 10 }}>No recent orders found.</Text>
-             ) : (
-               orders.slice(0, 5).map((order) => {
-                 const isCancelled = order.status === 'CANCELLED';
-                 const isAccepted = order.status !== 'PENDING' && !isCancelled;
-                 const isPending = order.status === 'PENDING';
-
-                 const mainItem = order.items && order.items.length > 0 ? order.items[0] : null;
-                 const rawImageUrl = mainItem?.imageUrl || mainItem?.productPhoto || mainItem?.product?.productPhoto;
-                 const resolvedImageUrl = rawImageUrl ? getProductImageUrl(rawImageUrl) : null;
-
-                 return (
-                  <TouchableOpacity 
-                     key={order.orderId} 
-                     style={[
-                      styles.orderCard,
-                      isAccepted && { backgroundColor: '#F1F8E9', borderColor: '#4CAF50' }, // faint green
-                      isCancelled && { backgroundColor: '#FFEBEE', borderColor: '#F44336' } // faint red
-                     ]}
-                     onPress={() => navigation.navigate('FarmerOrderDetails', {orderId: order.orderId, initialOrder: order})}
-                     activeOpacity={0.8}
+          <View style={styles.mainContentCard}>
+            
+            <View style={styles.contentPadding}>
+              
+              {/* =========================
+                  BANNER
+              ========================= */}
+              <ImageBackground
+                source={carouselImages[currentImageIndex]}
+                style={styles.promoCardBg}
+                imageStyle={styles.promoCardImage}
+                resizeMode="cover"
+              >
+                <View style={styles.promoOverlay} />
+                <View style={styles.promoContentWrapper}>
+                  <View style={styles.promoTextContent}>
+                    <Text style={[styles.promoTitle, { color: '#FFF' }]}>Farm Performance</Text>
+                    <Text style={[styles.promoSubtitle, { color: '#E8F5E9' }]}>Manage your stock & orders</Text>
+                    <TouchableOpacity 
+                        style={styles.promoButton}
+                        onPress={() => navigation.navigate('AddProduct')} 
                     >
-                      {isAccepted && (
-                        <View style={styles.statusMarkAbs}>
-                          <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                        </View>
-                      )}
-                      {isCancelled && (
-                        <View style={styles.statusMarkAbs}>
-                          <Ionicons name="close-circle" size={24} color="#F44336" />
-                        </View>
-                      )}
-
-                      <View style={styles.orderCardTopRow}>
-                        <Image 
-                           source={{ uri: resolvedImageUrl || 'https://cdn-icons-png.flaticon.com/512/1147/1147805.png' }} 
-                           style={styles.orderProductImage} 
-                        />
-                        <View style={styles.orderDetails}>
-                           <Text style={styles.orderProductName}>{mainItem?.productName || 'Product'}</Text>
-                           <Text style={styles.orderMeta}>Order #{order.orderNumber ? order.orderNumber.substring(0, 12) : order.orderId.substring(0, 8)}</Text>
-                           <Text style={styles.orderMeta}>Total: ₹{order.totalAmount}</Text>
-                        </View>
-                        <View style={styles.orderStatusCol}>
-                           <Text style={styles.customerName}>Ordered by: {order.customerName || 'Customer'}</Text>
-                           <View style={[styles.statusBadgePending, 
-                              isAccepted && { backgroundColor: '#C8E6C9' },
-                              isCancelled && { backgroundColor: '#FFCDD2' }
-                           ]}>
-                              <Text style={[styles.statusTextPending,
-                                 isAccepted && { color: '#2E7D32' },
-                                 isCancelled && { color: '#C62828' }
-                              ]}>{order.status}</Text>
-                           </View>
-                        </View>
-                      </View>
-
-                      {(isPending || isAccepted) && (
-                         <View style={styles.orderActionsRow}>
-                            {isPending && (
-                              <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAcceptOrder(order.orderId)}>
-                                 <Text style={styles.acceptBtnText}>Accept</Text>
-                              </TouchableOpacity>
-                            )}
-                            {(isPending || isAccepted) && (
-                              <TouchableOpacity style={styles.cancelBtn} onPress={() => handleCancelOrder(order.orderId)}>
-                                 <Text style={styles.cancelBtnText}>Reject</Text>
-                              </TouchableOpacity>
-                            )}
-                         </View>
-                      )}
+                      <Text style={styles.promoButtonText}>Add Product</Text>
+                      <Ionicons name="add" size={16} color="#000" style={{marginLeft: 4}} />
                     </TouchableOpacity>
-                 );
-               })
-             )}
+                  </View>
+                </View>
+                <View style={styles.carouselDotsContainer}>
+                  {carouselImages.map((_, index) => (
+                    <View key={index} style={[styles.carouselDot, currentImageIndex === index ? styles.carouselDotActive : styles.carouselDotInactive]} />
+                  ))}
+                </View>
+              </ImageBackground>
+
+              {/* =====================
+                  CATEGORIES
+              ===================== */}
+              <View style={styles.categorySection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Farm Categories</Text>
+                </View>
+                <View style={styles.categoryGridContainer}>
+                  {categories.map((category) => (
+                    <TouchableOpacity
+                      key={category.name}
+                      style={styles.categoryWrap}
+                      onPress={() => openCategory(category.name)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.categoryCard, { borderColor: category.color }]}>
+                        <Ionicons name={category.icon as any} size={22} color={category.color} />
+                      </View>
+                      <Text style={styles.categoryText} numberOfLines={1}>
+                        {category.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* =====================
+                  QUICK ACTIONS
+              ===================== */}
+              <View style={styles.quickActionsSection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Quick Actions</Text>
+                </View>
+                <View style={styles.quickActionsContainer}>
+                  <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('AddProduct')}>
+                    <View style={styles.actionCard}>
+                      <View style={[styles.actionIconBox, { backgroundColor: '#E6F4EA' }]}>
+                        <Ionicons name="add" size={24} color="#1E8E3E" />
+                      </View>
+                      <Text style={styles.actionLabel}>Add</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('MyFarm')}>
+                    <View style={styles.actionCard}>
+                      <View style={[styles.actionIconBox, { backgroundColor: '#E8F0FE' }]}>
+                        <Ionicons name="leaf" size={24} color="#1A73E8" />
+                      </View>
+                      <Text style={styles.actionLabel}>My Product</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('Orders')}>
+                    <View style={styles.actionCard}>
+                      <View style={[styles.actionIconBox, { backgroundColor: '#FFF0D4' }]}>
+                        <Ionicons name="receipt" size={24} color="#F9AB00" />
+                      </View>
+                      <Text style={styles.actionLabel}>Orders</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('Market')}>
+                    <View style={styles.actionCard}>
+                      <View style={[styles.actionIconBox, { backgroundColor: '#F3E8FD' }]}>
+                        <Ionicons name="storefront" size={24} color="#9334E6" />
+                      </View>
+                      <Text style={styles.actionLabel}>Market</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* =====================
+                  FARMER SHORTS
+              ===================== */}
+              {videoProducts.length > 0 && (
+                <View style={styles.shortsSection}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>🎬 Farmer Shorts</Text>
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shortsScroll} decelerationRate="fast" snapToInterval={155} snapToAlignment="start">
+                    {videoProducts.map(product => (
+                      <TouchableOpacity
+                        key={`video-${product.productId}`}
+                        style={styles.shortCard}
+                        activeOpacity={0.85}
+                        onPress={() => handlePlayVideo(product.productVideo!)}
+                      >
+                        <Image
+                          source={
+                            product.productPhoto
+                              ? { uri: `${BASE_URL}/product/image/${product.productPhoto}` }
+                              : { uri: 'https://placehold.co/140x240/1A1A2E/FFFFFF?text=Video' }
+                          }
+                          style={styles.shortThumbnail}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.shortOverlay} />
+                        <View style={styles.shortPlayBtn}>
+                          <View style={styles.shortPlayCircle}>
+                            <Ionicons name="play" size={20} color="#FFFFFF" />
+                          </View>
+                        </View>
+                        <View style={styles.shortsBadge}>
+                          <Ionicons name="videocam" size={10} color="#FF0000" />
+                          <Text style={styles.shortsBadgeText}> Shorts</Text>
+                        </View>
+                        <Text style={styles.shortTitle} numberOfLines={2}>{product.productName}</Text>
+                        <Text style={styles.shortPrice}>₹{product.price}/{product.unit?.toLowerCase()}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+
+              {/* =====================
+                  RECENT ORDERS
+              ===================== */}
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Recent Orders</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
+                  <Text style={styles.viewAllText}>View All</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.ordersList}>
+                {orders.filter(o => getFarmerItemsStatus(o.items || []) === 'PENDING').length === 0 ? (
+                  <Text style={{ textAlign: 'center', color: '#888', marginTop: 10 }}>No new orders found.</Text>
+                ) : (
+                  orders.filter(o => getFarmerItemsStatus(o.items || []) === 'PENDING').slice(0, 5).map((order) => {
+                    const fStatus = getFarmerItemsStatus(order.items || []);
+                    const isCancelled = fStatus === 'CANCELLED';
+                    const isAccepted = fStatus !== 'PENDING' && !isCancelled;
+                    const isPending = fStatus === 'PENDING';
+
+                    const mainItem = order.items && order.items.length > 0 ? order.items[0] : null;
+                    const rawImageUrl = mainItem?.imageUrl || mainItem?.productPhoto || mainItem?.product?.productPhoto;
+                    const resolvedImageUrl = rawImageUrl ? getProductImageUrl(rawImageUrl) : null;
+
+                    return (
+                      <TouchableOpacity 
+                        key={order.orderId} 
+                        style={[
+                          styles.orderCardItem,
+                          isAccepted && { backgroundColor: '#F1F8E9', borderColor: '#4CAF50' },
+                          isCancelled && { backgroundColor: '#FFEBEE', borderColor: '#F44336' }
+                        ]}
+                        onPress={() => navigation.navigate('FarmerOrderDetails', {orderId: order.orderId, initialOrder: order})}
+                        activeOpacity={0.8}
+                      >
+                        {isAccepted && (
+                          <View style={styles.statusMarkAbs}>
+                            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                          </View>
+                        )}
+                        {isCancelled && (
+                          <View style={styles.statusMarkAbs}>
+                            <Ionicons name="close-circle" size={24} color="#F44336" />
+                          </View>
+                        )}
+
+                        <View style={styles.orderCardTopRow}>
+                          <Image 
+                            source={{ uri: resolvedImageUrl || 'https://cdn-icons-png.flaticon.com/512/1147/1147805.png' }} 
+                            style={styles.orderProductImage} 
+                          />
+                          <View style={styles.orderDetails}>
+                            <Text style={styles.orderProductName}>{mainItem?.productName || 'Product'}</Text>
+                            <Text style={styles.orderMeta}>Order #{order.orderNumber ? order.orderNumber.substring(0, 12) : order.orderId.substring(0, 8)}</Text>
+                            <Text style={styles.orderMeta}>Total: ₹{order.totalAmount}</Text>
+                          </View>
+                          <View style={styles.orderStatusCol}>
+                            <Text style={styles.customerName}>Ordered by: {order.customerName || 'Customer'}</Text>
+                            <View style={[styles.statusBadgePending, 
+                                isAccepted && { backgroundColor: '#C8E6C9' },
+                                isCancelled && { backgroundColor: '#FFCDD2' }
+                            ]}>
+                                <Text style={[styles.statusTextPending,
+                                  isAccepted && { color: '#2E7D32' },
+                                  isCancelled && { color: '#C62828' }
+                                ]}>{fStatus}</Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        {(isPending || isAccepted) && (
+                          <View style={styles.orderActionsRow}>
+                              {isPending && (
+                                <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAcceptOrder(order.orderId)}>
+                                  <Text style={styles.acceptBtnText}>Accept</Text>
+                                </TouchableOpacity>
+                              )}
+                              {(isPending || isAccepted) && (
+                                <TouchableOpacity style={styles.cancelBtn} onPress={() => handleCancelOrder(order.orderId)}>
+                                  <Text style={styles.cancelBtnText}>Reject</Text>
+                                </TouchableOpacity>
+                              )}
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </View>
+
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#1E5631',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingBottom: 100, // Space for bottom nav
+    flexGrow: 1,
+    paddingBottom: 40,
   },
-  topGreenStrip: {
-    backgroundColor: '#2D983A',
+  headerBlock: {
+    backgroundColor: '#1E5631',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    zIndex: 10,
+  },
+  headerTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: 28,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    marginRight: 10,
+  },
+  locationContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerActions: {
+  locationTextContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  locationNameText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
   headerIconButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 9,
     position: 'relative',
+    padding: 4,
   },
   notificationBadge: {
     position: 'absolute',
-    top: 0,
-    right: -1,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#ED3D3D',
+    top: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#EF4444',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#176B2C',
   },
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  header: {
-    backgroundColor: '#E8F5D8',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 22,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-  },
-  greeting: {
-    marginTop: 10,
-    fontSize: 26,
-    fontWeight: '600',
-    color: '#112017',
-  },
-  subtitle: {
-    marginTop: 4,
-    fontSize: 14,
-    color: '#4A564E',
+    fontSize: 7,
+    fontWeight: 'bold',
   },
   searchBox: {
-    marginTop: 20,
-    minHeight: 59,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
-    paddingLeft: 16,
-    paddingRight: 7,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#62705F',
-    shadowOpacity: 0.12,
-    shadowRadius: 7,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30, // more pill-shaped
+    paddingHorizontal: 16,
+    height: 50,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
   },
   searchInput: {
     flex: 1,
-    marginHorizontal: 9,
+    fontSize: 14,
+    color: '#0F172A',
+    height: '100%',
   },
-  searchButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: '#2D983A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsCardContainer: {
-    paddingHorizontal: 16,
-    marginTop: -20, // Pull up to overlap header
-  },
-  statsCard: {
-    backgroundColor: '#E8F5E9', // Cream green
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#81C784',
-    padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    elevation: 10,
-    shadowColor: '#2E7D32',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-  },
-  statItem: {
-    alignItems: 'center',
+  mainContentCard: {
     flex: 1,
-  },
-  statIconWrapper: {
-    marginBottom: 8,
-  },
-  statValue: {
-    color: '#1B5E20', // Dark green for contrast
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    color: '#2E7D32', // Medium green for contrast
-    fontSize: 12,
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(0,0,0,0.1)', // Darker divider for contrast
+    backgroundColor: '#FFFFFF', // matching the white background below the curve
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 20,
+    marginTop: -25, // this pulls the white card up over the green header to create the curve
+    zIndex: 20,
   },
   contentPadding: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingHorizontal: 20,
   },
   promoCardBg: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 24,
-    minHeight: 140,
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-    backgroundColor: '#FFF',
-    elevation: 6,
-    shadowColor: '#2E7D32',
+    marginBottom: 28,
+    height: 180, // Increased height
+    backgroundColor: '#1E5631', // matching the header color as requested
+    elevation: 4,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 6,
   },
   promoCardImage: {
-    borderRadius: 16,
+    borderRadius: 20,
   },
   promoOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(9, 42, 11, 0.4)',
   },
   promoContentWrapper: {
-    padding: 20,
+    padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 28, // extra padding for dots
+    height: '100%',
+  },
+  promoTextContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  promoTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  promoSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  promoButton: {
+    backgroundColor: '#FFD02A', 
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  promoButtonText: {
+    color: '#27391F',
+    fontSize: 12,
+    fontWeight: '800',
   },
   carouselDotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    bottom: 12,
+    bottom: 10,
     left: 0,
     right: 0,
   },
@@ -538,112 +585,201 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     width: 8,
     height: 8,
-    borderRadius: 4,
   },
   carouselDotInactive: {
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
-  promoTextContent: {
-    flex: 1,
+  categorySection: {
+    marginBottom: 4, // Reduced from 24 to bring Quick Actions up
   },
-  promoTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontStyle: 'italic',
-    marginBottom: 4,
-  },
-  promoSubtitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  promoButton: {
-    backgroundColor: '#2E7D32',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+  sectionHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
-    alignSelf: 'flex-start',
-  },
-  promoButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#212121',
-    marginBottom: 16,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1E5631',
+  },
+  categoryGridContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 0,
+  },
+  categoryWrap: {
+    alignItems: 'center',
+    width: '16%', // roughly 1/6th to fit all evenly
+  },
+  categoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderBottomWidth: 3, // slightly smaller 3D depth for a smaller icon
+    width: 48, // made small enough to fit 6 on screen
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  categoryText: {
+    fontSize: 9, // smaller text to fit
+    color: '#334155',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  quickActionsSection: {
+    marginBottom: 28,
   },
   quickActionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+  },
+  actionWrap: {
+    flex: 1,
+    alignItems: 'center',
   },
   actionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E8F5E9',
-    paddingVertical: 16,
-    paddingHorizontal: 8,
+    borderBottomWidth: 5, // 3D effect depth
+    borderColor: '#E2E8F0',
+    borderBottomColor: '#CBD5E1',
+    width: '90%',
+    aspectRatio: 0.9,
     alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 6,
-    elevation: 8,
-    shadowColor: '#1B5E20',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  actionIconBg: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  actionIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   actionLabel: {
-    fontSize: 12,
-    color: '#2E7D32',
+    fontSize: 11,
+    color: '#334155',
     fontWeight: '700',
     textAlign: 'center',
+  },
+  shortsSection: {
+    marginBottom: 24,
+  },
+  shortsScroll: {
+    gap: 12,
+  },
+  shortCard: {
+    width: 140,
+    height: 240,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#1E293B',
+    position: 'relative',
+  },
+  shortThumbnail: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  shortOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  shortPlayBtn: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shortPlayCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  shortsBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  shortsBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  shortTitle: {
+    position: 'absolute',
+    bottom: 28,
+    left: 10,
+    right: 10,
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  shortPrice: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    color: '#FBBF24',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   viewAllText: {
-    color: '#2E7D32',
-    fontWeight: '600',
-    fontSize: 14,
+    color: '#176B2C',
+    fontWeight: '700',
+    fontSize: 12,
   },
   ordersList: {
     gap: 12,
   },
-  orderCard: {
+  orderCardItem: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#86EFAC',
     padding: 16,
     flexDirection: 'column',
-    elevation: 6,
-    shadowColor: '#1B5E20',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    position: 'relative',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   orderCardTopRow: {
     flexDirection: 'row',
@@ -651,8 +787,8 @@ const styles = StyleSheet.create({
   },
   statusMarkAbs: {
     position: 'absolute',
-    top: -10,
-    left: -10,
+    top: -8,
+    left: -8,
     backgroundColor: '#FFF',
     borderRadius: 12,
     zIndex: 10,
@@ -662,12 +798,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
+    borderTopColor: '#F1F5F9',
     paddingTop: 12,
     gap: 10,
   },
   acceptBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#176B2C',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -675,69 +811,61 @@ const styles = StyleSheet.create({
   acceptBtnText: {
     color: '#FFF',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 12,
   },
   cancelBtn: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#FEF2F2',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA'
   },
   cancelBtnText: {
-    color: '#FFF',
+    color: '#EF4444',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 12,
   },
   orderProductImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     marginRight: 12,
-    backgroundColor: '#EEEEEE',
+    backgroundColor: '#F1F5F9',
   },
   orderDetails: {
     flex: 1,
   },
   orderProductName: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#212121',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
     marginBottom: 4,
   },
   orderMeta: {
-    fontSize: 13,
-    color: '#757575',
+    fontSize: 12,
+    color: '#64748B',
   },
   orderStatusCol: {
     alignItems: 'flex-end',
   },
   customerName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#424242',
+    color: '#334155',
     marginBottom: 6,
   },
-  statusBadgeDelivered: {
-    backgroundColor: '#E8F5E9',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  statusTextDelivered: {
-    color: '#2E7D32',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
   statusBadgePending: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: '#FEF3C7',
     paddingVertical: 4,
     paddingHorizontal: 8,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   statusTextPending: {
-    color: '#F57C00',
-    fontSize: 11,
-    fontWeight: 'bold',
+    color: '#D97706',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase'
   }
 });
 

@@ -35,8 +35,12 @@ const CustomerOrdersScreen = ({navigation}: any) => {
         api.get('/order/customer/order-history')
       ]);
       const combined = [...activeResponse.data, ...historyResponse.data];
-      // Sort by some criteria if needed, or just reverse the combined list assuming order ID or created date
-      combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Sort by descending createdOn date (newest first)
+      combined.sort((a, b) => {
+        const dateA = new Date(a.createdOn || 0).getTime();
+        const dateB = new Date(b.createdOn || 0).getTime();
+        return dateB - dateA;
+      });
       
       setOrders(combined);
     } catch (error) {
@@ -110,7 +114,10 @@ const CustomerOrdersScreen = ({navigation}: any) => {
               {mainItem?.productName || 'Product'}
             </Text>
             {moreItemsCount > 0 && (
-              <Text style={styles.moreItemsText}>+ {moreItemsCount} more item(s)</Text>
+              <View style={styles.moreItemsBadge}>
+                <Ionicons name="layers-outline" size={13} color="#1E88E5" />
+                <Text style={styles.moreItemsText}>+{moreItemsCount} more item{moreItemsCount > 1 ? 's' : ''}</Text>
+              </View>
             )}
             <Text style={styles.totalAmount}>₹{item.totalAmount?.toFixed(2)}</Text>
           </View>
@@ -120,7 +127,7 @@ const CustomerOrdersScreen = ({navigation}: any) => {
           <OrderStatusBadge status={item.status} />
           <View style={styles.viewDetailsBtn}>
             <Text style={styles.viewDetailsText}>View Details</Text>
-            <Ionicons name="chevron-forward" size={16} color="#1B5E20" />
+            <Ionicons name="chevron-forward" size={16} color="#2563EB" />
           </View>
         </View>
       </TouchableOpacity>
@@ -159,7 +166,7 @@ const CustomerOrdersScreen = ({navigation}: any) => {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1B5E20']} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1E3A8A']} />
           }
           ListEmptyComponent={
             <OrderEmptyState 
@@ -176,13 +183,13 @@ const CustomerOrdersScreen = ({navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    backgroundColor: '#2D983A',
+    backgroundColor: '#1E3A8A',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
@@ -212,7 +219,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   tabBtnActive: {
-    backgroundColor: '#1B5E20',
+    backgroundColor: '#1E3A8A',
   },
   tabText: {
     fontSize: 14,
@@ -236,8 +243,8 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#86EFAC',
-    shadowColor: '#1B5E20',
+    borderColor: '#E2E8F0',
+    shadowColor: '#1E3A8A',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -272,7 +279,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 10,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -286,15 +293,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
+  moreItemsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
   moreItemsText: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E88E5',
+    marginLeft: 4,
   },
   totalAmount: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1B5E20',
+    color: '#1E3A8A',
     marginTop: 4,
   },
   cardFooter: {
@@ -321,7 +339,7 @@ const styles = StyleSheet.create({
   viewDetailsText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1B5E20',
+    color: '#2563EB',
     marginRight: 4,
   },
   emptyContainer: {
@@ -345,7 +363,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   shopBtn: {
-    backgroundColor: '#1B5E20',
+    backgroundColor: '#F59E0B',
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,

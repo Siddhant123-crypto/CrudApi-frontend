@@ -37,12 +37,7 @@ export const saveProductFormData = async (data: any, photoUri?: string, videoUri
     } as any);
   }
 
-  const response = await api.post('/product/save', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-    transformRequest: (data) => data,
-  });
+  const response = await api.post('/product/save', formData);
   return response.data;
 };
 
@@ -83,12 +78,7 @@ export const uploadProductPhoto = async (fileUri: string) => {
     type: fileType,
   } as any);
 
-  const response = await api.post('/product/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-    transformRequest: (data) => data,
-  });
+  const response = await api.post('/product/upload', formData);
   return response.data; // returns filename string
 };
 
@@ -122,14 +112,16 @@ export const updateProductFormData = async (
     formData.append('video', { uri: videoUri, name: filename, type: fileType } as any);
   }
 
-  const response = await api.put(`/product/update/${id}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    transformRequest: (data) => data,
-  });
+  const response = await api.put(`/product/update/${id}`, formData);
   return response.data;
 };
 
 // Helper — build full image URL for product photos
 export const getProductImageUrl = (fileName: string) => {
   return `${BASE_URL}/product/image/${fileName}`;
+};
+
+// Helper — build full video URL for product videos
+export const getProductVideoUrl = (fileName: string) => {
+  return `${BASE_URL}/product/video/${fileName}`;
 };

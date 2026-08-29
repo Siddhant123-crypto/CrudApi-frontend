@@ -756,10 +756,10 @@ const CustomerRegisterScreen = ({route, navigation}: any) => {
               style={{
                 marginTop: 16,
                 backgroundColor:
-                  '#C8E6C9',
+                  '#F59E0B',
               }}
               textStyle={{
-                color: '#1B5E20',
+                color: '#FFFFFF',
                 fontWeight: 'bold',
               }}
             />
@@ -956,7 +956,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#1B5E20',
+    color: '#1E3A8A',
     letterSpacing: 1,
   },
 
@@ -1005,7 +1005,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
 
     borderWidth: 2,
-    borderColor: '#C8E6C9',
+    borderColor: '#BFDBFE',
     borderStyle: 'dashed',
 
     position: 'relative',
@@ -1022,7 +1022,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
 
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1E3A8A',
 
     width: 32,
     height: 32,
@@ -1040,7 +1040,7 @@ const styles = StyleSheet.create({
     height: 110,
     borderRadius: 55,
     borderWidth: 2,
-    borderColor: '#C8E6C9',
+    borderColor: '#BFDBFE',
   },
 
   loginRow: {
@@ -1055,8 +1055,8 @@ const styles = StyleSheet.create({
   },
 
   loginLink: {
-    backgroundColor: '#C8E6C9',
-    color: '#212121',
+    backgroundColor: '#EFF6FF',
+    color: '#2563EB',
     fontSize: 12,
     fontWeight: '600',
     paddingVertical: 4,
@@ -1098,6 +1098,3 @@ const styles = StyleSheet.create({
     color: '#212121',
   },
 });
-
-
-import {customerRegister} from '../services/authService';

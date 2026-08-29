@@ -17,12 +17,17 @@ import FarmerRegisterScreen from '../screens/FarmerRegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
+import FarmerProductDetailScreen from '../screens/FarmerProductDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import FarmerDashboardScreen from '../screens/FarmerDashboardScreen';
 import AddProductScreen from '../screens/AddProductScreen';
 import MyProductsScreen from '../screens/MyProductsScreen';
 import EarningsScreen from '../screens/EarningsScreen';
 import CategoryDashboardScreen from '../screens/CategoryDashboardScreen';
+import CartScreen from '../screens/CartScreen';
+import WishlistScreen from '../screens/WishlistScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
+import FarmerCategoryDashboardScreen from '../screens/FarmerCategoryDashboardScreen';
 
 // ── New Order Screens ──
 import CheckoutScreen from '../screens/CheckoutScreen';
@@ -31,6 +36,7 @@ import CustomerOrdersScreen from '../screens/CustomerOrdersScreen';
 import CustomerOrderDetailsScreen from '../screens/CustomerOrderDetailsScreen';
 import FarmerOrdersScreen from '../screens/FarmerOrdersScreen';
 import FarmerOrderDetailsScreen from '../screens/FarmerOrderDetailsScreen';
+import { FarmerProductReviewsScreen } from '../screens/FarmerProductReviewsScreen';
 
 // ── Define Navigation Param Lists ──
 export type AuthStackParamList = {
@@ -47,25 +53,32 @@ export type MainStackParamList = {
   CustomerMain: undefined;
   FarmerMain: undefined;
   ProductDetail: {product: Product};
-  AddProduct: { product?: any } | undefined;
+  FarmerProductDetail: {product: any};
+  AddProduct: { product?: any, category?: string } | undefined;
   CategoryDashboard: { category: string };
+  FarmerCategoryDashboard: { category: string };
   Checkout: { orderItems: any[]; totalAmount: number };
   OrderSuccess: { orderNumber: string; totalAmount: number };
   CustomerOrderDetails: { orderId: string };
   FarmerOrderDetails: { orderId: string };
+  FarmerProductReviews: { product?: any } | undefined;
+  Cart: undefined;
+  Wishlist: undefined;
 };
 
 export type CustomerTabParamList = {
   Home: undefined;
+  Categories: undefined;
+  Wishlist: undefined;
   Orders: undefined;
   Profile: undefined;
 };
 
 export type FarmerTabParamList = {
-  Dashboard: undefined;
-  Products: undefined;
+  Home: undefined;
+  MyFarm: undefined;
+  Market: undefined;
   Orders: undefined;
-  Earnings: undefined;
   Profile: undefined;
 };
 
@@ -88,30 +101,35 @@ const CustomerTabs = () => {
     <CustomerTab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.grey,
+        tabBarActiveTintColor: '#1E3A8A',
+        tabBarInactiveTintColor: '#64748B',
         tabBarStyle: {
-          backgroundColor: COLORS.white,
-          borderTopWidth: 1,
-          borderTopColor: '#E0E0E0',
-          height: 65,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          height: 68,
           paddingBottom: 10,
           paddingTop: 8,
-          elevation: 8,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          elevation: 16,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.1,
-          shadowRadius: 3,
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: 10,
+          fontWeight: '700',
         },
         tabBarIcon: ({ color, size, focused }) => {
           let iconName: any;
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Categories') {
+            iconName = focused ? 'grid' : 'grid-outline';
+          } else if (route.name === 'Wishlist') {
+            iconName = focused ? 'heart' : 'heart-outline';
           } else if (route.name === 'Orders') {
             iconName = focused ? 'receipt' : 'receipt-outline';
           } else if (route.name === 'Profile') {
@@ -120,13 +138,23 @@ const CustomerTabs = () => {
             iconName = 'help-circle-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <Ionicons name={iconName} size={focused ? 24 : 22} color={color} />;
         },
       })}>
       <CustomerTab.Screen
         name="Home"
         component={HomeScreen as any}
         options={{tabBarLabel: 'Home'}}
+      />
+      <CustomerTab.Screen
+        name="Categories"
+        component={CategoriesScreen as any}
+        options={{tabBarLabel: 'Categories'}}
+      />
+      <CustomerTab.Screen
+        name="Wishlist"
+        component={WishlistScreen as any}
+        options={{tabBarLabel: 'WishList'}}
       />
       <CustomerTab.Screen
         name="Orders"
@@ -136,7 +164,7 @@ const CustomerTabs = () => {
       <CustomerTab.Screen
         name="Profile"
         component={ProfileScreen as any}
-        options={{tabBarLabel: 'Profile'}}
+        options={{tabBarLabel: 'Account'}}
       />
     </CustomerTab.Navigator>
   );
@@ -170,14 +198,14 @@ const FarmerTabs = () => {
         tabBarIcon: ({ color, size, focused }) => {
           let iconName: any;
 
-          if (route.name === 'Dashboard') {
+          if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Products') {
-            iconName = focused ? 'cube' : 'cube-outline';
+          } else if (route.name === 'MyFarm') {
+            iconName = focused ? 'leaf' : 'leaf-outline';
+          } else if (route.name === 'Market') {
+            iconName = focused ? 'storefront' : 'storefront-outline';
           } else if (route.name === 'Orders') {
             iconName = focused ? 'receipt' : 'receipt-outline';
-          } else if (route.name === 'Earnings') {
-            iconName = focused ? 'cash' : 'cash-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           } else {
@@ -188,24 +216,24 @@ const FarmerTabs = () => {
         },
       })}>
       <FarmerTab.Screen
-        name="Dashboard"
+        name="Home"
         component={FarmerDashboardScreen as any}
-        options={{tabBarLabel: 'Dashboard'}}
+        options={{tabBarLabel: 'Home'}}
       />
       <FarmerTab.Screen
-        name="Products"
+        name="MyFarm"
         component={MyProductsScreen as any}
-        options={{tabBarLabel: 'Products'}}
+        options={{tabBarLabel: 'My Farm'}}
+      />
+      <FarmerTab.Screen
+        name="Market"
+        component={EarningsScreen as any}
+        options={{tabBarLabel: 'Market'}}
       />
       <FarmerTab.Screen
         name="Orders"
         component={FarmerOrdersScreen as any}
         options={{tabBarLabel: 'Orders'}}
-      />
-      <FarmerTab.Screen
-        name="Earnings"
-        component={EarningsScreen as any}
-        options={{tabBarLabel: 'Earnings'}}
       />
       <FarmerTab.Screen
         name="Profile"
@@ -242,8 +270,15 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
       options={{
         headerShown: true,
         headerTitle: 'Product Details',
-        headerStyle: {backgroundColor: COLORS.primary},
+        headerStyle: {backgroundColor: '#1E3A8A'},
         headerTintColor: COLORS.white,
+      }}
+    />
+    <Stack.Screen
+      name="FarmerProductDetail"
+      component={FarmerProductDetailScreen as any}
+      options={{
+        headerShown: false
       }}
     />
     <Stack.Screen
@@ -259,11 +294,22 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
     <Stack.Screen
       name="CategoryDashboard"
       component={CategoryDashboardScreen as any}
-      options={{
-        headerShown: true,
-        headerStyle: {backgroundColor: COLORS.primary},
-        headerTintColor: COLORS.white,
-      }}
+      options={{headerShown: true, headerBackTitleVisible: false}}
+    />
+    <Stack.Screen
+      name="FarmerCategoryDashboard"
+      component={FarmerCategoryDashboardScreen as any}
+      options={{headerShown: true, headerBackTitleVisible: false}}
+    />
+    <Stack.Screen
+      name="Cart"
+      component={CartScreen as any}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
+      name="Wishlist"
+      component={WishlistScreen as any}
+      options={{headerShown: false}}
     />
     <Stack.Screen
       name="Checkout"
@@ -283,6 +329,11 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
     <Stack.Screen
       name="FarmerOrderDetails"
       component={FarmerOrderDetailsScreen as any}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
+      name="FarmerProductReviews"
+      component={FarmerProductReviewsScreen as any}
       options={{headerShown: false}}
     />
   </Stack.Navigator>
