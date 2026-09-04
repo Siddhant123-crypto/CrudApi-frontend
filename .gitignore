@@ -1,0 +1,50 @@
+# OSX
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Xcode
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+
+# Android
+*.iml
+.gradle
+local.properties
+*.apk
+*.aab
+android/app/build
+
+# Bundle artifacts
+*.jsbundle
+*.bundle
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Env
+.env
+.env.local
+
+# Metro
+.metro-health-check*
+
+# Testing
+coverage/
