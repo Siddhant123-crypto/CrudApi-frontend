@@ -28,6 +28,8 @@ import CartScreen from '../screens/CartScreen';
 import WishlistScreen from '../screens/WishlistScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import FarmerCategoryDashboardScreen from '../screens/FarmerCategoryDashboardScreen';
+import MyFarmScreen from '../screens/MyFarmScreen';
+import EditFarmDetailsScreen from '../screens/EditFarmDetailsScreen';
 
 // ── New Order Screens ──
 import CheckoutScreen from '../screens/CheckoutScreen';
@@ -37,6 +39,22 @@ import CustomerOrderDetailsScreen from '../screens/CustomerOrderDetailsScreen';
 import FarmerOrdersScreen from '../screens/FarmerOrdersScreen';
 import FarmerOrderDetailsScreen from '../screens/FarmerOrderDetailsScreen';
 import { FarmerProductReviewsScreen } from '../screens/FarmerProductReviewsScreen';
+
+// ── Admin Screens ──
+import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
+import AdminFarmersScreen from '../screens/admin/AdminFarmersScreen';
+import AdminCustomersScreen from '../screens/admin/AdminCustomersScreen';
+import AdminCustomerDetailsScreen from '../screens/admin/AdminCustomerDetailsScreen';
+import AdminProductsScreen from '../screens/admin/AdminProductsScreen';
+import { AdminProductDetailsScreen } from '../screens/admin/AdminProductDetailsScreen';
+import { AdminCategoryProductsScreen } from '../screens/admin/AdminCategoryProductsScreen';
+import AdminOrdersScreen from '../screens/admin/AdminOrdersScreen';
+import AdminFarmVerificationScreen from '../screens/admin/AdminFarmVerificationScreen';
+import AdminCategoriesScreen from '../screens/admin/AdminCategoriesScreen';
+import ComingSoonScreen from '../screens/admin/ComingSoonScreen';
+import AdminFarmerDetailsScreen from '../screens/admin/AdminFarmerDetailsScreen';
+import AdminMenuScreen from '../screens/admin/AdminMenuScreen';
+
 
 // ── Define Navigation Param Lists ──
 export type AuthStackParamList = {
@@ -50,6 +68,7 @@ export type AuthStackParamList = {
 };
 
 export type MainStackParamList = {
+  AdminMain: undefined;
   CustomerMain: undefined;
   FarmerMain: undefined;
   ProductDetail: {product: Product};
@@ -64,6 +83,22 @@ export type MainStackParamList = {
   FarmerProductReviews: { product?: any } | undefined;
   Cart: undefined;
   Wishlist: undefined;
+  MyProducts: undefined;
+  EditFarmDetails: { farmDetails?: any };
+  AdminFarmers: undefined;
+  AdminCustomers: undefined;
+  AdminProducts: undefined;
+  AdminOrders: undefined;
+  AdminFarmVerification: undefined;
+  AdminCategories: undefined;
+  AdminFarmerDetails: { farmerId: string };
+  AdminCustomerDetails: { customerId: string };
+  AdminProductDetails: { productId: string };
+  AdminCategoryProducts: { category: string };
+  AdminOrderDetails: { orderId: string };
+  AdminFarmVerificationDetails: { verificationId: string };
+  Analytics: undefined;
+  AdminMenu: undefined;
 };
 
 export type CustomerTabParamList = {
@@ -82,10 +117,18 @@ export type FarmerTabParamList = {
   Profile: undefined;
 };
 
+export type AdminTabParamList = {
+  Home: undefined;
+  Users: undefined;
+  Products: undefined;
+  More: undefined;
+};
+
 
 const Stack = createNativeStackNavigator<AuthStackParamList & MainStackParamList>();
 const CustomerTab = createBottomTabNavigator<CustomerTabParamList>();
 const FarmerTab = createBottomTabNavigator<FarmerTabParamList>();
+const AdminTab = createBottomTabNavigator<AdminTabParamList>();
 
 // ── Colors ──
 const COLORS = {
@@ -222,7 +265,7 @@ const FarmerTabs = () => {
       />
       <FarmerTab.Screen
         name="MyFarm"
-        component={MyProductsScreen as any}
+        component={MyFarmScreen as any}
         options={{tabBarLabel: 'My Farm'}}
       />
       <FarmerTab.Screen
@@ -244,6 +287,83 @@ const FarmerTabs = () => {
   );
 };
 
+// ── Bottom Tabs for Admin ──
+const AdminTabs = () => {
+  return (
+    <AdminTab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: '#F5C16C', // Gold accent
+        tabBarInactiveTintColor: '#6B7280',
+        tabBarStyle: {
+          backgroundColor: '#17212F', // Dark navy
+          borderTopWidth: 0,
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 8,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          elevation: 16,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          position: 'absolute',
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '700',
+        },
+        tabBarIcon: ({ color, size, focused }) => {
+          let iconName: any;
+
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Users') {
+            iconName = focused ? 'people' : 'people-outline';
+          } else if (route.name === 'Products') {
+            iconName = focused ? 'cube' : 'cube-outline';
+          } else if (route.name === 'More') {
+            iconName = focused ? 'grid' : 'grid-outline';
+          } else {
+            iconName = 'help-circle-outline';
+          }
+
+          return <Ionicons name={iconName} size={focused ? 24 : 22} color={color} />;
+        },
+        tabBarItemStyle: ({ focused }: any) => ({
+          backgroundColor: focused ? '#1F2B3A' : 'transparent',
+          borderRadius: 16,
+          margin: 4,
+          padding: 2,
+        }),
+      }) as any}>
+      <AdminTab.Screen
+        name="Home"
+        component={AdminDashboardScreen as any}
+        options={{tabBarLabel: 'Home'}}
+      />
+      <AdminTab.Screen
+        name="Users"
+        component={AdminFarmersScreen as any} // Directing to Farmers list for now
+        options={{tabBarLabel: 'Users'}}
+      />
+      <AdminTab.Screen
+        name="Products"
+        component={AdminProductsScreen as any}
+        options={{tabBarLabel: 'Products'}}
+      />
+      <AdminTab.Screen
+        name="More"
+        component={ComingSoonScreen as any}
+        options={{tabBarLabel: 'More'}}
+        initialParams={{ title: 'Admin Menu', icon: 'grid' }}
+      />
+    </AdminTab.Navigator>
+  );
+};
+
+
 // ── Auth Stack (not logged in) ──
 const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection' | 'NewUserLogin'}) => (
   <Stack.Navigator screenOptions={{headerShown: false}} initialRouteName={initialRoute}>
@@ -259,7 +379,9 @@ const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection' | 
 // ── Main Stack (logged in) ──
 const MainStack: React.FC<{role?: string}> = ({role}) => (
   <Stack.Navigator screenOptions={{headerShown: false}}>
-    {role === 'FARMER' ? (
+    {role === 'ADMIN' ? (
+      <Stack.Screen name="AdminMain" component={AdminTabs} />
+    ) : role === 'FARMER' ? (
       <Stack.Screen name="FarmerMain" component={FarmerTabs} />
     ) : (
       <Stack.Screen name="CustomerMain" component={CustomerTabs} />
@@ -336,6 +458,32 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
       component={FarmerProductReviewsScreen as any}
       options={{headerShown: false}}
     />
+    <Stack.Screen
+      name="MyProducts"
+      component={MyProductsScreen as any}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
+      name="EditFarmDetails"
+      component={EditFarmDetailsScreen as any}
+      options={{headerShown: false}}
+    />
+    
+    {/* Admin Supplemental Screens */}
+    <Stack.Screen name="AdminFarmers" component={AdminFarmersScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminCustomers" component={AdminCustomersScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminProducts" component={AdminProductsScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminOrders" component={AdminOrdersScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminFarmVerification" component={AdminFarmVerificationScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="Analytics" component={ComingSoonScreen as any} options={{headerShown: false}} initialParams={{ title: 'Analytics & Reports', icon: 'bar-chart' }} />
+    <Stack.Screen name="AdminFarmerDetails" component={AdminFarmerDetailsScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminCustomerDetails" component={AdminCustomerDetailsScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminProductDetails" component={AdminProductDetailsScreen} options={{headerShown: false}} />
+    <Stack.Screen name="AdminCategoryProducts" component={AdminCategoryProductsScreen} options={{headerShown: false}} />
+    <Stack.Screen name="AdminOrderDetails" component={ComingSoonScreen as any} options={{headerShown: false}} initialParams={{ title: 'Order Details', icon: 'receipt' }} />
+    <Stack.Screen name="AdminFarmVerificationDetails" component={ComingSoonScreen as any} options={{headerShown: false}} initialParams={{ title: 'Verification Details', icon: 'shield-checkmark' }} />
+    <Stack.Screen name="AdminMenu" component={AdminMenuScreen as any} options={{headerShown: false, presentation: 'modal'}} />
   </Stack.Navigator>
 );
 

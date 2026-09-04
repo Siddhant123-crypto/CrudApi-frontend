@@ -245,7 +245,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                     </View>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('MyFarm')}>
+                  <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('MyProducts')}>
                     <View style={styles.actionCard}>
                       <View style={[styles.actionIconBox, { backgroundColor: '#E8F0FE' }]}>
                         <Ionicons name="leaf" size={24} color="#1A73E8" />

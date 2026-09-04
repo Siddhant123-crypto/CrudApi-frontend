@@ -10,6 +10,16 @@ export const authLogin = async (email: string, password: string) => {
   return response.data;
 };
 
+// POST /admin/login
+export const adminLogin = async (email: string, password: string) => {
+  const response = await api.post('/admin/login', {
+    email,
+    password,
+  });
+
+  return response.data;
+};
+
 // POST /user/login
 export const userLogin = async (email: string, password: string) => {
   const response = await api.post('/user/login', {

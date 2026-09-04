@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   newUserLogin,
   googleLogin,
+  adminLogin,
 } from '../services/authService';
 
 // @ts-ignore
@@ -44,7 +45,7 @@ GoogleSignin.configure({
 type UserData = {
   name: string;
   email: string;
-  role: 'FARMER' | 'USER';
+  role: 'FARMER' | 'USER' | 'ADMIN';
   farmerId?: string;
   userId?: string;
   profilePhoto?: string;
@@ -116,16 +117,37 @@ const NewUserLoginScreen = ({
     setLoading(true);
 
     try {
-      const result =
-        await newUserLogin(
-          identifier.trim(),
-          password,
-        );
+      let result;
+      const isSystemAdmin = identifier.trim().toLowerCase() === 'admin@gmail.com';
+      
+      if (isSystemAdmin) {
+        result = await adminLogin(identifier.trim(), password);
+        console.log('ADMIN LOGIN RESPONSE:', result);
 
-      console.log(
-        'NORMAL LOGIN RESPONSE:',
-        result,
-      );
+        if (result?.message?.includes('successful') || result?.role === 'ADMIN') {
+          const userData: UserData = {
+            name: result.name || 'System Admin',
+            email: result.email || identifier.trim(),
+            role: 'ADMIN',
+            userId: result.adminId,
+          };
+          
+          if (!result.token) {
+            Alert.alert('Login Error', 'Login successful but access token was not received.');
+            return;
+          }
+          
+          await login(userData, result.token);
+          console.log('ADMIN LOGIN COMPLETED');
+          return;
+        } else {
+          Alert.alert('Login Failed', result?.message || 'Invalid credentials');
+          return;
+        }
+      } else {
+        result = await newUserLogin(identifier.trim(), password);
+        console.log('NORMAL LOGIN RESPONSE:', result);
+      }
 
       // ----------------------------------------------
       // SUCCESS
@@ -144,6 +166,10 @@ const NewUserLoginScreen = ({
           response.role === 'FARMER' ||
           response.role === 'Farmer';
 
+        const isAdmin =
+          response.role === 'ADMIN' ||
+          response.role === 'Admin';
+
         const userData: UserData = {
           name:
             response.name,
@@ -151,16 +177,18 @@ const NewUserLoginScreen = ({
           email:
             response.email,
 
-          role: isFarmer
-            ? 'FARMER'
-            : 'USER',
+          role: isAdmin
+            ? 'ADMIN'
+            : isFarmer
+              ? 'FARMER'
+              : 'USER',
 
           farmerId: isFarmer
             ? response.farmerId ||
               response.id
             : undefined,
 
-          userId: !isFarmer
+          userId: (!isFarmer && !isAdmin)
             ? response.userId ||
               response.id
             : undefined,
@@ -331,6 +359,10 @@ const NewUserLoginScreen = ({
           response.role === 'FARMER' ||
           response.role === 'Farmer';
 
+        const isAdmin =
+          response.role === 'ADMIN' ||
+          response.role === 'Admin';
+
         const userData: UserData = {
           name:
             response.name,
@@ -338,16 +370,18 @@ const NewUserLoginScreen = ({
           email:
             response.email,
 
-          role: isFarmer
-            ? 'FARMER'
-            : 'USER',
+          role: isAdmin
+            ? 'ADMIN'
+            : isFarmer
+              ? 'FARMER'
+              : 'USER',
 
           farmerId: isFarmer
             ? response.farmerId ||
               response.id
             : undefined,
 
-          userId: !isFarmer
+          userId: (!isFarmer && !isAdmin)
             ? response.userId ||
               response.id
             : undefined,

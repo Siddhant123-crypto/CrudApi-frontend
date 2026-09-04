@@ -2,7 +2,7 @@ export interface User {
   userId?: string;
   name: string;
   email: string;
-  role: 'USER' | 'FARMER';
+  role: 'USER' | 'FARMER' | 'ADMIN';
   farmerId?: string;
   profilePhoto?: string;
 }
