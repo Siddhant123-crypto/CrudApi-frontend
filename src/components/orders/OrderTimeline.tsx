@@ -1,12 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 interface OrderTimelineProps {
   status: string;
   isFarmer?: boolean;
 }
-
 export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer = false }) => {
   const statuses = [
     { id: 'PENDING', label: 'Order placed, waiting for farmer' },
@@ -15,7 +13,6 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer =
     { id: 'OUT_FOR_DELIVERY', label: 'Your order is on the way' },
     { id: 'DELIVERED', label: 'Order delivered successfully' },
   ];
-
   if (status === 'CANCELLED') {
     return (
       <View style={styles.timelineContainer}>
@@ -28,15 +25,12 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer =
       </View>
     );
   }
-
   const currentIndex = statuses.findIndex(s => s.id === status);
-
   return (
     <View style={styles.timelineContainer}>
       {statuses.map((s, index) => {
         const isCompleted = index <= currentIndex;
         const isCurrent = index === currentIndex;
-
         return (
           <View key={s.id} style={styles.timelineItem}>
             <View style={styles.timelineLeft}>
@@ -77,7 +71,6 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer =
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   timelineContainer: {
     paddingLeft: 8,

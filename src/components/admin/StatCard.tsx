@@ -1,14 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 interface StatCardProps {
   title: string;
   value: string | number;
   growth: string;
   icon: keyof typeof Ionicons.glyphMap;
 }
-
 export const StatCard: React.FC<StatCardProps> = ({ title, value, growth, icon }) => {
   return (
     <View style={styles.card}>
@@ -21,7 +19,6 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, growth, icon }
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',

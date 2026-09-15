@@ -1,10 +1,8 @@
 import React from 'react';
 import {View, ActivityIndicator, Text, StyleSheet} from 'react-native';
-
 interface LoadingSpinnerProps {
   message?: string;
 }
-
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({message = 'Loading...'}) => {
   return (
     <View style={styles.container}>
@@ -15,7 +13,6 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({message = 'Loading...'})
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -41,5 +38,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-
 export default LoadingSpinner;

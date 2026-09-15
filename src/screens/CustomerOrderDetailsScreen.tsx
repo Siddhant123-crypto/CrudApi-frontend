@@ -22,7 +22,6 @@ import { OrderStatusBadge } from '../components/orders/OrderStatusBadge';
 import { ReviewForm } from '../components/reviews/ReviewForm';
 import { StarRating } from '../components/reviews/StarRating';
 import { getProductReviews, deleteReview } from '../services/reviewService';
-
 const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
   const {orderId} = route.params;
   const [order, setOrder] = useState<any>(null);
@@ -30,17 +29,13 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
   const [cancelling, setCancelling] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
-  
   const [editReasonModalVisible, setEditReasonModalVisible] = useState(false);
   const [editReasonText, setEditReasonText] = useState('');
   const [editingReason, setEditingReason] = useState(false);
-
   const [reviews, setReviews] = useState<Record<string, any>>({});
   const [reviewFormVisible, setReviewFormVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-
   const appState = useRef(AppState.currentState);
-
   const fetchReviewsForOrderItems = async (orderData: any) => {
     if (orderData && orderData.status === 'DELIVERED') {
       try {
@@ -64,9 +59,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       }
     }
   };
-
   const fetchOrderDetails = async (isSilent = false) => {
-    // Only show full loading indicator on first load
     if (!isSilent && !order) {
       setLoading(true);
     }
@@ -84,31 +77,21 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       setLoading(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
-      
-      // 1. Fetch immediately on focus
       fetchOrderDetails(false);
-
-      // 2. Start polling interval
       const intervalId = setInterval(() => {
         if (appState.current === 'active' && isMounted) {
-          fetchOrderDetails(true); // Silent refresh
+          fetchOrderDetails(true);
         }
       }, 10000);
-
-      // 3. Handle AppState changes
       const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
         if (appState.current.match(/inactive|background/) && nextAppState === 'active' && isMounted) {
-          // Immediately fetch when coming back to foreground
           fetchOrderDetails(true);
         }
         appState.current = nextAppState;
       });
-
-      // 4. Cleanup
       return () => {
         isMounted = false;
         clearInterval(intervalId);
@@ -116,11 +99,9 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       };
     }, [orderId])
   );
-
   const handleCancelOrder = () => {
     setCancelModalVisible(true);
   };
-
   const confirmCancelOrder = async () => {
     setCancelling(true);
     try {
@@ -128,19 +109,17 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       await api.put(`/order/${orderId}/cancel${queryParams}`);
       Alert.alert('Success', 'Order cancelled successfully');
       setCancelModalVisible(false);
-      fetchOrderDetails(); // Refresh details to show cancelled status
+      fetchOrderDetails();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to cancel order');
     } finally {
       setCancelling(false);
     }
   };
-
   const handleEditReason = () => {
     setEditReasonText(order?.cancellationReason || '');
     setEditReasonModalVisible(true);
   };
-
   const submitEditReason = async () => {
     if (!editReasonText.trim()) {
       Alert.alert('Validation Error', 'Reason cannot be empty');
@@ -159,7 +138,6 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       setEditingReason(false);
     }
   };
-
   const handleDeleteReview = (reviewId: string, productId: string) => {
     Alert.alert(
       'Delete Review',
@@ -185,7 +163,6 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       ]
     );
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -193,11 +170,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       </View>
     );
   }
-
   if (!order) return null;
-
-
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -208,10 +181,8 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           Order #{order.orderNumber ? order.orderNumber.substring(0, 12) : order.orderId.substring(0, 8)}
         </Text>
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        
-        {/* Status Timeline */}
+        {}
         <View style={styles.card}>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
             <Text style={styles.sectionTitle}>Overall Order Status</Text>
@@ -219,8 +190,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           </View>
           <OrderTimeline status={order.status} />
         </View>
-
-        {/* Cancellation Reason Card (if cancelled) */}
+        {}
         {order.status === 'CANCELLED' && (
           <View style={[styles.card, {borderColor: '#FCA5A5', backgroundColor: '#FEF2F2'}]}>
             <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8}}>
@@ -237,8 +207,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             </Text>
           </View>
         )}
-
-        {/* Ordered Items */}
+        {}
         <View style={styles.highlightedCard}>
           <Text style={styles.sectionTitle}>Ordered Items</Text>
           {order.items.map((item: any, index: number) => {
@@ -261,8 +230,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
                   </View>
                   <Text style={styles.itemTotal}>₹{item.subtotal.toFixed(2)}</Text>
                 </View>
-
-                {/* Review status / action */}
+                {}
                 {item.status === 'DELIVERED' && (
                   <View style={styles.reviewActionContainer}>
                     {reviews[item.productId] ? (
@@ -327,8 +295,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             );
           })}
         </View>
-
-        {/* Delivery Address */}
+        {}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Delivery Details</Text>
           <View style={styles.detailRow}>
@@ -339,8 +306,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             </View>
           </View>
         </View>
-
-        {/* Payment Details */}
+        {}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Payment Details</Text>
           <View style={styles.summaryRow}>
@@ -352,23 +318,20 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             <Text style={styles.summaryTotal}>₹{order.totalAmount.toFixed(2)}</Text>
           </View>
         </View>
-
         <View style={{height: 40}} />
       </ScrollView>
-
-      {/* Cancel Order Button */}
+      {}
       {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
         <View style={styles.bottomBar}>
-          <TouchableOpacity 
-            style={styles.cancelBtn} 
+          <TouchableOpacity
+            style={styles.cancelBtn}
             onPress={handleCancelOrder}
           >
              <Text style={styles.cancelBtnText}>Cancel Order</Text>
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Cancel Reason Modal */}
+      {}
       <Modal
         visible={cancelModalVisible}
         transparent={true}
@@ -379,7 +342,6 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Cancel Order</Text>
             <Text style={styles.modalSubtitle}>Are you sure you want to cancel this order? Please tell us why.</Text>
-            
             <TextInput
               style={styles.reasonInput}
               placeholder="Reason for cancellation (optional)"
@@ -389,18 +351,16 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
               numberOfLines={4}
               textAlignVertical="top"
             />
-            
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalCancelBtn} 
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
                 onPress={() => setCancelModalVisible(false)}
                 disabled={cancelling}
               >
                 <Text style={styles.modalCancelBtnText}>Keep Order</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.modalConfirmBtn} 
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
                 onPress={confirmCancelOrder}
                 disabled={cancelling}
               >
@@ -414,8 +374,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           </View>
         </View>
       </Modal>
-
-      {/* Edit Reason Modal */}
+      {}
       <Modal
         visible={editReasonModalVisible}
         transparent={true}
@@ -426,7 +385,6 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Edit Cancellation Reason</Text>
             <Text style={styles.modalSubtitle}>Update your reason for cancelling this order.</Text>
-            
             <TextInput
               style={styles.reasonInput}
               placeholder="Reason for cancellation (optional)"
@@ -436,18 +394,16 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
               numberOfLines={4}
               textAlignVertical="top"
             />
-            
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalCancelBtn} 
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
                 onPress={() => setEditReasonModalVisible(false)}
                 disabled={editingReason}
               >
                 <Text style={styles.modalCancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.modalConfirmBtn} 
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
                 onPress={submitEditReason}
                 disabled={editingReason}
               >
@@ -461,7 +417,6 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           </View>
         </View>
       </Modal>
-
       {selectedProduct && (
         <ReviewForm
           visible={reviewFormVisible}
@@ -486,7 +441,6 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -564,8 +518,6 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 16,
   },
-  
-  // Timeline
   timelineContainer: {
     paddingLeft: 8,
   },
@@ -587,7 +539,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   timelineDotActive: {
-    backgroundColor: '#10B981', // green
+    backgroundColor: '#10B981',
   },
   timelineDotInactive: {
     backgroundColor: '#E5E7EB',
@@ -630,8 +582,6 @@ const styles = StyleSheet.create({
   timelineTextInactive: {
     color: '#9CA3AF',
   },
-  
-  // Items
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -680,8 +630,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  
-  // Details
   detailRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -710,7 +658,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#1E3A8A',
   },
-
   bottomBar: {
     padding: 16,
     backgroundColor: '#FFFFFF',
@@ -728,8 +675,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -899,5 +844,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
 export default CustomerOrderDetailsScreen;

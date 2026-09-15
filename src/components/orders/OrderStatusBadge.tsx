@@ -1,15 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-
 interface OrderStatusBadgeProps {
   status: string;
 }
-
 export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status }) => {
   let color = '#FFA000';
   let bgColor = '#FFF8E1';
   let label = 'Pending';
-
   switch (status) {
     case 'PENDING':
       label = 'Pending';
@@ -42,14 +39,12 @@ export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status }) =>
       bgColor = '#FFCDD2';
       break;
   }
-
   return (
     <View style={[styles.badge, { backgroundColor: bgColor }]}>
       <Text style={[styles.text, { color }]}>{label}</Text>
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,

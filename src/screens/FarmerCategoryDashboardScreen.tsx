@@ -17,10 +17,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { StarRating } from '../components/reviews/StarRating';
-
 const { width } = Dimensions.get('window');
 const PRODUCT_CARD_WIDTH = width / 2 - 24;
-
 interface ProductItem {
   productId: string;
   productName: string;
@@ -36,15 +34,12 @@ interface ProductItem {
   averageRating?: number;
   reviewCount?: number;
 }
-
 export default function FarmerCategoryDashboardScreen({ route, navigation }: any) {
   const { category } = route.params;
   const { user } = useAuth();
-
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: category,
@@ -69,13 +64,11 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
       },
     });
   }, [navigation, category]);
-
   useFocusEffect(
     useCallback(() => {
       fetchFarmerCategoryProducts();
     }, [category, user?.farmerId])
   );
-
   const fetchFarmerCategoryProducts = async () => {
     try {
       setLoading(true);
@@ -96,11 +89,9 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
       setLoading(false);
     }
   };
-
   const handleEditProduct = (product: ProductItem) => {
     navigation.navigate('AddProduct', { product });
   };
-
   const handleDeleteProduct = (productId: string) => {
     Alert.alert('Delete Product', 'Are you sure you want to delete this product?', [
       { text: 'Cancel', style: 'cancel' },
@@ -119,13 +110,11 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
       },
     ]);
   };
-
   const filteredProducts = products.filter(p =>
     p.productName.toLowerCase().includes(searchText.toLowerCase())
   );
-
   const renderProductItem = ({ item }: { item: ProductItem }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.productCard}
       activeOpacity={0.9}
       onPress={() => navigation.navigate('FarmerProductDetail', { product: item })}
@@ -148,12 +137,10 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
       </View>
       <View style={styles.cardContent}>
         <Text style={styles.productTitle} numberOfLines={1}>{item.productName}</Text>
-        
         <View style={styles.ratingRow}>
           <StarRating rating={item.averageRating || 0} size={14} />
           <Text style={styles.reviewCountText}>({item.reviewCount || 0})</Text>
         </View>
-
         <View style={styles.priceRow}>
           <Text style={styles.productPrice}>₹{item.price}</Text>
           {item.unit && <Text style={styles.unitText}>/ {item.unit.toLowerCase()}</Text>}
@@ -175,7 +162,6 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
       </View>
     </TouchableOpacity>
   );
-
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
@@ -183,10 +169,9 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
       </View>
     );
   }
-
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
+      {}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={20} color="#64748B" style={styles.searchIcon} />
@@ -199,7 +184,6 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
           />
         </View>
       </View>
-
       <FlatList
         data={filteredProducts}
         keyExtractor={(item) => item.productId}
@@ -216,9 +200,8 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
           </View>
         }
       />
-
       {/* FAB for Adding Product */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('AddProduct', { category: category })}
         activeOpacity={0.8}
@@ -228,7 +211,6 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

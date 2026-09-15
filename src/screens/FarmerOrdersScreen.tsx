@@ -17,14 +17,12 @@ import {getProductImageUrl} from '../services/productService';
 import { getFarmerItemsStatus } from '../services/orderService';
 import { OrderEmptyState } from '../components/orders/OrderEmptyState';
 import { OrderSkeleton } from '../components/orders/OrderSkeleton';
-
 const FarmerOrdersScreen = ({navigation}: any) => {
   const {user} = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState('All'); // All, New, Confirmed, Processing, Delivery, Completed, Cancelled
-
+  const [filter, setFilter] = useState('All');
   const tabs = [
     {id: 'All', label: 'All', statuses: []},
     {id: 'New', label: 'New', statuses: ['PENDING']},
@@ -34,12 +32,11 @@ const FarmerOrdersScreen = ({navigation}: any) => {
     {id: 'Completed', label: 'Completed', statuses: ['DELIVERED']},
     {id: 'Cancelled', label: 'Cancelled', statuses: ['CANCELLED']},
   ];
-
   const fetchOrders = async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
     try {
       const response = await api.get('/order/farmer');
-      setOrders(response.data.reverse()); // Latest first
+      setOrders(response.data.reverse());
     } catch (error) {
       console.log('Error fetching farmer orders:', error);
     } finally {
@@ -47,20 +44,16 @@ const FarmerOrdersScreen = ({navigation}: any) => {
       setRefreshing(false);
     }
   };
-
   useEffect(() => {
-    // Refresh when screen comes into focus
     const unsubscribe = navigation.addListener('focus', () => {
       fetchOrders();
     });
     return unsubscribe;
   }, [navigation]);
-
   const onRefresh = () => {
     setRefreshing(true);
     fetchOrders(true);
   };
-
   const getFilteredOrders = () => {
     if (filter === 'All') return orders;
     const activeTab = tabs.find(t => t.id === filter);
@@ -70,29 +63,25 @@ const FarmerOrdersScreen = ({navigation}: any) => {
       return activeTab.statuses.includes(fStatus);
     });
   };
-
   const renderOrderCard = ({item}: {item: any}) => {
     const mainItem = item.items && item.items.length > 0 ? item.items[0] : null;
     const moreItemsCount = item.items ? item.items.length - 1 : 0;
-
     const rawImageUrl = mainItem?.imageUrl || mainItem?.productPhoto || mainItem?.product?.productPhoto;
     const imageUrl = rawImageUrl
       ? getProductImageUrl(rawImageUrl)
       : null;
-
     const fStatus = getFarmerItemsStatus(item.items || []);
     const isCancelled = fStatus === 'CANCELLED';
     const isAccepted = fStatus !== 'PENDING' && !isCancelled;
     const isNew = fStatus === 'PENDING';
-
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[
-          styles.orderCard, 
+          styles.orderCard,
           isNew && styles.orderCardNew,
           isAccepted && { backgroundColor: '#F1F8E9', borderColor: '#4CAF50' },
           isCancelled && { backgroundColor: '#FFEBEE', borderColor: '#F44336' }
-        ]} 
+        ]}
         onPress={() => navigation.navigate('FarmerOrderDetails', {orderId: item.orderId, initialOrder: item})}
         activeOpacity={0.8}
       >
@@ -122,7 +111,6 @@ const FarmerOrdersScreen = ({navigation}: any) => {
             </View>
           </View>
         </View>
-
         <View style={styles.cardBody}>
           <View style={styles.customerInfo}>
             <View style={{flex: 1}}>
@@ -132,9 +120,7 @@ const FarmerOrdersScreen = ({navigation}: any) => {
               </Text>
             </View>
           </View>
-
           <View style={styles.divider} />
-
           <View style={styles.productRow}>
             {imageUrl ? (
               <Image source={{uri: imageUrl}} style={styles.productImage} />
@@ -161,7 +147,6 @@ const FarmerOrdersScreen = ({navigation}: any) => {
       </TouchableOpacity>
     );
   };
-
   return (
     <View style={styles.container}>
       <View style={[styles.header, {flexDirection: 'row', alignItems: 'center'}]}>
@@ -170,7 +155,6 @@ const FarmerOrdersScreen = ({navigation}: any) => {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, {marginLeft: 16}]}>Order Management</Text>
       </View>
-
       <View style={styles.tabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingHorizontal: 12}}>
           {tabs.map(tab => (
@@ -179,13 +163,11 @@ const FarmerOrdersScreen = ({navigation}: any) => {
               style={[styles.tabBtn, filter === tab.id && styles.tabBtnActive]}
               onPress={() => setFilter(tab.id)}>
               <Text style={[styles.tabText, filter === tab.id && styles.tabTextActive]}>{tab.label}</Text>
-              
-              {/* Optional: Add count badges here if you pre-calculate them */}
+              {}
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
-
       {loading ? (
         <OrderSkeleton />
       ) : (
@@ -199,7 +181,7 @@ const FarmerOrdersScreen = ({navigation}: any) => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1B5E20']} />
           }
           ListEmptyComponent={
-            <OrderEmptyState 
+            <OrderEmptyState
               title="No Orders Found"
               subtitle="You don't have any orders in this category right now."
             />
@@ -209,15 +191,13 @@ const FarmerOrdersScreen = ({navigation}: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // match farmer app bg
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    backgroundColor: '#1E5631', // Match Farmer Dashboard green
-
+    backgroundColor: '#1E5631',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
@@ -418,5 +398,4 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
-
 export default FarmerOrdersScreen;

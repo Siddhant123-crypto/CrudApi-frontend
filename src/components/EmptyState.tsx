@@ -1,16 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 interface EmptyStateProps {
   title: string;
   subtitle: string;
   buttonText: string;
   onButtonPress: () => void;
   iconName?: keyof typeof Ionicons.glyphMap;
-  imageUrl?: any; // require() image
+  imageUrl?: any;
 }
-
 const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   subtitle,
@@ -38,7 +36,6 @@ const EmptyState: React.FC<EmptyStateProps> = ({
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -93,5 +90,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
 export default EmptyState;

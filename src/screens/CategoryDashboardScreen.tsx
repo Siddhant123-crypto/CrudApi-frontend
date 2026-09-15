@@ -17,11 +17,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import api, { BASE_URL } from '../services/api';
 import { StarRating } from '../components/reviews/StarRating';
 import { useWishlist } from '../context/WishlistContext';
-
 const { width } = Dimensions.get('window');
 const PRODUCT_CARD_WIDTH = width / 2 - 24;
-
-// Preset price buttons
 const PRICE_PRESETS = [
   { label: 'All', min: 0, max: 99999 },
   { label: '₹10–50', min: 10, max: 50 },
@@ -31,7 +28,6 @@ const PRICE_PRESETS = [
   { label: '₹500–1000', min: 500, max: 1000 },
   { label: '₹1000+', min: 1000, max: 99999 },
 ];
-
 interface ProductItem {
   productId: string;
   productName: string;
@@ -46,20 +42,14 @@ interface ProductItem {
   averageRating?: number;
   reviewCount?: number;
 }
-
 export default function CategoryDashboardScreen({ route, navigation }: any) {
   const { category } = route.params;
   const { toggleWishlist, isInWishlist } = useWishlist();
-
   const [allProducts, setAllProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Filters
   const [searchText, setSearchText] = useState('');
-  const [activePriceIndex, setActivePriceIndex] = useState(0); // 0 = "All"
+  const [activePriceIndex, setActivePriceIndex] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
-
-  // Configure Header Title — only category name
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: category,
@@ -79,13 +69,11 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
       },
     });
   }, [navigation, category]);
-
   useFocusEffect(
     useCallback(() => {
       fetchCategoryProducts();
     }, [category])
   );
-
   const fetchCategoryProducts = async () => {
     try {
       setLoading(true);
@@ -104,7 +92,6 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
       setLoading(false);
     }
   };
-
   const openProduct = (productId: string) => {
     const product = allProducts.find(p => p.productId === productId);
     if (product) {
@@ -115,8 +102,6 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
       navigation.navigate('ProductDetail', { product });
     }
   };
-
-  // Filter products by Search and Price Range
   const activePreset = PRICE_PRESETS[activePriceIndex];
   const displayedProducts = allProducts.filter(p => {
     const name = p.productName || '';
@@ -124,7 +109,6 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
     const inPriceRange = p.price >= activePreset.min && p.price <= activePreset.max;
     return matchesSearch && inPriceRange;
   });
-
   const renderProduct = ({ item }: { item: ProductItem }) => (
     <TouchableOpacity
       activeOpacity={0.9}
@@ -149,15 +133,15 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
         <View style={styles.freshTag}>
           <Text style={styles.freshTagText}>Fresh</Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.heartIcon}
           onPress={() => toggleWishlist(item.productId)}
           activeOpacity={0.7}
         >
-          <Ionicons 
-            name={isInWishlist(item.productId) ? "heart" : "heart-outline"} 
-            size={18} 
-            color={isInWishlist(item.productId) ? "#E53935" : "#E74C3C"} 
+          <Ionicons
+            name={isInWishlist(item.productId) ? "heart" : "heart-outline"}
+            size={18}
+            color={isInWishlist(item.productId) ? "#E53935" : "#E74C3C"}
           />
         </TouchableOpacity>
       </View>
@@ -179,10 +163,9 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
       </View>
     </TouchableOpacity>
   );
-
   return (
     <View style={styles.container}>
-      {/* ─── PREMIUM SEARCH BAR (3D floating effect) ─── */}
+      {}
       <View style={styles.searchWrapper}>
         <View style={[styles.searchContainer, searchFocused && styles.searchContainerFocused]}>
           <View style={styles.searchIconCircle}>
@@ -204,8 +187,7 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
           )}
         </View>
       </View>
-
-      {/* ─── PRICE FILTER BUTTONS (pill/chip style) ─── */}
+      {}
       <View style={styles.priceFilterWrapper}>
         <View style={styles.priceFilterHeader}>
           <Ionicons name="pricetag" size={16} color="#1E3A8A" />
@@ -233,15 +215,13 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
           })}
         </ScrollView>
       </View>
-
-      {/* ─── RESULTS COUNT ─── */}
+      {}
       <View style={styles.resultsBar}>
         <Text style={styles.resultsText}>
           {displayedProducts.length} product{displayedProducts.length !== 1 ? 's' : ''} found
         </Text>
       </View>
-
-      {/* ─── PRODUCTS GRID ─── */}
+      {}
       {loading ? (
         <ActivityIndicator size="large" color="#1E3A8A" style={{ marginTop: 50 }} />
       ) : displayedProducts.length === 0 ? (
@@ -265,14 +245,11 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-
-  /* ── Search Bar (3D floating) ── */
   searchWrapper: {
     paddingHorizontal: 16,
     paddingTop: 14,
@@ -285,7 +262,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     height: 52,
     borderRadius: 16,
-    // 3D shadow effect
     shadowColor: '#1E3A8A',
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -318,8 +294,6 @@ const styles = StyleSheet.create({
   clearBtn: {
     padding: 4,
   },
-
-  /* ── Price Filter Buttons ── */
   priceFilterWrapper: {
     marginTop: 12,
     paddingBottom: 4,
@@ -345,7 +319,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 25,
     backgroundColor: '#FFFFFF',
-    // 3D shadow for chips
     shadowColor: '#1E3A8A',
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -369,8 +342,6 @@ const styles = StyleSheet.create({
   priceChipTextActive: {
     color: '#FFFFFF',
   },
-
-  /* ── Results Bar ── */
   resultsBar: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -380,8 +351,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B7F6E',
   },
-
-  /* ── Product Grid ── */
   listContent: {
     paddingHorizontal: 10,
     paddingBottom: 30,
@@ -493,8 +462,6 @@ const styles = StyleSheet.create({
     color: '#687168',
     marginLeft: 2,
   },
-
-  /* ── Empty State ── */
   emptyBox: {
     flex: 1,
     alignItems: 'center',

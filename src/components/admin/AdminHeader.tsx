@@ -2,29 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
-
 interface AdminHeaderProps {
   onMenuPress?: () => void;
 }
-
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuPress }) => {
   const navigation = useNavigation<any>();
-
   return (
     <View style={styles.header}>
-      <TouchableOpacity 
-        style={styles.menuButton} 
+      <TouchableOpacity
+        style={styles.menuButton}
         onPress={onMenuPress || (() => navigation.navigate('AdminMenu'))}
       >
         <Ionicons name="menu" size={28} color="#FFFFFF" />
       </TouchableOpacity>
-
       <View style={styles.titleContainer}>
         <Text style={styles.titleText}>
           Farm<Text style={styles.titleAccent}>2</Text>Home
         </Text>
       </View>
-
       <View style={styles.rightActions}>
         <TouchableOpacity style={styles.profileButton}>
           <View style={styles.avatarPlaceholder}>
@@ -36,7 +31,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuPress }) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   header: {
     backgroundColor: '#17212F',
@@ -44,7 +38,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 50, // safe area approximation
+    paddingTop: 50,
     paddingBottom: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,

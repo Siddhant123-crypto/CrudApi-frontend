@@ -19,7 +19,6 @@ import { useAuth } from '../context/AuthContext';
 import { getAllProducts, getProductImageUrl } from '../services/productService';
 import { getFarmerOrders, acceptOrder, farmerCancelOrder, getFarmerItemsStatus } from '../services/orderService';
 import { BASE_URL } from '../services/api';
-
 const categories = [
   { name: 'Vegetable', icon: 'leaf-outline', bg: '#E6F4EA', color: '#1E8E3E' },
   { name: 'Fruit', icon: 'nutrition-outline', bg: '#FCE8E6', color: '#D93025' },
@@ -28,7 +27,6 @@ const categories = [
   { name: 'Wild Veg', icon: 'rose-outline', bg: '#F3E8FD', color: '#9334E6' },
   { name: 'Dairy', icon: 'water-outline', bg: '#E8F0FE', color: '#1A73E8' },
 ];
-
 const FarmerDashboardScreen = ({ navigation }: any) => {
   const { user, logout, setInitialAuthRoute } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
@@ -38,20 +36,17 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [searchText, setSearchText] = useState('');
-
   const carouselImages = [
     require('../../assets/vagis4.png'),
     require('../../assets/vagis5.png'),
     require('../../assets/vagis6.png'),
   ];
-
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % carouselImages.length);
     }, 4000);
     return () => clearInterval(timer);
   }, []);
-
   const fetchData = async () => {
     try {
       const [allProducts, farmerOrders] = await Promise.all([
@@ -68,19 +63,16 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
       setLoading(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       fetchData();
     }, [user?.farmerId])
   );
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
   }, []);
-
   const handleAcceptOrder = async (orderId: string) => {
     try {
       await acceptOrder(orderId);
@@ -91,7 +83,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
       Alert.alert('Error', 'Could not accept order');
     }
   };
-
   const handleCancelOrder = async (orderId: string) => {
     try {
       await farmerCancelOrder(orderId);
@@ -102,20 +93,16 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
       Alert.alert('Error', 'Could not reject order');
     }
   };
-
   const openCategory = (categoryName: string) => {
     navigation.navigate('FarmerCategoryDashboard', { category: categoryName });
   };
-
   const handlePlayVideo = (videoFilename: string) => {
     const videoUrl = `${BASE_URL}/product/video/${videoFilename}`;
     Linking.openURL(videoUrl).catch(() =>
       Alert.alert('Error', 'Could not open video. Please try again.')
     );
   };
-
   const videoProducts = allGlobalProducts.filter(p => !!p.productVideo);
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -124,12 +111,10 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#176B2C']} />}
         >
-          {/* =========================
-              CURVED HEADER (Green Theme)
-          ========================= */}
+          {}
           <View style={styles.headerBlock}>
             <View style={styles.headerTopRow}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={async () => {
                   setInitialAuthRoute('NewUserLogin');
                   await logout();
@@ -138,7 +123,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
               >
                 <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
               </TouchableOpacity>
-
               <View style={styles.locationContainer}>
                 <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.locationTextContainer}>
                   <Text style={styles.locationNameText} numberOfLines={1}>
@@ -146,7 +130,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                   </Text>
                 </TouchableOpacity>
               </View>
-
               <TouchableOpacity style={styles.headerIconButton} onPress={() => Alert.alert('Notifications', 'No new notifications.')}>
                 <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
                 <View style={styles.notificationBadge}>
@@ -154,8 +137,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                 </View>
               </TouchableOpacity>
             </View>
-
-            {/* SEARCH BOX INSIDE CURVED HEADER */}
+            {}
             <View style={styles.searchBox}>
               <Ionicons name="search-outline" size={20} color="#64748B" style={{ marginRight: 8 }} />
               <TextInput
@@ -167,14 +149,9 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
               />
             </View>
           </View>
-
           <View style={styles.mainContentCard}>
-            
             <View style={styles.contentPadding}>
-              
-              {/* =========================
-                  BANNER
-              ========================= */}
+              {}
               <ImageBackground
                 source={carouselImages[currentImageIndex]}
                 style={styles.promoCardBg}
@@ -186,9 +163,9 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                   <View style={styles.promoTextContent}>
                     <Text style={[styles.promoTitle, { color: '#FFF' }]}>Farm Performance</Text>
                     <Text style={[styles.promoSubtitle, { color: '#E8F5E9' }]}>Manage your stock & orders</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.promoButton}
-                        onPress={() => navigation.navigate('AddProduct')} 
+                        onPress={() => navigation.navigate('AddProduct')}
                     >
                       <Text style={styles.promoButtonText}>Add Product</Text>
                       <Ionicons name="add" size={16} color="#000" style={{marginLeft: 4}} />
@@ -201,10 +178,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                   ))}
                 </View>
               </ImageBackground>
-
-              {/* =====================
-                  CATEGORIES
-              ===================== */}
+              {}
               <View style={styles.categorySection}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Farm Categories</Text>
@@ -227,10 +201,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                   ))}
                 </View>
               </View>
-
-              {/* =====================
-                  QUICK ACTIONS
-              ===================== */}
+              {}
               <View style={styles.quickActionsSection}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -244,7 +215,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                       <Text style={styles.actionLabel}>Add</Text>
                     </View>
                   </TouchableOpacity>
-
                   <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('MyProducts')}>
                     <View style={styles.actionCard}>
                       <View style={[styles.actionIconBox, { backgroundColor: '#E8F0FE' }]}>
@@ -253,7 +223,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                       <Text style={styles.actionLabel}>My Product</Text>
                     </View>
                   </TouchableOpacity>
-
                   <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('Orders')}>
                     <View style={styles.actionCard}>
                       <View style={[styles.actionIconBox, { backgroundColor: '#FFF0D4' }]}>
@@ -262,7 +231,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                       <Text style={styles.actionLabel}>Orders</Text>
                     </View>
                   </TouchableOpacity>
-
                   <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('Market')}>
                     <View style={styles.actionCard}>
                       <View style={[styles.actionIconBox, { backgroundColor: '#F3E8FD' }]}>
@@ -273,10 +241,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                   </TouchableOpacity>
                 </View>
               </View>
-
-              {/* =====================
-                  FARMER SHORTS
-              ===================== */}
+              {}
               {videoProducts.length > 0 && (
                 <View style={styles.shortsSection}>
                   <View style={styles.sectionHeader}>
@@ -316,18 +281,13 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                   </ScrollView>
                 </View>
               )}
-
-
-              {/* =====================
-                  RECENT ORDERS
-              ===================== */}
+              {}
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Recent Orders</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
                   <Text style={styles.viewAllText}>View All</Text>
                 </TouchableOpacity>
               </View>
-
               <View style={styles.ordersList}>
                 {orders.filter(o => getFarmerItemsStatus(o.items || []) === 'PENDING').length === 0 ? (
                   <Text style={{ textAlign: 'center', color: '#888', marginTop: 10 }}>No new orders found.</Text>
@@ -337,14 +297,12 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                     const isCancelled = fStatus === 'CANCELLED';
                     const isAccepted = fStatus !== 'PENDING' && !isCancelled;
                     const isPending = fStatus === 'PENDING';
-
                     const mainItem = order.items && order.items.length > 0 ? order.items[0] : null;
                     const rawImageUrl = mainItem?.imageUrl || mainItem?.productPhoto || mainItem?.product?.productPhoto;
                     const resolvedImageUrl = rawImageUrl ? getProductImageUrl(rawImageUrl) : null;
-
                     return (
-                      <TouchableOpacity 
-                        key={order.orderId} 
+                      <TouchableOpacity
+                        key={order.orderId}
                         style={[
                           styles.orderCardItem,
                           isAccepted && { backgroundColor: '#F1F8E9', borderColor: '#4CAF50' },
@@ -363,11 +321,10 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                             <Ionicons name="close-circle" size={24} color="#F44336" />
                           </View>
                         )}
-
                         <View style={styles.orderCardTopRow}>
-                          <Image 
-                            source={{ uri: resolvedImageUrl || 'https://cdn-icons-png.flaticon.com/512/1147/1147805.png' }} 
-                            style={styles.orderProductImage} 
+                          <Image
+                            source={{ uri: resolvedImageUrl || 'https://cdn-icons-png.flaticon.com/512/1147/1147805.png' }}
+                            style={styles.orderProductImage}
                           />
                           <View style={styles.orderDetails}>
                             <Text style={styles.orderProductName}>{mainItem?.productName || 'Product'}</Text>
@@ -376,7 +333,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                           </View>
                           <View style={styles.orderStatusCol}>
                             <Text style={styles.customerName}>Ordered by: {order.customerName || 'Customer'}</Text>
-                            <View style={[styles.statusBadgePending, 
+                            <View style={[styles.statusBadgePending,
                                 isAccepted && { backgroundColor: '#C8E6C9' },
                                 isCancelled && { backgroundColor: '#FFCDD2' }
                             ]}>
@@ -387,7 +344,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                             </View>
                           </View>
                         </View>
-
                         {(isPending || isAccepted) && (
                           <View style={styles.orderActionsRow}>
                               {isPending && (
@@ -407,7 +363,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                   })
                 )}
               </View>
-
             </View>
           </View>
         </ScrollView>
@@ -415,7 +370,6 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -485,7 +439,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 30, // more pill-shaped
+    borderRadius: 30,
     paddingHorizontal: 16,
     height: 50,
     elevation: 2,
@@ -502,11 +456,11 @@ const styles = StyleSheet.create({
   },
   mainContentCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // matching the white background below the curve
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingTop: 20,
-    marginTop: -25, // this pulls the white card up over the green header to create the curve
+    marginTop: -25,
     zIndex: 20,
   },
   contentPadding: {
@@ -516,8 +470,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 28,
-    height: 180, // Increased height
-    backgroundColor: '#1E5631', // matching the header color as requested
+    height: 180,
+    backgroundColor: '#1E5631',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -552,7 +506,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   promoButton: {
-    backgroundColor: '#FFD02A', 
+    backgroundColor: '#FFD02A',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -590,7 +544,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.4)',
   },
   categorySection: {
-    marginBottom: 4, // Reduced from 24 to bring Quick Actions up
+    marginBottom: 4,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -610,14 +564,14 @@ const styles = StyleSheet.create({
   },
   categoryWrap: {
     alignItems: 'center',
-    width: '16%', // roughly 1/6th to fit all evenly
+    width: '16%',
   },
   categoryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1.5,
-    borderBottomWidth: 3, // slightly smaller 3D depth for a smaller icon
-    width: 48, // made small enough to fit 6 on screen
+    borderBottomWidth: 3,
+    width: 48,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
@@ -629,7 +583,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   categoryText: {
-    fontSize: 9, // smaller text to fit
+    fontSize: 9,
     color: '#334155',
     fontWeight: '700',
     textAlign: 'center',
@@ -649,7 +603,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     borderWidth: 1,
-    borderBottomWidth: 5, // 3D effect depth
+    borderBottomWidth: 5,
     borderColor: '#E2E8F0',
     borderBottomColor: '#CBD5E1',
     width: '90%',
@@ -868,5 +822,4 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase'
   }
 });
-
 export default FarmerDashboardScreen;

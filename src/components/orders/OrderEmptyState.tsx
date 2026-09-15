@@ -1,12 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 interface OrderEmptyStateProps {
   title?: string;
   subtitle?: string;
 }
-
 export const OrderEmptyState: React.FC<OrderEmptyStateProps> = ({
   title = 'No orders found',
   subtitle = "Looks like you don't have any orders here yet.",
@@ -21,7 +19,6 @@ export const OrderEmptyState: React.FC<OrderEmptyStateProps> = ({
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,

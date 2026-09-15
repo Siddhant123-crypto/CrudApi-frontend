@@ -1,13 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, ViewStyle } from 'react-native';
-
 interface SkeletonProps {
   style?: ViewStyle | ViewStyle[];
 }
-
 export const Skeleton: React.FC<SkeletonProps> = ({ style }) => {
   const animatedValue = useRef(new Animated.Value(0.3)).current;
-
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -24,7 +21,6 @@ export const Skeleton: React.FC<SkeletonProps> = ({ style }) => {
       ])
     ).start();
   }, [animatedValue]);
-
   return (
     <Animated.View
       style={[
@@ -35,7 +31,6 @@ export const Skeleton: React.FC<SkeletonProps> = ({ style }) => {
     />
   );
 };
-
 const styles = StyleSheet.create({
   skeleton: {
     backgroundColor: '#E5E7EB',

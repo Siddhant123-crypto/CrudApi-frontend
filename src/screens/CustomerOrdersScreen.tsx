@@ -17,16 +17,13 @@ import {getProductImageUrl} from '../services/productService';
 import { OrderStatusBadge } from '../components/orders/OrderStatusBadge';
 import { OrderEmptyState } from '../components/orders/OrderEmptyState';
 import { OrderSkeleton } from '../components/orders/OrderSkeleton';
-
 const CustomerOrdersScreen = ({navigation}: any) => {
   const {user} = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState('All'); // All, Active, Delivered, Cancelled
-
+  const [filter, setFilter] = useState('All');
   const tabs = ['All', 'Active', 'Delivered', 'Cancelled'];
-
   const fetchOrders = async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
     try {
@@ -35,13 +32,11 @@ const CustomerOrdersScreen = ({navigation}: any) => {
         api.get('/order/customer/order-history')
       ]);
       const combined = [...activeResponse.data, ...historyResponse.data];
-      // Sort by descending createdOn date (newest first)
       combined.sort((a, b) => {
         const dateA = new Date(a.createdOn || 0).getTime();
         const dateB = new Date(b.createdOn || 0).getTime();
         return dateB - dateA;
       });
-      
       setOrders(combined);
     } catch (error) {
       console.log('Error fetching orders:', error);
@@ -50,18 +45,15 @@ const CustomerOrdersScreen = ({navigation}: any) => {
       setRefreshing(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       fetchOrders();
     }, [])
   );
-
   const onRefresh = () => {
     setRefreshing(true);
     fetchOrders(true);
   };
-
   const getFilteredOrders = () => {
     if (filter === 'All') return orders;
     if (filter === 'Active') {
@@ -77,19 +69,16 @@ const CustomerOrdersScreen = ({navigation}: any) => {
     if (filter === 'Cancelled') return orders.filter(o => o.status === 'CANCELLED');
     return orders;
   };
-
   const renderOrderCard = ({item}: {item: any}) => {
     const mainItem = item.items && item.items.length > 0 ? item.items[0] : null;
     const moreItemsCount = item.items ? item.items.length - 1 : 0;
-
     const rawImageUrl = mainItem?.imageUrl || mainItem?.productPhoto || mainItem?.product?.productPhoto;
     const imageUrl = rawImageUrl
       ? getProductImageUrl(rawImageUrl)
       : null;
-
     return (
-      <TouchableOpacity 
-        style={styles.orderCard} 
+      <TouchableOpacity
+        style={styles.orderCard}
         onPress={() => navigation.navigate('CustomerOrderDetails', {orderId: item.orderId})}
         activeOpacity={0.8}
       >
@@ -101,14 +90,12 @@ const CustomerOrdersScreen = ({navigation}: any) => {
             {item.createdOn ? new Date(item.createdOn).toLocaleDateString() : ''}
           </Text>
         </View>
-
         <View style={styles.cardBody}>
           {imageUrl ? (
             <Image source={{uri: imageUrl}} style={styles.productImage} />
           ) : (
             <View style={styles.placeholderImage}><Text>🌾</Text></View>
           )}
-
           <View style={styles.productInfo}>
             <Text style={styles.productName} numberOfLines={1}>
               {mainItem?.productName || 'Product'}
@@ -122,7 +109,6 @@ const CustomerOrdersScreen = ({navigation}: any) => {
             <Text style={styles.totalAmount}>₹{item.totalAmount?.toFixed(2)}</Text>
           </View>
         </View>
-
         <View style={styles.cardFooter}>
           <OrderStatusBadge status={item.status} />
           <View style={styles.viewDetailsBtn}>
@@ -133,18 +119,16 @@ const CustomerOrdersScreen = ({navigation}: any) => {
       </TouchableOpacity>
     );
   };
-
   return (
     <View style={styles.container}>
-      {/* Custom Header */}
+      {}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Home')}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Orders</Text>
       </View>
-
-      {/* Filter Tabs */}
+      {}
       <View style={styles.tabsContainer}>
         {tabs.map(tab => (
           <TouchableOpacity
@@ -155,7 +139,6 @@ const CustomerOrdersScreen = ({navigation}: any) => {
           </TouchableOpacity>
         ))}
       </View>
-
       {loading ? (
         <OrderSkeleton />
       ) : (
@@ -169,7 +152,7 @@ const CustomerOrdersScreen = ({navigation}: any) => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1E3A8A']} />
           }
           ListEmptyComponent={
-            <OrderEmptyState 
+            <OrderEmptyState
               title={`No ${filter !== 'All' ? filter : ''} orders found`}
               subtitle="Looks like you don't have any orders here yet."
             />
@@ -179,7 +162,6 @@ const CustomerOrdersScreen = ({navigation}: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -374,5 +356,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-
 export default CustomerOrdersScreen;

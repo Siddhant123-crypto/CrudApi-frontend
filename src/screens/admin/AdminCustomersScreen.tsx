@@ -5,20 +5,16 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { useNavigation } from '@react-navigation/native';
 import api from '../../services/api';
-
 export const AdminCustomersScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-
   const tabs = ['All', 'ACTIVE', 'INACTIVE', 'BLOCKED'];
-
   useEffect(() => {
     fetchCustomers();
   }, []);
-
   const fetchCustomers = async () => {
     try {
       setLoading(true);
@@ -32,18 +28,15 @@ export const AdminCustomersScreen: React.FC = () => {
       setLoading(false);
     }
   };
-
   const filteredCustomers = customers.filter(c => {
     if (activeTab !== 'All' && c.status !== activeTab) return false;
     if (searchQuery && !c.name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
-
   const getInitials = (name: string) => {
     if (!name) return 'U';
     return name.charAt(0).toUpperCase();
   };
-
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.customerCard} onPress={() => navigation.navigate('AdminCustomerDetails', { customerId: item.customerId })}>
       <View style={styles.cardLeft}>
@@ -60,11 +53,9 @@ export const AdminCustomersScreen: React.FC = () => {
       </View>
     </TouchableOpacity>
   );
-
   return (
     <View style={styles.container}>
       <AdminHeader />
-      
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Customers</Text>
         <View style={styles.searchContainer}>
@@ -78,7 +69,6 @@ export const AdminCustomersScreen: React.FC = () => {
           />
         </View>
       </View>
-
       <View style={styles.tabsContainer}>
         {tabs.map(tab => (
           <TouchableOpacity
@@ -92,7 +82,6 @@ export const AdminCustomersScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
-
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#17212F" />
@@ -110,7 +99,6 @@ export const AdminCustomersScreen: React.FC = () => {
           <Text style={styles.emptyText}>No customers found</Text>
         </View>
       )}
-
       <TouchableOpacity style={styles.fab}>
         <Ionicons name="add" size={24} color="#17212F" />
         <Text style={styles.fabText}>Add Customer</Text>
@@ -118,7 +106,6 @@ export const AdminCustomersScreen: React.FC = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 8 },
@@ -158,5 +145,4 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: '#6B7280', fontSize: 16 },
 });
-
 export default AdminCustomersScreen;

@@ -6,16 +6,13 @@ import { BASE_URL } from '../services/api';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { StarRating } from './reviews/StarRating';
-
 interface WishlistProductCardProps {
   item: WishlistResponse;
   onPress: () => void;
 }
-
 const WishlistProductCard: React.FC<WishlistProductCardProps> = ({ item, onPress }) => {
   const { toggleWishlist } = useWishlist();
   const { addToCart } = useCart();
-
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.95}>
       <View style={styles.imageContainer}>
@@ -28,32 +25,28 @@ const WishlistProductCard: React.FC<WishlistProductCardProps> = ({ item, onPress
           style={styles.image}
           resizeMode="cover"
         />
-        <TouchableOpacity 
-          style={styles.heartBtn} 
+        <TouchableOpacity
+          style={styles.heartBtn}
           onPress={() => toggleWishlist(item.productId)}
         >
           <Ionicons name="heart" size={22} color="#E53935" />
         </TouchableOpacity>
       </View>
-
       <View style={styles.infoContainer}>
         <Text style={styles.title} numberOfLines={2}>{item.productName}</Text>
         <Text style={styles.category}>{item.category}</Text>
-        
         <View style={styles.ratingRow}>
           <StarRating rating={Math.round(item.averageRating || 0)} size={12} disabled={true} />
           <Text style={styles.ratingText}> {item.averageRating ? item.averageRating.toFixed(1) : 'New'}</Text>
         </View>
-
         <View style={styles.bottomRow}>
           <Text style={styles.priceText}>
             ₹{item.price}
             <Text style={styles.unitText}> / {item.unit.toLowerCase()}</Text>
           </Text>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.addToCartBtn} 
+        <TouchableOpacity
+          style={styles.addToCartBtn}
           onPress={() => addToCart(item.productId, 1)}
         >
           <Ionicons name="cart-outline" size={18} color="#FFFFFF" />
@@ -63,7 +56,6 @@ const WishlistProductCard: React.FC<WishlistProductCardProps> = ({ item, onPress
     </TouchableOpacity>
   );
 };
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
@@ -159,5 +151,4 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 });
-
 export default WishlistProductCard;

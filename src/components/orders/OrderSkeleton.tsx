@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Skeleton } from './Skeleton';
-
 export const OrderSkeleton = () => {
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -11,9 +10,7 @@ export const OrderSkeleton = () => {
             <Skeleton style={styles.idSkeleton} />
             <Skeleton style={styles.badgeSkeleton} />
           </View>
-          
           <View style={styles.divider} />
-          
           <View style={styles.itemRow}>
             <Skeleton style={styles.imageSkeleton} />
             <View style={styles.itemInfo}>
@@ -21,7 +18,6 @@ export const OrderSkeleton = () => {
               <Skeleton style={styles.textSkeletonSmall} />
             </View>
           </View>
-
           <View style={styles.footer}>
             <Skeleton style={styles.dateSkeleton} />
             <Skeleton style={styles.priceSkeleton} />
@@ -31,7 +27,6 @@ export const OrderSkeleton = () => {
     </ScrollView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     padding: 16,

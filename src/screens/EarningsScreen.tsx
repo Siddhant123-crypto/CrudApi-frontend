@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-
 const EarningsScreen = () => {
   return (
     <View style={styles.container}>
@@ -8,7 +7,6 @@ const EarningsScreen = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -20,5 +18,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
 export default EarningsScreen;

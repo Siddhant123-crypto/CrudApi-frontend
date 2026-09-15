@@ -2,23 +2,20 @@ import React from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import {getProductImageUrl} from '../services/productService';
 import {Product} from '../types';
-
 interface ProductCardProps {
   product: Product;
   onPress: () => void;
 }
-
 const ProductCard: React.FC<ProductCardProps> = ({product, onPress}) => {
   const imageUrl = product.productPhoto
     ? getProductImageUrl(product.productPhoto)
     : null;
-
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
       activeOpacity={0.85}>
-      {/* Product Image */}
+      {}
       <View style={styles.imageContainer}>
         {imageUrl ? (
           <Image source={{uri: imageUrl}} style={styles.image} />
@@ -27,26 +24,23 @@ const ProductCard: React.FC<ProductCardProps> = ({product, onPress}) => {
             <Text style={styles.placeholderText}>🌾</Text>
           </View>
         )}
-        {/* Category Badge */}
+        {}
         {product.category && (
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>{product.category}</Text>
           </View>
         )}
       </View>
-
-      {/* Product Info */}
+      {}
       <View style={styles.infoContainer}>
         <Text style={styles.productName} numberOfLines={1}>
           {product.productName}
         </Text>
-
         {product.farmerName && (
           <Text style={styles.farmerName} numberOfLines={1}>
             by {product.farmerName}
           </Text>
         )}
-
         <View style={styles.priceRow}>
           <Text style={styles.price}>
             ₹{product.price?.toFixed(2) || '0.00'}
@@ -59,7 +53,6 @@ const ProductCard: React.FC<ProductCardProps> = ({product, onPress}) => {
     </TouchableOpacity>
   );
 };
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
@@ -139,5 +132,4 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
-
 export default ProductCard;

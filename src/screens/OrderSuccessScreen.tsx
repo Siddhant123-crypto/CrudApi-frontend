@@ -8,12 +8,9 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
-
 const OrderSuccessScreen = ({route, navigation}: any) => {
   const {orderNumber, totalAmount} = route.params || {};
   const {user} = useAuth();
-
-  // Prevent going back to checkout
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
@@ -22,10 +19,8 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
         return true;
       }
     );
-
     return () => backHandler.remove();
   }, [navigation]);
-
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -36,7 +31,6 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
         <Text style={styles.subtitle}>
           Your fresh products will be prepared by the farmer soon.
         </Text>
-
         <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Order Number:</Text>
@@ -49,15 +43,14 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
           </View>
         </View>
       </View>
-
       <View style={styles.bottomBar}>
-        <TouchableOpacity 
-          style={styles.primaryBtn} 
+        <TouchableOpacity
+          style={styles.primaryBtn}
           onPress={() => navigation.navigate(user?.role === 'FARMER' ? 'FarmerMain' : 'CustomerMain', { screen: 'Orders' })}>
           <Text style={styles.primaryBtnText}>View My Orders</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.secondaryBtn} 
+        <TouchableOpacity
+          style={styles.secondaryBtn}
           onPress={() => navigation.navigate(user?.role === 'FARMER' ? 'FarmerMain' : 'CustomerMain', { screen: user?.role === 'FARMER' ? 'Dashboard' : 'Home' })}>
           <Text style={styles.secondaryBtnText}>Continue Shopping</Text>
         </TouchableOpacity>
@@ -65,7 +58,6 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -157,5 +149,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
 export default OrderSuccessScreen;

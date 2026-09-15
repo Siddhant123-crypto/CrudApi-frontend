@@ -14,18 +14,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
 import {getProductImageUrl} from '../services/productService';
 import api from '../services/api';
-
 const CheckoutScreen = ({route, navigation}: any) => {
   const {orderItems, totalAmount} = route.params || {};
   const {user} = useAuth();
-
   const [loading, setLoading] = useState(false);
-  
   const [address, setAddress] = useState('');
   const [village, setVillage] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [state, setState] = useState('Maharashtra');
-
   if (!orderItems || orderItems.length === 0) {
     return (
       <View style={styles.errorContainer}>
@@ -36,31 +32,26 @@ const CheckoutScreen = ({route, navigation}: any) => {
       </View>
     );
   }
-
   const handlePlaceOrder = async () => {
     if (!address.trim() || !village.trim() || !postalCode.trim() || !state.trim()) {
       Alert.alert('Missing Info', 'Please fill in all address fields.');
       return;
     }
-
     setLoading(true);
     try {
       const items = orderItems.map((item: any) => ({
         productId: item.product.productId,
         quantity: item.quantity,
       }));
-
       const payload = {
-        paymentMethod: 'COD', // Assuming COD for now
+        paymentMethod: 'COD',
         deliveryAddress: address,
         village,
         postalCode,
         state,
         items,
       };
-
       const response = await api.post('/order/create', payload);
-      
       if (response.status === 201 || response.status === 200) {
         navigation.replace('OrderSuccess', {
           orderNumber: response.data.response.orderNumber,
@@ -79,7 +70,6 @@ const CheckoutScreen = ({route, navigation}: any) => {
       setLoading(false);
     }
   };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -88,9 +78,8 @@ const CheckoutScreen = ({route, navigation}: any) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
       </View>
-
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Order Items Summary */}
+        {}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
           {orderItems.map((item: any, index: number) => {
@@ -119,8 +108,7 @@ const CheckoutScreen = ({route, navigation}: any) => {
             );
           })}
         </View>
-
-        {/* Delivery Details */}
+        {}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Details</Text>
           <View style={styles.card}>
@@ -166,8 +154,7 @@ const CheckoutScreen = ({route, navigation}: any) => {
             </View>
           </View>
         </View>
-
-        {/* Payment Method */}
+        {}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Method</Text>
           <View style={[styles.card, styles.paymentCard]}>
@@ -176,11 +163,9 @@ const CheckoutScreen = ({route, navigation}: any) => {
             <Ionicons name="checkmark-circle" size={24} color="#2563EB" style={{marginLeft: 'auto'}} />
           </View>
         </View>
-
         <View style={{height: 100}} />
       </ScrollView>
-
-      {/* Bottom Action */}
+      {}
       <View style={styles.bottomBar}>
         <View style={styles.totalContainer}>
           <Text style={styles.totalLabel}>Total Amount</Text>
@@ -200,7 +185,6 @@ const CheckoutScreen = ({route, navigation}: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -380,5 +364,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
 export default CheckoutScreen;

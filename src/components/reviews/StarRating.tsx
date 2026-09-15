@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 interface StarRatingProps {
   rating: number;
   maxStars?: number;
@@ -9,7 +8,6 @@ interface StarRatingProps {
   size?: number;
   disabled?: boolean;
 }
-
 export const StarRating = ({
   rating,
   maxStars = 5,
@@ -18,7 +16,6 @@ export const StarRating = ({
   disabled = false,
 }: StarRatingProps) => {
   const stars = [];
-
   for (let i = 1; i <= maxStars; i++) {
     const isFilled = i <= rating;
     stars.push(
@@ -37,10 +34,8 @@ export const StarRating = ({
       </TouchableOpacity>
     );
   }
-
   return <View style={styles.container}>{stars}</View>;
 };
-
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',

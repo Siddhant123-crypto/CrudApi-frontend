@@ -1,6 +1,5 @@
 import React, {useState} from 'react';
 import {View, TextInput, Text, StyleSheet, TouchableOpacity, KeyboardTypeOptions, ViewStyle, TextStyle, StyleProp} from 'react-native';
-
 interface CustomInputProps {
   label?: string;
   value: string;
@@ -15,7 +14,6 @@ interface CustomInputProps {
   inputStyle?: StyleProp<TextStyle>;
   leftIcon?: React.ReactNode;
 }
-
 const CustomInput: React.FC<CustomInputProps> = ({
   label,
   value,
@@ -32,7 +30,6 @@ const CustomInput: React.FC<CustomInputProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
-
   return (
     <View style={[styles.container, style]}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -75,7 +72,6 @@ const CustomInput: React.FC<CustomInputProps> = ({
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     marginVertical: 8,
@@ -134,5 +130,4 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
-
 export default CustomInput;

@@ -4,7 +4,6 @@ import { Review } from '../../types';
 import { StarRating } from './StarRating';
 import { getProductImageUrl } from '../../services/productService';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 interface ReviewCardProps {
   review: Review;
   isOwner?: boolean;
@@ -13,7 +12,6 @@ interface ReviewCardProps {
   onImagePress?: (imageUrl: string) => void;
   onVideoPress?: (videoUrl: string) => void;
 }
-
 export const ReviewCard = ({
   review,
   isOwner = false,
@@ -29,11 +27,8 @@ export const ReviewCard = ({
         day: 'numeric',
       })
     : '';
-
-  // Separate photos and videos from review.media
   const photos = review.media?.filter((m) => m.mediaType === 'IMAGE') || [];
   const videos = review.media?.filter((m) => m.mediaType === 'VIDEO') || [];
-
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -44,7 +39,6 @@ export const ReviewCard = ({
             <Text style={styles.date}>{formattedDate}</Text>
           </View>
         </View>
-        
         {review.isVerifiedPurchase && (
           <View style={styles.verifiedBadge}>
             <Ionicons name="checkmark-circle" size={14} color="#15803D" />
@@ -52,12 +46,10 @@ export const ReviewCard = ({
           </View>
         )}
       </View>
-
       {review.reviewText ? (
         <Text style={styles.reviewText}>{review.reviewText}</Text>
       ) : null}
-
-      {/* Media Displays */}
+      {}
       {photos.length > 0 || videos.length > 0 ? (
         <View style={styles.mediaContainer}>
           {photos.map((photo) => {
@@ -73,7 +65,6 @@ export const ReviewCard = ({
               </TouchableOpacity>
             );
           })}
-
           {videos.map((video) => {
             return (
               <TouchableOpacity
@@ -91,8 +82,7 @@ export const ReviewCard = ({
           })}
         </View>
       ) : null}
-
-      {/* Edit/Delete Actions */}
+      {}
       {isOwner && (onEdit || onDelete) && (
         <View style={styles.actionsRow}>
           {onEdit && (
@@ -112,7 +102,6 @@ export const ReviewCard = ({
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',

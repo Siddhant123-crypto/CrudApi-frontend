@@ -4,22 +4,18 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api, { BASE_URL } from '../../services/api';
 import { StatusBadge } from '../../components/admin/StatusBadge';
-
 export const AdminFarmerDetailsScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { farmerId } = route.params;
-
   const [loading, setLoading] = useState(true);
   const [farmer, setFarmer] = useState<any>(null);
   const [sales, setSales] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
-
   useEffect(() => {
     fetchFarmerData();
   }, [farmerId]);
-
   const fetchFarmerData = async () => {
     try {
       setLoading(true);
@@ -29,7 +25,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
         api.get(`/admin/products/farmer/${farmerId}`),
         api.get(`/admin/orders/farmer/${farmerId}`)
       ]);
-
       if (farmerRes.data?.data) setFarmer(farmerRes.data.data);
       if (salesRes.data?.data) setSales(salesRes.data.data);
       if (productsRes.data?.data) setProducts(productsRes.data.data);
@@ -40,7 +35,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       setLoading(false);
     }
   };
-
   const getProfileImage = () => {
     if (farmer?.profilePhoto) {
       if (farmer.profilePhoto.startsWith('http')) {
@@ -50,7 +44,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(farmer?.name || 'Unknown')}&background=F5C16C&color=17212F&size=150&bold=true`;
   };
-
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
@@ -58,7 +51,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       </View>
     );
   }
-
   if (!farmer) {
     return (
       <View style={styles.container}>
@@ -72,7 +64,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       </View>
     );
   }
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -80,7 +71,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(amount || 0);
   };
-
   const getProductImage = (item: any) => {
     if (item.productPhoto) {
       if (item.productPhoto.startsWith('http')) {
@@ -90,12 +80,11 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.productName || 'Product')}&background=E5E7EB&color=6B7280`;
   };
-
   const renderProductItem = ({ item }: { item: any }) => (
     <View style={styles.productCard}>
-      <Image 
-        source={{ uri: getProductImage(item) }} 
-        style={styles.productImage} 
+      <Image
+        source={{ uri: getProductImage(item) }}
+        style={styles.productImage}
       />
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={1}>{item.productName}</Text>
@@ -103,7 +92,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       </View>
     </View>
   );
-
   const renderOrderItem = ({ item }: { item: any }) => (
     <View style={styles.orderCard}>
       <View style={styles.orderHeader}>
@@ -117,7 +105,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       <Text style={styles.orderDate}>{new Date(item.orderDate).toLocaleDateString()}</Text>
     </View>
   );
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -126,10 +113,8 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Farmer Details</Text>
       </View>
-
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        {/* Profile Section */}
+        {}
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             <Image source={{ uri: getProfileImage() }} style={styles.profileImage} />
@@ -140,11 +125,9 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
             <StatusBadge status={farmer.status === 'ACTIVE' ? 'Active' : (farmer.status === 'PENDING' ? 'Pending' : (farmer.status === 'INACTIVE' ? 'Blocked' : 'Inactive'))} />
           </View>
         </View>
-
-        {/* Basic Info (3D Card) */}
+        {}
         <View style={styles.section3D}>
           <Text style={styles.sectionTitle}>Full Information</Text>
-          
           <View style={styles.infoRow}>
             <Ionicons name="person-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
@@ -152,7 +135,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <Text style={styles.infoValue}>{farmer.name || 'N/A'}</Text>
             </View>
           </View>
-
           <View style={styles.infoRow}>
             <Ionicons name="mail-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
@@ -160,7 +142,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <Text style={styles.infoValue}>{farmer.email || 'N/A'}</Text>
             </View>
           </View>
-
           <View style={styles.infoRow}>
             <Ionicons name="call-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
@@ -168,7 +149,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <Text style={styles.infoValue}>{farmer.mobile || 'N/A'}</Text>
             </View>
           </View>
-          
           <View style={styles.infoRow}>
             <Ionicons name="location-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
@@ -176,7 +156,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <Text style={styles.infoValue}>{farmer.address || 'N/A'}</Text>
             </View>
           </View>
-
           <View style={styles.infoRow}>
             <Ionicons name="map-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
@@ -184,7 +163,6 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <Text style={styles.infoValue}>{farmer.state || 'N/A'}, {farmer.village || 'N/A'}</Text>
             </View>
           </View>
-
           <View style={styles.infoRow}>
             <Ionicons name="navigate-circle-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
@@ -192,10 +170,8 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <Text style={styles.infoValue}>{farmer.postalCode || 'N/A'}</Text>
             </View>
           </View>
-
         </View>
-
-        {/* Stats Section (3D Card) */}
+        {}
         <View style={styles.section3D}>
           <Text style={styles.sectionTitle}>Sales Statistics</Text>
           <View style={styles.statsGrid}>
@@ -217,8 +193,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
             </View>
           </View>
         </View>
-
-        {/* Products Section */}
+        {}
         <View style={styles.section3D}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Products Catalog</Text>
@@ -236,8 +211,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
             <Text style={styles.emptyTextSmall}>No products listed by this farmer.</Text>
           )}
         </View>
-
-        {/* Customers / Orders Section */}
+        {}
         <View style={styles.section3D}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Recent Orders</Text>
@@ -252,20 +226,18 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
             <Text style={styles.emptyTextSmall}>No orders yet.</Text>
           )}
         </View>
-
       </ScrollView>
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 16, 
-    paddingTop: Platform.OS === 'ios' ? 60 : 50, // dashboard header safe area approx
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
     paddingBottom: 16,
     backgroundColor: '#17212F',
     borderBottomLeftRadius: 24,
@@ -281,7 +253,6 @@ const styles = StyleSheet.create({
   backButton: { marginRight: 16, padding: 4 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5 },
   scrollContent: { paddingBottom: 40 },
-  
   profileSection: {
     alignItems: 'center',
     paddingVertical: 24,
@@ -289,11 +260,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginHorizontal: 16,
     marginBottom: 20,
-    // 3D Shadow Effect
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 10 }, 
-    shadowOpacity: 0.15, 
-    shadowRadius: 15, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
     elevation: 10,
     borderWidth: 1,
     borderColor: '#F3F4F6',
@@ -311,41 +281,36 @@ const styles = StyleSheet.create({
   farmerName: { fontSize: 26, fontWeight: 'bold', color: '#1B2430', marginBottom: 6 },
   farmerEmail: { fontSize: 16, color: '#4B5563', marginBottom: 16, fontWeight: '500' },
   statusBadgeContainer: { flexDirection: 'row', justifyContent: 'center' },
-  
   section3D: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 16,
     marginBottom: 20,
-    // Enhanced 3D shadow
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 8 }, 
-    shadowOpacity: 0.12, 
-    shadowRadius: 12, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#17212F', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 10 },
-  
   infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12 },
   infoIcon: { marginRight: 16 },
   infoTextContainer: { flex: 1 },
   infoLabel: { fontSize: 14, color: '#6B7280', marginBottom: 4, fontWeight: '600' },
   infoValue: { fontSize: 17, color: '#111827', fontWeight: 'bold' },
-  
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  statBox: { 
-    width: '47%', backgroundColor: '#17212F', 
+  statBox: {
+    width: '47%', backgroundColor: '#17212F',
     padding: 20, borderRadius: 16, marginBottom: 16,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 6,
   },
   statValue: { fontSize: 24, fontWeight: '900', color: '#F5C16C', marginBottom: 8 },
   statLabel: { fontSize: 14, color: '#E5E7EB', fontWeight: '600', textAlign: 'center' },
-  
   productCard: {
     width: 140, backgroundColor: '#FFFFFF',
     borderRadius: 16, marginRight: 16,
@@ -357,7 +322,6 @@ const styles = StyleSheet.create({
   productInfo: { padding: 12 },
   productName: { fontSize: 15, fontWeight: 'bold', color: '#1B2430', marginBottom: 6 },
   productPrice: { fontSize: 15, color: '#2D983A', fontWeight: '800' },
-  
   orderCard: {
     backgroundColor: '#F9FAFB',
     borderRadius: 16, padding: 16, marginBottom: 12,
@@ -369,9 +333,7 @@ const styles = StyleSheet.create({
   customerName: { fontSize: 15, color: '#4B5563', marginBottom: 6, fontWeight: '500' },
   orderAmount: { fontSize: 16, fontWeight: '800', color: '#1B2430', marginBottom: 4 },
   orderDate: { fontSize: 13, color: '#9CA3AF', fontWeight: '500' },
-  
   emptyText: { textAlign: 'center', color: '#6B7280', marginTop: 40, fontSize: 18, fontWeight: '500' },
   emptyTextSmall: { textAlign: 'center', color: '#9CA3AF', marginVertical: 16, fontSize: 15, fontStyle: 'italic' },
 });
-
 export default AdminFarmerDetailsScreen;

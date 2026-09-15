@@ -3,7 +3,6 @@ import { cartService } from '../services/cartService';
 import { CartResponse, CartItemResponse } from '../types';
 import { useAuth } from './AuthContext';
 import { Alert } from 'react-native';
-
 interface CartContextType {
   cart: CartResponse | null;
   isLoading: boolean;
@@ -14,14 +13,11 @@ interface CartContextType {
   clearCart: () => Promise<void>;
   cartCount: number;
 }
-
 const CartContext = createContext<CartContextType | undefined>(undefined);
-
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isLoggedIn } = useAuth();
-
   const refreshCart = useCallback(async () => {
     if (!isLoggedIn) {
       setCart(null);
@@ -35,20 +31,18 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error: any) {
       console.log('Error refreshing cart:', error);
       if (
-        error?.response?.status === 404 || 
+        error?.response?.status === 404 ||
         (error?.response?.status === 500 && error?.response?.data?.message?.includes('Cart is empty'))
       ) {
-        setCart(null); // Cart not found / empty
+        setCart(null);
       }
     } finally {
       setIsLoading(false);
     }
   }, [isLoggedIn]);
-
   useEffect(() => {
     refreshCart();
   }, [refreshCart]);
-
   const addToCart = async (productId: string, quantity: number = 1) => {
     try {
       if (!isLoggedIn) {
@@ -66,7 +60,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     }
   };
-
   const updateQuantity = async (productId: string, quantity: number) => {
     if (quantity < 1) return;
     try {
@@ -80,7 +73,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     }
   };
-
   const removeFromCart = async (productId: string) => {
     try {
       setIsLoading(true);
@@ -93,7 +85,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     }
   };
-
   const clearCart = async () => {
     try {
       setIsLoading(true);
@@ -106,7 +97,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     }
   };
-
   return (
     <CartContext.Provider
       value={{
@@ -124,7 +114,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     </CartContext.Provider>
   );
 };
-
 export const useCart = (): CartContextType => {
   const context = useContext(CartContext);
   if (!context) {
@@ -132,5 +121,4 @@ export const useCart = (): CartContextType => {
   }
   return context;
 };
-
 export default CartContext;

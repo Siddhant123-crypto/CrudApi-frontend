@@ -4,27 +4,22 @@ import { AdminHeader } from '../../components/admin/AdminHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { useNavigation } from '@react-navigation/native';
-
 const mockVerifications = [
   { id: '1', farmer: 'Rahul Patil', farm: 'Green Valley Farm', date: '03 Sep, 10:30 AM', status: 'Verified' },
   { id: '2', farmer: 'Amit Kumar', farm: 'Fresh Farm', date: '02 Sep, 09:15 AM', status: 'Pending' },
   { id: '3', farmer: 'Ravi Sharma', farm: 'Sharma Farm', date: '01 Sep, 04:20 PM', status: 'Rejected' },
   { id: '4', farmer: 'Suresh Yadav', farm: 'Yadav Farm', date: '31 Aug, 11:00 AM', status: 'Verified' },
 ];
-
 export const AdminFarmVerificationScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation<any>();
-
   const tabs = ['All', 'Verified', 'Pending', 'Rejected'];
-
   const filteredVerifications = mockVerifications.filter(v => {
     if (activeTab !== 'All' && v.status !== activeTab) return false;
     if (searchQuery && !v.farm.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
-
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.verificationCard} onPress={() => navigation.navigate('AdminFarmVerificationDetails', { verificationId: item.id })}>
       <View style={styles.cardLeft}>
@@ -43,11 +38,9 @@ export const AdminFarmVerificationScreen: React.FC = () => {
       </View>
     </TouchableOpacity>
   );
-
   return (
     <View style={styles.container}>
       <AdminHeader />
-      
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Farm Verification</Text>
         <View style={styles.searchContainer}>
@@ -61,7 +54,6 @@ export const AdminFarmVerificationScreen: React.FC = () => {
           />
         </View>
       </View>
-
       <View style={styles.tabsContainer}>
         {tabs.map(tab => (
           <TouchableOpacity
@@ -73,7 +65,6 @@ export const AdminFarmVerificationScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
-
       <FlatList
         data={filteredVerifications}
         keyExtractor={item => item.id}
@@ -84,7 +75,6 @@ export const AdminFarmVerificationScreen: React.FC = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 8 },
@@ -115,5 +105,4 @@ const styles = StyleSheet.create({
   cardRight: { flexDirection: 'row', alignItems: 'center' },
   chevron: { marginLeft: 8 },
 });
-
 export default AdminFarmVerificationScreen;

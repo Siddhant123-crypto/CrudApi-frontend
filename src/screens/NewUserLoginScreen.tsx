@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-
 import {
   View,
   Text,
@@ -12,36 +11,20 @@ import {
   Image,
   ImageBackground,
 } from 'react-native';
-
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
-
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 import { useAuth } from '../context/AuthContext';
-
 import {
   newUserLogin,
   googleLogin,
   adminLogin,
 } from '../services/authService';
-
-// @ts-ignore
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-
-// --------------------------------------------------
-// GOOGLE CONFIG
-// --------------------------------------------------
-
 GoogleSignin.configure({
   webClientId:
     '159078840279-7slmnqaleckksrrtr1i35lfnqj0g23v0.apps.googleusercontent.com',
 });
-
-// --------------------------------------------------
-// USER TYPE
-// --------------------------------------------------
-
 type UserData = {
   name: string;
   email: string;
@@ -50,80 +33,52 @@ type UserData = {
   userId?: string;
   profilePhoto?: string;
 };
-
-// --------------------------------------------------
-// COMPONENT
-// --------------------------------------------------
-
 const NewUserLoginScreen = ({
   navigation,
 }: any) => {
   const { login } = useAuth();
-
   const [identifier, setIdentifier] =
     useState('');
-
   const [password, setPassword] =
     useState('');
-
   const [loading, setLoading] =
     useState(false);
-
   const [googleLoading, setGoogleLoading] =
     useState(false);
-
   const [errors, setErrors] =
     useState<{
       identifier?: string | null;
       password?: string | null;
     }>({});
-
-  // --------------------------------------------------
-  // VALIDATION
-  // --------------------------------------------------
-
   const validate = () => {
     const newErrors: Record<
       string,
       string | null
     > = {};
-
     if (!identifier.trim()) {
       newErrors.identifier =
         'Email or Mobile is required';
     }
-
     if (!password.trim()) {
       newErrors.password =
         'Password is required';
     }
-
     setErrors(newErrors);
-
     return (
       Object.keys(newErrors).length === 0
     );
   };
-
-  // --------------------------------------------------
-  // NORMAL LOGIN
-  // --------------------------------------------------
-
   const handleLogin = async () => {
     if (!validate()) {
       return;
     }
-
     setLoading(true);
-
     try {
       let result;
       const isSystemAdmin = identifier.trim().toLowerCase() === 'admin@gmail.com';
-      
       if (isSystemAdmin) {
         result = await adminLogin(identifier.trim(), password);
         console.log('ADMIN LOGIN RESPONSE:', result);
-
         if (result?.message?.includes('successful') || result?.role === 'ADMIN') {
           const userData: UserData = {
             name: result.name || 'System Admin',
@@ -131,12 +86,10 @@ const NewUserLoginScreen = ({
             role: 'ADMIN',
             userId: result.adminId,
           };
-          
           if (!result.token) {
             Alert.alert('Login Error', 'Login successful but access token was not received.');
             return;
           }
-          
           await login(userData, result.token);
           console.log('ADMIN LOGIN COMPLETED');
           return;
@@ -148,11 +101,6 @@ const NewUserLoginScreen = ({
         result = await newUserLogin(identifier.trim(), password);
         console.log('NORMAL LOGIN RESPONSE:', result);
       }
-
-      // ----------------------------------------------
-      // SUCCESS
-      // ----------------------------------------------
-
       if (
         result?.message?.includes(
           'Login Successful',
@@ -161,83 +109,59 @@ const NewUserLoginScreen = ({
       ) {
         const response =
           result.response;
-
         const isFarmer =
           response.role === 'FARMER' ||
           response.role === 'Farmer';
-
         const isAdmin =
           response.role === 'ADMIN' ||
           response.role === 'Admin';
-
         const userData: UserData = {
           name:
             response.name,
-
           email:
             response.email,
-
           role: isAdmin
             ? 'ADMIN'
             : isFarmer
               ? 'FARMER'
               : 'USER',
-
           farmerId: isFarmer
             ? response.farmerId ||
               response.id
             : undefined,
-
           userId: (!isFarmer && !isAdmin)
             ? response.userId ||
               response.id
             : undefined,
-
           profilePhoto:
             response.profilePhoto,
         };
-
         console.log(
           'NORMAL LOGIN USER:',
           userData,
         );
-
         console.log(
           'NORMAL LOGIN TOKEN:',
           result.accessToken
             ? 'YES'
             : 'NO',
         );
-
         if (!result.accessToken) {
           Alert.alert(
             'Login Error',
             'Login successful but access token was not received.',
           );
-
           return;
         }
-
-        // --------------------------------------------
-        // SAVE USER + JWT
-        // --------------------------------------------
-
         await login(
           userData,
           result.accessToken,
         );
-
         console.log(
           'NORMAL LOGIN COMPLETED',
         );
-
         return;
       }
-
-      // ----------------------------------------------
-      // FAILED
-      // ----------------------------------------------
-
       Alert.alert(
         'Login Failed',
         result?.message ||
@@ -248,13 +172,11 @@ const NewUserLoginScreen = ({
         'Normal Login Error:',
         error,
       );
-
       const msg =
         error?.response?.data?.message ||
         error?.response?.data ||
         error?.message ||
         'Unable to connect to server.';
-
       Alert.alert(
         'Login Error',
         typeof msg === 'string'
@@ -265,31 +187,15 @@ const NewUserLoginScreen = ({
       setLoading(false);
     }
   };
-
-  // --------------------------------------------------
-  // GOOGLE LOGIN
-  // --------------------------------------------------
-
   const handleGoogleLogin = async () => {
     if (googleLoading) {
       return;
     }
-
     setGoogleLoading(true);
-
     try {
-      // ----------------------------------------------
-      // PLAY SERVICES
-      // ----------------------------------------------
-
       await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
-
-      // ----------------------------------------------
-      // SIGN OUT PREVIOUS ACCOUNT
-      // ----------------------------------------------
-
       try {
         await GoogleSignin.signOut();
       } catch (error) {
@@ -297,55 +203,30 @@ const NewUserLoginScreen = ({
           'No previous Google session',
         );
       }
-
-      // ----------------------------------------------
-      // GOOGLE SIGN IN
-      // ----------------------------------------------
-
       const googleResult =
         await GoogleSignin.signIn();
-
       console.log(
         'GOOGLE RESULT:',
         googleResult,
       );
-
-      // ----------------------------------------------
-      // GET ID TOKEN
-      // ----------------------------------------------
-
       const idToken =
         googleResult.data?.idToken;
-
       if (!idToken) {
         Alert.alert(
           'Google Login Failed',
           'Google ID token was not received.',
         );
-
         return;
       }
-
       console.log(
         'GOOGLE ID TOKEN RECEIVED',
       );
-
-      // ----------------------------------------------
-      // SEND TOKEN TO BACKEND
-      // ----------------------------------------------
-
       const backendResult =
         await googleLogin(idToken);
-
       console.log(
         'GOOGLE BACKEND RESPONSE:',
         backendResult,
       );
-
-      // =================================================
-      // EXISTING USER
-      // =================================================
-
       if (
         backendResult?.message?.includes(
           'Login Successful',
@@ -354,54 +235,43 @@ const NewUserLoginScreen = ({
       ) {
         const response =
           backendResult.response;
-
         const isFarmer =
           response.role === 'FARMER' ||
           response.role === 'Farmer';
-
         const isAdmin =
           response.role === 'ADMIN' ||
           response.role === 'Admin';
-
         const userData: UserData = {
           name:
             response.name,
-
           email:
             response.email,
-
           role: isAdmin
             ? 'ADMIN'
             : isFarmer
               ? 'FARMER'
               : 'USER',
-
           farmerId: isFarmer
             ? response.farmerId ||
               response.id
             : undefined,
-
           userId: (!isFarmer && !isAdmin)
             ? response.userId ||
               response.id
             : undefined,
-
           profilePhoto:
             response.profilePhoto,
         };
-
         console.log(
           'GOOGLE EXISTING USER:',
           userData,
         );
-
         console.log(
           'GOOGLE JWT:',
           backendResult.accessToken
             ? 'YES'
             : 'NO',
         );
-
         if (
           !backendResult.accessToken
         ) {
@@ -409,30 +279,17 @@ const NewUserLoginScreen = ({
             'Google Login Error',
             'Backend login successful but JWT token was not received.',
           );
-
           return;
         }
-
-        // --------------------------------------------
-        // SAVE USER + JWT
-        // --------------------------------------------
-
         await login(
           userData,
           backendResult.accessToken,
         );
-
         console.log(
           'GOOGLE EXISTING USER LOGIN SUCCESS',
         );
-
         return;
       }
-
-      // =================================================
-      // NEW GOOGLE USER
-      // =================================================
-
       if (
         backendResult?.message ===
           'NEW_USER' &&
@@ -441,27 +298,18 @@ const NewUserLoginScreen = ({
         console.log(
           'NEW GOOGLE USER',
         );
-
         navigation.navigate(
           'RoleSelection',
           {
             email:
               backendResult.response.email,
-
             name:
               backendResult.response.name,
-
             isGoogleSignUp: true,
           },
         );
-
         return;
       }
-
-      // =================================================
-      // FAILED
-      // =================================================
-
       Alert.alert(
         'Google Login Failed',
         backendResult?.message ||
@@ -472,7 +320,6 @@ const NewUserLoginScreen = ({
         'Google Login Error:',
         error,
       );
-
       Alert.alert(
         'Google Login Error',
         error?.message ||
@@ -482,11 +329,6 @@ const NewUserLoginScreen = ({
       setGoogleLoading(false);
     }
   };
-
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
-
   return (
     <ImageBackground
       source={require('../../assets/Tractor.png')}
@@ -515,8 +357,7 @@ const NewUserLoginScreen = ({
             false
           }
         >
-          {/* HEADER */}
-
+          {}
           <View style={styles.header}>
             <View
               style={styles.logoWrapper}
@@ -529,19 +370,16 @@ const NewUserLoginScreen = ({
                 resizeMode="contain"
               />
             </View>
-
             <Text
               style={styles.welcomeText}
             >
               Welcome to
             </Text>
-
             <Text
               style={styles.appName}
             >
               Farm2Home!
             </Text>
-
             <Text
               style={styles.tagline}
             >
@@ -549,9 +387,7 @@ const NewUserLoginScreen = ({
               to your home
             </Text>
           </View>
-
-          {/* LOGIN CARD */}
-
+          {}
           <View
             style={styles.formContainer}
           >
@@ -560,21 +396,17 @@ const NewUserLoginScreen = ({
             >
               Sign In
             </Text>
-
             <Text
               style={styles.formSubtitle}
             >
               Use your Farm2Home Account
             </Text>
-
-            {/* EMAIL */}
-
+            {}
             <CustomInput
               label="Email or Mobile"
               value={identifier}
               onChangeText={text => {
                 setIdentifier(text);
-
                 if (errors.identifier) {
                   setErrors({
                     ...errors,
@@ -593,15 +425,12 @@ const NewUserLoginScreen = ({
                 />
               }
             />
-
-            {/* PASSWORD */}
-
+            {}
             <CustomInput
               label="Password"
               value={password}
               onChangeText={text => {
                 setPassword(text);
-
                 if (errors.password) {
                   setErrors({
                     ...errors,
@@ -620,9 +449,7 @@ const NewUserLoginScreen = ({
                 />
               }
             />
-
-            {/* FORGOT */}
-
+            {}
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate(
@@ -639,9 +466,7 @@ const NewUserLoginScreen = ({
                 Forgot Password?
               </Text>
             </TouchableOpacity>
-
-            {/* BUTTONS */}
-
+            {}
             <View
               style={styles.actionColumn}
             >
@@ -662,13 +487,11 @@ const NewUserLoginScreen = ({
                   fontWeight: 'bold',
                 }}
               />
-
               <View
                 style={
                   styles.buttonSpacerVertical
                 }
               />
-
               <CustomButton
                 title="Create account"
                 onPress={() =>
@@ -693,9 +516,7 @@ const NewUserLoginScreen = ({
                 }}
               />
             </View>
-
-            {/* OR */}
-
+            {}
             <View
               style={
                 styles.dividerContainer
@@ -704,20 +525,16 @@ const NewUserLoginScreen = ({
               <View
                 style={styles.divider}
               />
-
               <Text
                 style={styles.orText}
               >
                 OR
               </Text>
-
               <View
                 style={styles.divider}
               />
             </View>
-
-            {/* GOOGLE */}
-
+            {}
             <TouchableOpacity
               style={
                 styles.googleButton
@@ -735,7 +552,6 @@ const NewUserLoginScreen = ({
                   styles.googleIconImage
                 }
               />
-
               <Text
                 style={
                   styles.googleButtonText
@@ -752,22 +568,15 @@ const NewUserLoginScreen = ({
     </ImageBackground>
   );
 };
-
-// --------------------------------------------------
-// STYLES
-// --------------------------------------------------
-
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
     width: '100%',
     height: '100%',
   },
-
   container: {
     flex: 1,
   },
-
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -775,12 +584,10 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
     paddingBottom: 60,
   },
-
   header: {
     alignItems: 'center',
     marginBottom: 28,
   },
-
   logoWrapper: {
     width: 104,
     height: 104,
@@ -792,26 +599,22 @@ const styles = StyleSheet.create({
     borderColor: '#C8E6C9',
     marginBottom: 12,
   },
-
   logoImage: {
     width: 92,
     height: 92,
     borderRadius: 46,
   },
-
   welcomeText: {
     fontSize: 26,
     fontWeight: '700',
     color: '#212121',
   },
-
   appName: {
     fontSize: 34,
     fontWeight: '800',
     color: '#1B5E20',
     marginTop: -4,
   },
-
   tagline: {
     fontSize: 14,
     color: '#4E7D50',
@@ -819,7 +622,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-
   formContainer: {
     backgroundColor:
       'rgba(255,255,255,0.6)',
@@ -832,13 +634,11 @@ const styles = StyleSheet.create({
     borderColor: '#E4E4E4',
     elevation: 3,
   },
-
   formTitle: {
     fontSize: 28,
     fontWeight: '700',
     color: '#212121',
   },
-
   formSubtitle: {
     fontSize: 15,
     color: '#757575',
@@ -846,49 +646,41 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontWeight: '500',
   },
-
   forgotButton: {
     alignSelf: 'flex-start',
     marginTop: -8,
     marginBottom: 16,
   },
-
   forgotText: {
     color: '#1B5E20',
     fontSize: 14,
     fontWeight: '600',
   },
-
   actionColumn: {
     flexDirection: 'column',
     alignItems: 'center',
     width: '100%',
     marginTop: 12,
   },
-
   buttonSpacerVertical: {
     height: 12,
   },
-
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 22,
   },
-
   divider: {
     flex: 1,
     height: 1,
     backgroundColor: '#DDDDDD',
   },
-
   orText: {
     marginHorizontal: 12,
     fontSize: 13,
     color: '#777777',
     fontWeight: '600',
   },
-
   googleButton: {
     height: 52,
     borderRadius: 11,
@@ -900,18 +692,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 1,
   },
-
   googleIconImage: {
     width: 24,
     height: 24,
     marginRight: 12,
   },
-
   googleButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#333333',
   },
 });
-
 export default NewUserLoginScreen;

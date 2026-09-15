@@ -15,18 +15,15 @@ import { useCart } from '../context/CartContext';
 import CartItemCard from '../components/CartItemCard';
 import EmptyState from '../components/EmptyState';
 import { useNavigation } from '@react-navigation/native';
-
 const CartScreen = () => {
   const { cart, isLoading, refreshCart, clearCart } = useCart();
   const navigation = useNavigation<any>();
   const [refreshing, setRefreshing] = useState(false);
-
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshCart();
     setRefreshing(false);
   };
-
   const handleClearCart = () => {
     Alert.alert(
       'Clear Cart',
@@ -37,11 +34,8 @@ const CartScreen = () => {
       ]
     );
   };
-
   const handleCheckout = () => {
     if (!cart || cart.items.length === 0) return;
-    
-    // Navigate to existing CheckoutScreen with necessary params
     navigation.navigate('Checkout', {
       orderItems: cart.items.map(item => ({
         product: {
@@ -56,7 +50,6 @@ const CartScreen = () => {
       totalAmount: cart.totalAmount,
     });
   };
-
   if (isLoading && !refreshing && !cart) {
     return (
       <View style={styles.loadingContainer}>
@@ -64,7 +57,6 @@ const CartScreen = () => {
       </View>
     );
   }
-
   if (!cart || cart.items.length === 0) {
     return (
       <View style={styles.container}>
@@ -87,7 +79,6 @@ const CartScreen = () => {
       </View>
     );
   }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -101,7 +92,6 @@ const CartScreen = () => {
           <Ionicons name="trash-bin-outline" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-
       <FlatList
         data={cart.items}
         keyExtractor={(item) => item.cartItemId}
@@ -111,7 +101,6 @@ const CartScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1E3A8A']} />
         }
       />
-
       <View style={styles.summaryContainer}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Total Items</Text>
@@ -121,7 +110,6 @@ const CartScreen = () => {
           <Text style={styles.totalLabel}>Total Amount</Text>
           <Text style={styles.totalValue}>₹{cart.totalAmount}</Text>
         </View>
-        
         <TouchableOpacity style={styles.checkoutBtn} onPress={handleCheckout} activeOpacity={0.8}>
           <Text style={styles.checkoutBtnText}>Proceed to Checkout</Text>
           <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
@@ -130,7 +118,6 @@ const CartScreen = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -230,5 +217,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
 export default CartScreen;

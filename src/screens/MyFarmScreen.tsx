@@ -20,11 +20,9 @@ import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../services/api';
 import { getFarmDetails } from '../services/farmDetailsService';
 import { getMyGallery, uploadGalleryFile, deleteGalleryFile } from '../services/farmGalleryService';
-
-// ─── Video Card Component (pure JS, works in Expo Go) ────────────────────────
 const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
   <View style={[style, { backgroundColor: '#0F3320', justifyContent: 'center', alignItems: 'center', opacity: blurred ? 0.6 : 1 }]}>
-    {/* Play circle button */}
+    {}
     <View style={{
       width: 44,
       height: 44,
@@ -38,7 +36,7 @@ const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
     }}>
       <Ionicons name="play" size={20} color="#FFFFFF" style={{ marginLeft: 2 }} />
     </View>
-    {/* VIDEO label */}
+    {}
     <View style={{
       backgroundColor: 'rgba(255,255,255,0.15)',
       paddingHorizontal: 8,
@@ -49,10 +47,7 @@ const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
     </View>
   </View>
 );
-// ─────────────────────────────────────────────────────────────────────────────
-
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 const MyFarmScreen = ({ navigation }: any) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -60,11 +55,8 @@ const MyFarmScreen = ({ navigation }: any) => {
   const [gallery, setGallery] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  
-  // Selection mode for deleting gallery items
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedGalleryIds, setSelectedGalleryIds] = useState<string[]>([]);
-
   const fetchData = async () => {
     if (!user?.farmerId) {
       setLoading(false);
@@ -76,7 +68,6 @@ const MyFarmScreen = ({ navigation }: any) => {
         getFarmDetails(user.farmerId).catch(() => null),
         getMyGallery().catch(() => ({ data: [] }))
       ]);
-
       if (detailsResponse && detailsResponse.data) {
         setFarmDetails(detailsResponse.data);
       }
@@ -89,13 +80,11 @@ const MyFarmScreen = ({ navigation }: any) => {
       setLoading(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       fetchData();
     }, [user?.farmerId])
   );
-
   const handleAddPhoto = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -103,13 +92,11 @@ const MyFarmScreen = ({ navigation }: any) => {
         Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to upload media.');
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos'],
         allowsEditing: true,
         quality: 0.8,
       });
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         uploadFile(result.assets[0].uri);
       }
@@ -117,12 +104,10 @@ const MyFarmScreen = ({ navigation }: any) => {
       console.log('Image picker error:', error);
     }
   };
-
   const uploadFile = async (uri: string) => {
     if (!user?.farmerId) return;
     try {
       setUploading(true);
-      
       const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
       let mimeType = 'image/jpeg';
       if (['mp4', 'mov', 'webm'].includes(fileExt)) {
@@ -130,11 +115,8 @@ const MyFarmScreen = ({ navigation }: any) => {
       } else if (fileExt === 'png') {
         mimeType = 'image/png';
       }
-
       await uploadGalleryFile(user.farmerId, uri, mimeType, `gallery_file.${fileExt}`);
       Alert.alert('Success', 'File uploaded successfully');
-      
-      // Refresh gallery
       const galleryResponse = await getMyGallery().catch(() => ({ data: [] }));
       if (galleryResponse && galleryResponse.data) {
         setGallery(galleryResponse.data);
@@ -146,32 +128,27 @@ const MyFarmScreen = ({ navigation }: any) => {
       setUploading(false);
     }
   };
-
   const toggleSelection = (id: string) => {
-    setSelectedGalleryIds(prev => 
+    setSelectedGalleryIds(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
-
   const handleDeleteSelected = () => {
     if (selectedGalleryIds.length === 0) return;
-    
     Alert.alert(
       'Delete Selected',
       `Are you sure you want to delete ${selectedGalleryIds.length} item(s)?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
               setLoading(true);
-              // Delete sequentially
               for (const id of selectedGalleryIds) {
                 await deleteGalleryFile(id).catch(err => console.log('Failed to delete', id, err));
               }
-              // Refresh gallery
               setGallery(prev => prev.filter(item => !selectedGalleryIds.includes(item.id)));
               setIsSelectionMode(false);
               setSelectedGalleryIds([]);
@@ -187,14 +164,12 @@ const MyFarmScreen = ({ navigation }: any) => {
       ]
     );
   };
-
   const handlePlayVideo = (filePath: string) => {
     const videoUrl = `${BASE_URL}/${filePath}`;
     Linking.openURL(videoUrl).catch(() =>
       Alert.alert('Error', 'Could not open video.')
     );
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -202,16 +177,13 @@ const MyFarmScreen = ({ navigation }: any) => {
       </View>
     );
   }
-
   const fd = farmDetails || {};
-  const isVerified = true; // Hardcoded true as a placeholder, tie to actual verified status if available in API
-
+  const isVerified = true;
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
-          {/* TOP HEADER */}
+          {}
           <View style={styles.headerBlock}>
             <View style={styles.headerTopRow}>
               <View style={styles.headerLeft}>
@@ -228,11 +200,9 @@ const MyFarmScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* OVERLAPPING CONTENT CARD */}
+          {}
           <View style={styles.mainContentCard}>
-            
-            {/* 1. FARM PROFILE CARD */}
+            {}
             <View style={styles.farmProfileCard}>
               <View style={styles.profileRow}>
                 <View style={styles.profileLeft}>
@@ -252,9 +222,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                     {fd.aboutFarm || 'Update your farm details to add a description about your farming practices and produce.'}
                   </Text>
                 </View>
-
                 <View style={styles.profileDivider} />
-
                 <View style={styles.profileRight}>
                   <View style={styles.infoBlock}>
                     <View style={styles.infoIconBox}>
@@ -277,8 +245,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                 </View>
               </View>
             </View>
-
-            {/* 2. FARM STATISTICS CARDS */}
+            {}
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
                 <View style={styles.statIconBox}>
@@ -290,7 +257,6 @@ const MyFarmScreen = ({ navigation }: any) => {
                   <Text style={styles.statDesc}>Farm Area</Text>
                 </View>
               </View>
-              
               <View style={styles.statItem}>
                 <View style={styles.statIconBox}>
                   <Ionicons name="flower-outline" size={26} color="#176B2C" />
@@ -301,7 +267,6 @@ const MyFarmScreen = ({ navigation }: any) => {
                   <Text style={styles.statDesc}>Grown</Text>
                 </View>
               </View>
-              
               <View style={styles.statItem}>
                 <View style={styles.statIconBox}>
                   <Ionicons name="ribbon-outline" size={26} color="#176B2C" />
@@ -312,7 +277,6 @@ const MyFarmScreen = ({ navigation }: any) => {
                   <Text style={styles.statDesc}>Experience</Text>
                 </View>
               </View>
-              
               <View style={styles.statItem}>
                 <View style={styles.statIconBox}>
                   <Ionicons name="people-outline" size={26} color="#176B2C" />
@@ -324,13 +288,11 @@ const MyFarmScreen = ({ navigation }: any) => {
                 </View>
               </View>
             </View>
-
-            {/* 3. FARM DETAILS */}
+            {}
             <View style={styles.detailsCard}>
               <Text style={styles.sectionTitle}>Farm Details</Text>
-              
               <View style={styles.detailsGrid}>
-                {/* Left Column */}
+                {}
                 <View style={styles.detailsCol}>
                   <View style={styles.detailItem}>
                     <Ionicons name="person-outline" size={22} color="#176B2C" style={styles.detailIcon} />
@@ -361,8 +323,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                     </View>
                   </View>
                 </View>
-
-                {/* Right Column */}
+                {}
                 <View style={styles.detailsCol}>
                   <View style={styles.detailItem}>
                     <Ionicons name="leaf-outline" size={22} color="#176B2C" style={styles.detailIcon} />
@@ -394,10 +355,8 @@ const MyFarmScreen = ({ navigation }: any) => {
                   </View>
                 </View>
               </View>
-
-              {/* FARM MEDIA MOVED BACK TO GALLERY (REMOVED FROM HERE) */}
-
-              {/* 4. ABOUT MY FARM BOX */}
+              {}
+              {}
               <View style={styles.aboutBox}>
                 <View style={styles.aboutHeader}>
                   <Ionicons name="leaf" size={20} color="#176B2C" />
@@ -411,25 +370,23 @@ const MyFarmScreen = ({ navigation }: any) => {
                 </View>
               </View>
             </View>
-
-            {/* 5. FARM PHOTOS / GALLERY */}
+            {}
             <View style={styles.gallerySection}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Farm Photos</Text>
-                
                 <View style={styles.actionButtonsRow}>
                   {isSelectionMode ? (
                     <>
-                      <TouchableOpacity 
-                        style={[styles.actionBtn, styles.deleteActionBtn, selectedGalleryIds.length === 0 && styles.disabledBtn]} 
+                      <TouchableOpacity
+                        style={[styles.actionBtn, styles.deleteActionBtn, selectedGalleryIds.length === 0 && styles.disabledBtn]}
                         onPress={handleDeleteSelected}
                         disabled={selectedGalleryIds.length === 0}
                       >
                         <Ionicons name="trash" size={16} color="#FFFFFF" />
                         <Text style={styles.deleteActionText}>Delete ({selectedGalleryIds.length})</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.actionBtn, styles.cancelActionBtn]} 
+                      <TouchableOpacity
+                        style={[styles.actionBtn, styles.cancelActionBtn]}
                         onPress={() => {
                           setIsSelectionMode(false);
                           setSelectedGalleryIds([]);
@@ -460,7 +417,6 @@ const MyFarmScreen = ({ navigation }: any) => {
                   )}
                 </View>
               </View>
-
               {gallery.length === 0 ? (
                 <View style={styles.emptyGalleryBox}>
                   <Ionicons name="image-outline" size={32} color="#B8DDBB" />
@@ -470,14 +426,12 @@ const MyFarmScreen = ({ navigation }: any) => {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryScroll}>
                   {gallery.map((item) => {
                     const isSelected = selectedGalleryIds.includes(item.id);
-                    // Fix Windows backslashes in paths
                     const sanitizedPath = item.filePath ? item.filePath.replace(/\\/g, '/') : '';
                     const mediaUrl = `${BASE_URL}/${sanitizedPath}`;
                     const isVideo = item.fileType === 'VIDEO';
-
                     return (
-                      <TouchableOpacity 
-                        key={item.id} 
+                      <TouchableOpacity
+                        key={item.id}
                         style={styles.galleryItem}
                         onLongPress={() => {
                           if (!isSelectionMode) {
@@ -501,21 +455,19 @@ const MyFarmScreen = ({ navigation }: any) => {
                             blurred={isSelectionMode}
                           />
                         ) : (
-                          <Image 
-                            source={{ uri: mediaUrl }} 
-                            style={[styles.galleryImage, isSelectionMode && styles.galleryImageBlurred]} 
+                          <Image
+                            source={{ uri: mediaUrl }}
+                            style={[styles.galleryImage, isSelectionMode && styles.galleryImageBlurred]}
                             resizeMode="cover"
                           />
                         )}
-                        
-                        {/* Play Icon for Video in Normal Mode */}
+                        {}
                         {!isSelectionMode && isVideo && (
                           <View style={styles.videoOverlay}>
                             <Ionicons name="play-circle" size={36} color="#FFFFFF" />
                           </View>
                         )}
-                        
-                        {/* Selection Mode Overlay & Checkmark */}
+                        {}
                         {isSelectionMode && (
                           <View style={styles.selectionOverlay}>
                             {isSelected ? (
@@ -533,8 +485,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                 </ScrollView>
               )}
             </View>
-
-            {/* 6. FARM VERIFIED */}
+            {}
             <View style={styles.verifiedCard}>
               <View style={styles.verifiedIconWrap}>
                 <Ionicons name="shield-checkmark" size={32} color="#176B2C" />
@@ -549,23 +500,20 @@ const MyFarmScreen = ({ navigation }: any) => {
                 <Text style={styles.certBtnText}>View Certificate</Text>
               </TouchableOpacity>
             </View>
-
-            {/* 7. EDIT BUTTON */}
-            <TouchableOpacity 
-              style={styles.editBtn} 
+            {}
+            <TouchableOpacity
+              style={styles.editBtn}
               onPress={() => navigation.navigate('EditFarmDetails', { farmDetails: fd })}
             >
               <Ionicons name="pencil-outline" size={18} color="#FFFFFF" />
               <Text style={styles.editBtnText}>Edit Farm Details</Text>
             </TouchableOpacity>
-
           </View>
         </ScrollView>
       </View>
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -587,9 +535,9 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     backgroundColor: '#1E5631',
-    paddingTop: Platform.OS === 'android' ? 50 : 30, // Increased height
+    paddingTop: Platform.OS === 'android' ? 50 : 30,
     paddingHorizontal: 20,
-    paddingBottom: 70, // Increased height to look premium
+    paddingBottom: 70,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -605,7 +553,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#FFFFFF',
-    fontSize: 22, // Increased font size
+    fontSize: 22,
     fontWeight: '800',
   },
   headerIconButton: {
@@ -636,10 +584,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 16,
-    marginTop: -30, 
+    marginTop: -30,
   },
-  
-  /* 1. FARM PROFILE CARD */
   farmProfileCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -666,7 +612,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   farmNameText: {
-    fontSize: 22, // Increased
+    fontSize: 22,
     fontWeight: '800',
     color: '#176B2C',
     marginRight: 6,
@@ -678,10 +624,10 @@ const styles = StyleSheet.create({
   taglineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6, // Adjusted
+    marginBottom: 6,
   },
   taglineText: {
-    fontSize: 14, // Increased
+    fontSize: 14,
     color: '#647064',
     marginLeft: 6,
     flexShrink: 1,
@@ -689,16 +635,16 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12, // Adjusted
+    marginBottom: 12,
   },
   locationText: {
-    fontSize: 14, // Increased
+    fontSize: 14,
     color: '#647064',
     marginLeft: 6,
     flexShrink: 1,
   },
   farmDescText: {
-    fontSize: 14, // Increased
+    fontSize: 14,
     color: '#172117',
     lineHeight: 20,
   },
@@ -717,7 +663,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   infoIconBox: {
-    width: 42, // Increased
+    width: 42,
     height: 42,
     borderRadius: 10,
     backgroundColor: '#F1FAF2',
@@ -726,17 +672,15 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   infoValue: {
-    fontSize: 15, // Increased
+    fontSize: 15,
     fontWeight: '800',
     color: '#172117',
   },
   infoLabel: {
-    fontSize: 13, // Increased
+    fontSize: 13,
     color: '#647064',
     marginTop: 2,
   },
-
-  /* 2. STATS CONTAINER (4 CARDS) */
   statsContainer: {
     flexDirection: 'row',
     marginTop: 16,
@@ -751,7 +695,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 4,
     alignItems: 'center',
-    elevation: 6, // 3D effect
+    elevation: 6,
     shadowColor: '#176B2C',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -760,7 +704,7 @@ const styles = StyleSheet.create({
     borderColor: '#EAF6D8',
   },
   statIconBox: {
-    width: 44, // Increased
+    width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: '#F1FAF2',
@@ -772,27 +716,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statVal: {
-    fontSize: 16, // Increased
+    fontSize: 16,
     fontWeight: '800',
     color: '#172117',
   },
   statSubVal: {
-    fontSize: 12, // Increased
+    fontSize: 12,
     color: '#647064',
     fontWeight: '700',
   },
   statDesc: {
-    fontSize: 11, // Increased
+    fontSize: 11,
     color: '#647064',
     marginTop: 2,
   },
-
-  /* 3. DETAILS CARD */
   detailsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     marginTop: 16,
-    padding: 20, // Increased padding
+    padding: 20,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -802,7 +744,7 @@ const styles = StyleSheet.create({
     borderColor: '#EAF6D8',
   },
   sectionTitle: {
-    fontSize: 20, // Increased significantly
+    fontSize: 20,
     fontWeight: '800',
     color: '#176B2C',
     marginBottom: 20,
@@ -812,7 +754,7 @@ const styles = StyleSheet.create({
   },
   detailsCol: {
     flex: 1,
-    gap: 20, // Increased gap
+    gap: 20,
   },
   detailItem: {
     flexDirection: 'row',
@@ -823,18 +765,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   detailLabel: {
-    fontSize: 13, // Increased
+    fontSize: 13,
     color: '#647064',
     marginBottom: 4,
   },
   detailValue: {
-    fontSize: 15, // Increased
+    fontSize: 15,
     fontWeight: '700',
     color: '#172117',
     paddingRight: 8,
   },
-
-  /* ACTION BUTTONS (ADD / DELETE / SELECTION) */
   actionButtonsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -883,7 +823,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#4B5563',
   },
-
   galleryImageBlurred: {
     opacity: 0.6,
   },
@@ -915,8 +854,6 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
-
-  /* 4. ABOUT BOX */
   aboutBox: {
     backgroundColor: '#F1FAF2',
     borderRadius: 16,
@@ -929,7 +866,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   aboutTitle: {
-    fontSize: 16, // Increased
+    fontSize: 16,
     fontWeight: '800',
     color: '#176B2C',
     marginLeft: 8,
@@ -941,13 +878,11 @@ const styles = StyleSheet.create({
   },
   aboutText: {
     flex: 1,
-    fontSize: 14, // Increased
+    fontSize: 14,
     color: '#172117',
     lineHeight: 22,
     marginRight: 16,
   },
-
-  /* 5. GALLERY */
   gallerySection: {
     marginTop: 20,
   },
@@ -1023,8 +958,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  /* 6. VERIFIED */
   verifiedCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1072,8 +1005,6 @@ const styles = StyleSheet.create({
     color: '#176B2C',
     marginLeft: 4,
   },
-
-  /* 7. EDIT BTN */
   editBtn: {
     flexDirection: 'row',
     backgroundColor: '#176B2C',
@@ -1096,5 +1027,4 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   }
 });
-
 export default MyFarmScreen;

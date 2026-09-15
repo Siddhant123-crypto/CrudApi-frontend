@@ -26,11 +26,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import api, {BASE_URL} from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
-
 const {width} = Dimensions.get('window');
-const PRODUCT_CARD_WIDTH = width * 0.4; // Slightly smaller for horizontal scroll
-
-// Preset price buttons
+const PRODUCT_CARD_WIDTH = width * 0.4;
 const PRICE_PRESETS = [
   { label: 'All', min: 0, max: 99999 },
   { label: '₹10–50', min: 10, max: 50 },
@@ -40,7 +37,6 @@ const PRICE_PRESETS = [
   { label: '₹500–1000', min: 500, max: 1000 },
   { label: '₹1000+', min: 1000, max: 99999 },
 ];
-
 const ProductDetailScreen = ({route, navigation}: any) => {
   const {product} = route.params;
   const {user} = useAuth();
@@ -48,54 +44,43 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(1);
   const [ordering, setOrdering] = useState(false);
-
   const [productData, setProductData] = useState<any>(product);
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState<boolean>(true);
-
-  // Media Viewer state
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [mediaModalUrl, setMediaModalUrl] = useState<string | null>(null);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
-
-  // Similar Products state
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [similarLoading, setSimilarLoading] = useState<boolean>(true);
-
-  // Filters
   const [searchText, setSearchText] = useState('');
-  const [activePriceIndex, setActivePriceIndex] = useState(0); // 0 = "All"
+  const [activePriceIndex, setActivePriceIndex] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [categoryDropdownVisible, setCategoryDropdownVisible] = useState(false);
-
   const fetchSimilarProducts = async (currentId: string) => {
     try {
       setSimilarLoading(true);
       const res = await api.get('/product/getAll');
       const raw: any[] = Array.isArray(res.data) ? res.data : [];
-      const similar = raw.filter((p: any) => 
-        p.isDelete !== true && 
-        p.status !== 'DELETED' && 
-        p.status !== 'INACTIVE' && 
+      const similar = raw.filter((p: any) =>
+        p.isDelete !== true &&
+        p.status !== 'DELETED' &&
+        p.status !== 'INACTIVE' &&
         p.productId !== currentId
       );
-      setSimilarProducts(similar); // Show all other active products
+      setSimilarProducts(similar);
     } catch (error) {
       console.log('Error fetching similar products:', error);
     } finally {
       setSimilarLoading(false);
     }
   };
-
   const fetchProductAndReviews = async () => {
     try {
       const updatedProduct = await getProductById(product.productId);
       setProductData(updatedProduct);
-
       const reviews = await getProductReviews(product.productId);
       setReviewsList(reviews);
-
       if (updatedProduct) {
         fetchSimilarProducts(product.productId);
       }
@@ -105,17 +90,14 @@ const ProductDetailScreen = ({route, navigation}: any) => {
       setReviewsLoading(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       fetchProductAndReviews();
     }, [product.productId])
   );
-
   const imageUrl = productData.productPhoto
     ? getProductImageUrl(productData.productPhoto)
     : null;
-
   const handleGoToCart = () => {
     if (!user) {
       Alert.alert('Login Required', 'Please log in to add items to cart.');
@@ -124,25 +106,20 @@ const ProductDetailScreen = ({route, navigation}: any) => {
     addToCart(productData.productId, quantity);
     navigation.navigate('Cart');
   };
-
   const handleBuyNow = () => {
     if (!user) {
       Alert.alert('Login Required', 'Please log in to place an order.');
       return;
     }
-    
     const orderItems = [{
       product: productData,
       quantity: quantity
     }];
     const totalAmount = productData.price * quantity;
-
     navigation.navigate('Checkout', { orderItems, totalAmount });
   };
-
   const isCustomer = user?.role === 'USER';
   const isFarmer = user?.role === 'FARMER';
-  
   const availableCategories = [
     'All',
     'Vegetable',
@@ -153,7 +130,6 @@ const ProductDetailScreen = ({route, navigation}: any) => {
     'Wild Forest Vegetable',
     'Root Vegetable'
   ];
-
   const displayedSimilarProducts = similarProducts.filter(p => {
     const activePreset = PRICE_PRESETS[activePriceIndex];
     const name = p.productName || '';
@@ -162,11 +138,10 @@ const ProductDetailScreen = ({route, navigation}: any) => {
     const categoryMatch = selectedCategoryFilter === 'All' || p.category?.toLowerCase() === selectedCategoryFilter.toLowerCase();
     return matchesSearch && inPriceRange && categoryMatch;
   });
-
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 100}}>
-        {/* Header Image Section */}
+        {}
         <View style={styles.headerImageContainer}>
           {imageUrl ? (
             <Image source={{uri: imageUrl}} style={styles.headerImage} />
@@ -175,8 +150,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               <Text style={{fontSize: 50}}>🌾</Text>
             </View>
           )}
-
-          {/* Top Bar (Heart only) */}
+          {}
           <View style={styles.topBar}>
             {isCustomer && (
               <TouchableOpacity style={styles.iconButton} onPress={() => toggleWishlist(productData.productId)}>
@@ -184,17 +158,15 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </TouchableOpacity>
             )}
           </View>
-
-          {/* Organic Tag */}
+          {}
           <View style={styles.organicTagOverlay}>
             <Ionicons name="leaf" size={14} color="#FFF" style={{marginRight: 4}} />
             <Text style={styles.organicTagText}>Organic</Text>
           </View>
         </View>
-
-        {/* Content Container (Overlaps Image) */}
+        {}
         <View style={styles.contentContainer}>
-          {/* Title & Rating */}
+          {}
           <Text style={styles.productName}>{productData.productName}</Text>
           <View style={styles.authorRow}>
             <Text style={styles.authorText}>by {productData.farmerName || 'Farmer'}</Text>
@@ -212,8 +184,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </Text>
             </Text>
           </View>
-
-          {/* Price & Status */}
+          {}
           <View style={styles.priceStatusRow}>
             <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
               <Text style={styles.price}>₹{productData.price?.toFixed(2) || '0.00'}</Text>
@@ -225,8 +196,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </Text>
             </View>
           </View>
-
-          {/* Tags */}
+          {}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsContainer}>
             <View style={styles.tag}>
               <Ionicons name="nutrition-outline" size={14} color="#1E3A8A" />
@@ -241,8 +211,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               <Text style={styles.tagText}>Pesticide Free</Text>
             </View>
           </ScrollView>
-
-          {/* Farmer Details Card */}
+          {}
           <Text style={styles.sectionTitle}>Farmer Details</Text>
           <View style={styles.card}>
             <View style={styles.farmerCardContent}>
@@ -255,7 +224,6 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                   <Ionicons name="checkmark-circle" size={16} color="#4CAF50" style={{marginLeft: 4}} />
                 </View>
                 <Text style={styles.farmerSubtitle}>Experienced Farmer</Text>
-                
                 <View style={styles.iconRow}>
                   <Ionicons name="location-outline" size={14} color="#757575" />
                   <Text style={styles.iconText}>{productData.farmerAddress || 'Nashik, Maharashtra'}</Text>
@@ -267,8 +235,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </View>
             </View>
           </View>
-
-          {/* Product Details Card */}
+          {}
           <Text style={styles.sectionTitle}>Product Details</Text>
           <View style={styles.card}>
             <View style={styles.detailRow}>
@@ -309,8 +276,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </Text>
             </View>
           </View>
-
-          {/* Location Card */}
+          {}
           <Text style={styles.sectionTitle}>Location</Text>
           <View style={styles.locationCard}>
             <View style={styles.locationInfo}>
@@ -320,10 +286,9 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                 <Text style={styles.locationSub}>Near Panchavati</Text>
               </View>
             </View>
-            {/* A dummy map background pattern can go here */}
+            {}
           </View>
-
-          {/* Customer Reviews Section */}
+          {}
           <Text style={styles.sectionTitle}>Customer Photos & Videos</Text>
           <View style={styles.reviewsSection}>
             {reviewsLoading ? (
@@ -340,7 +305,6 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                     (review.media || []).map((m) => {
                       const isVideo = m.mediaType === 'VIDEO';
                       const url = isVideo ? getProductVideoUrl(m.mediaUrl) : getProductImageUrl(m.mediaUrl);
-                      
                       return (
                         <TouchableOpacity
                           key={m.mediaId}
@@ -379,13 +343,11 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </View>
             )}
           </View>
-
-          {/* Similar Products Section */}
+          {}
           {similarProducts.length > 0 && (
             <View style={styles.similarSection}>
               <Text style={styles.sectionTitle}>Explore More Products</Text>
-              
-              {/* ─── PREMIUM SEARCH BAR AND CATEGORY FILTER ─── */}
+              {}
               <View style={styles.searchWrapper}>
                 <View style={[styles.searchContainer, searchFocused && styles.searchContainerFocused]}>
                   <View style={styles.searchIconCircle}>
@@ -406,9 +368,8 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                     </TouchableOpacity>
                   )}
                 </View>
-
-                <TouchableOpacity 
-                  style={styles.categoryFilterBtn} 
+                <TouchableOpacity
+                  style={styles.categoryFilterBtn}
                   onPress={() => setCategoryDropdownVisible(true)}
                   activeOpacity={0.8}
                 >
@@ -419,8 +380,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                   <Ionicons name="chevron-down" size={14} color="#2563EB" style={{marginLeft: 2}} />
                 </TouchableOpacity>
               </View>
-
-              {/* ─── PRICE FILTER BUTTONS ─── */}
+              {}
               <View style={styles.priceFilterWrapper}>
                 <View style={styles.priceFilterHeader}>
                   <Ionicons name="pricetag" size={16} color="#1E3A8A" />
@@ -448,7 +408,6 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                   })}
                 </ScrollView>
               </View>
-
               {similarLoading ? (
                 <ActivityIndicator size="small" color="#1E3A8A" style={{ marginVertical: 20 }} />
               ) : (
@@ -498,14 +457,12 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               )}
             </View>
           )}
-
         </View>
       </ScrollView>
-
-      {/* Bottom Action Area */}
+      {}
       {isCustomer && (
         <View style={styles.bottomBar}>
-          {/* Quantity Selector Row */}
+          {}
           <View style={styles.bottomTopRow}>
             <View style={styles.quantityContainer}>
               <TouchableOpacity style={styles.quantityBtn} onPress={() => setQuantity(q => Math.max(1, q - 1))}>
@@ -518,16 +475,14 @@ const ProductDetailScreen = ({route, navigation}: any) => {
             </View>
             <Text style={styles.totalPriceText}>₹{(productData.price * quantity).toFixed(2)}</Text>
           </View>
-
-          {/* Flipkart-style Buttons Row */}
+          {}
           <View style={styles.actionButtonsRow}>
-            {/* Go to Cart — left */}
+            {}
             <TouchableOpacity style={styles.goToCartBtn} onPress={handleGoToCart} activeOpacity={0.8}>
               <Ionicons name="cart-outline" size={18} color="#F59E0B" style={{marginRight: 6}} />
               <Text style={styles.goToCartBtnText}>Go to Cart</Text>
             </TouchableOpacity>
-
-            {/* Buy Now — right */}
+            {}
             <TouchableOpacity style={styles.buyNowBtn} onPress={handleBuyNow} disabled={ordering} activeOpacity={0.85}>
               <Ionicons name="flash" size={18} color="#FFF" style={{marginRight: 6}} />
               <Text style={styles.buyNowBtnText}>Buy Now</Text>
@@ -535,18 +490,16 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           </View>
         </View>
       )}
-
       {isFarmer && (
         <View style={styles.farmerBottomBar}>
           <View style={styles.farmerButtonsRow}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.editButton}
               onPress={() => navigation.navigate('AddProduct', {product: productData})}
             >
               <Ionicons name="pencil" size={18} color="#2E7D32" style={{marginRight: 8}} />
               <Text style={styles.editButtonText}>Edit Product</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity style={styles.deactivateButton}>
               <Ionicons name="power" size={18} color="#FFF" style={{marginRight: 8}} />
               <Text style={styles.deactivateButtonText}>Deactivate</Text>
@@ -558,7 +511,6 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           </View>
         </View>
       )}
-
       <MediaViewerModal
         visible={mediaModalVisible}
         imageUrl={mediaModalUrl}
@@ -569,33 +521,32 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           setSelectedReview(null);
         }}
       />
-
-      {/* Category Dropdown Modal */}
+      {}
       <Modal
         visible={categoryDropdownVisible}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setCategoryDropdownVisible(false)}
       >
-        <TouchableOpacity 
-          style={styles.dropdownOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.dropdownOverlay}
+          activeOpacity={1}
           onPress={() => setCategoryDropdownVisible(false)}
         >
           <View style={styles.dropdownContainer}>
             <Text style={styles.dropdownTitle}>Select Category</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {availableCategories.map(cat => (
-                <TouchableOpacity 
-                  key={cat} 
-                  style={styles.dropdownItem} 
-                  onPress={() => { 
-                    setSelectedCategoryFilter(cat); 
-                    setCategoryDropdownVisible(false); 
+                <TouchableOpacity
+                  key={cat}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setSelectedCategoryFilter(cat);
+                    setCategoryDropdownVisible(false);
                   }}
                 >
                   <Text style={[
-                    styles.dropdownItemText, 
+                    styles.dropdownItemText,
                     selectedCategoryFilter === cat && styles.dropdownItemTextActive
                   ]}>
                     {cat}
@@ -612,7 +563,6 @@ const ProductDetailScreen = ({route, navigation}: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -976,7 +926,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  // Legacy — unused but kept to avoid any reference errors
   buyBtn: {
     flex: 1,
     backgroundColor: '#F59E0B',
@@ -1122,8 +1071,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
-  
-  /* ── Similar Products ── */
   similarSection: {
     marginTop: 10,
     marginBottom: 40,
@@ -1181,7 +1128,7 @@ const styles = StyleSheet.create({
     borderColor: '#EFEFEF',
     borderRadius: 16,
     paddingHorizontal: 12,
-    height: 50, // Match search input height approximately
+    height: 50,
     marginLeft: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1194,7 +1141,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2563EB',
     marginLeft: 6,
-    maxWidth: 70, // Keep it compact
+    maxWidth: 70,
   },
   dropdownOverlay: {
     flex: 1,
@@ -1369,5 +1316,4 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
 });
-
 export default ProductDetailScreen;

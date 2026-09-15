@@ -1,6 +1,5 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {View, StyleSheet, PanResponder, Animated} from 'react-native';
-
 interface CustomRangeSliderProps {
   min: number;
   max: number;
@@ -9,7 +8,6 @@ interface CustomRangeSliderProps {
   onValuesChange: (values: [number, number]) => void;
   sliderWidth: number;
 }
-
 const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
   min,
   max,
@@ -21,23 +19,17 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
   const range = max - min;
   const thumbWidth = 24;
   const usableWidth = sliderWidth - thumbWidth;
-
   const getPosition = (val: number) => {
     return ((val - min) / range) * usableWidth;
   };
-
   const [minVal, setMinVal] = useState(initialMin);
   const [maxVal, setMaxVal] = useState(initialMax);
-
   const minValRef = useRef(initialMin);
   const maxValRef = useRef(initialMax);
-
   useEffect(() => {
     minValRef.current = minVal;
     maxValRef.current = maxVal;
   }, [minVal, maxVal]);
-
-  // Sync state if props change externally
   useEffect(() => {
     setMinVal(initialMin);
     setMaxVal(initialMax);
@@ -46,14 +38,10 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
     position1.setValue(getPosition(initialMin));
     position2.setValue(getPosition(initialMax));
   }, [initialMin, initialMax]);
-
   const position1 = useRef(new Animated.Value(getPosition(initialMin))).current;
   const position2 = useRef(new Animated.Value(getPosition(initialMax))).current;
-
-  // Track the actual positions in JS so PanResponder can use them synchronously
   const pos1Value = useRef(getPosition(initialMin));
   const pos2Value = useRef(getPosition(initialMax));
-
   useEffect(() => {
     const id1 = position1.addListener(({value}) => {
       pos1Value.current = value;
@@ -66,7 +54,6 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
       position2.removeListener(id2);
     };
   }, [position1, position2]);
-
   const panResponder1 = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -78,16 +65,11 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
       onPanResponderMove: (evt, gestureState) => {
         let newX = gestureState.dx;
         const projectedAbsoluteX = pos1Value.current + newX;
-        
-        // Boundaries
         if (projectedAbsoluteX < 0) newX = -pos1Value.current;
         if (projectedAbsoluteX > pos2Value.current - thumbWidth) {
           newX = pos2Value.current - thumbWidth - pos1Value.current;
         }
-
         position1.setValue(newX);
-        
-        // Calculate real-time value to display
         const absolutePos = pos1Value.current + newX;
         const val = Math.round((absolutePos / usableWidth) * range + min);
         setMinVal(val);
@@ -99,7 +81,6 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
       },
     })
   ).current;
-
   const panResponder2 = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -111,16 +92,11 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
       onPanResponderMove: (evt, gestureState) => {
         let newX = gestureState.dx;
         const projectedAbsoluteX = pos2Value.current + newX;
-        
-        // Boundaries
         if (projectedAbsoluteX > usableWidth) newX = usableWidth - pos2Value.current;
         if (projectedAbsoluteX < pos1Value.current + thumbWidth) {
           newX = pos1Value.current + thumbWidth - pos2Value.current;
         }
-
         position2.setValue(newX);
-        
-        // Calculate real-time value to display
         const absolutePos = pos2Value.current + newX;
         const val = Math.round((absolutePos / usableWidth) * range + min);
         setMaxVal(val);
@@ -132,13 +108,11 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
       },
     })
   ).current;
-
   return (
     <View style={[styles.container, {width: sliderWidth}]}>
-      {/* Background Track */}
+      {}
       <View style={styles.track} />
-
-      {/* Selected Range Fill */}
+      {}
       <Animated.View
         style={[
           styles.fill,
@@ -151,15 +125,13 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
           },
         ]}
       />
-
-      {/* Thumb 1 (Min) */}
+      {}
       <Animated.View
         style={[styles.thumb, {transform: [{translateX: position1}]}]}
         {...panResponder1.panHandlers}>
         <View style={styles.thumbInner} />
       </Animated.View>
-
-      {/* Thumb 2 (Max) */}
+      {}
       <Animated.View
         style={[styles.thumb, {transform: [{translateX: position2}]}]}
         {...panResponder2.panHandlers}>
@@ -168,7 +140,6 @@ const CustomRangeSlider: React.FC<CustomRangeSliderProps> = ({
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     height: 40,
@@ -209,5 +180,4 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 });
-
 export default CustomRangeSlider;

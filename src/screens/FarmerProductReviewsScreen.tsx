@@ -17,32 +17,24 @@ import { ReviewCard } from '../components/reviews/ReviewCard';
 import { StarRating } from '../components/reviews/StarRating';
 import { MediaViewerModal } from '../components/reviews/MediaViewerModal';
 import { Review } from '../types';
-
 export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
   const product = route.params?.product;
-  
   const [allReviews, setAllReviews] = useState<Review[]>([]);
   const [filteredReviews, setFilteredReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  
-  // Media Viewer state
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [mediaModalUrl, setMediaModalUrl] = useState<string | null>(null);
-
   const fetchReviews = async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
     } else {
       setLoading(true);
     }
-
     try {
       const data = await getFarmerReviews();
       setAllReviews(data);
-
       if (product) {
-        // Filter reviews for this specific product
         const filtered = data.filter((r) => r.productId === product.productId);
         setFilteredReviews(filtered);
       } else {
@@ -56,20 +48,16 @@ export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
       setRefreshing(false);
     }
   };
-
   useEffect(() => {
     fetchReviews();
   }, [product?.productId]);
-
-  // Compute rating metrics
   const totalReviews = filteredReviews.length;
   const averageRating = totalReviews > 0
     ? filteredReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
     : 0;
-
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
@@ -78,8 +66,7 @@ export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
           Product Review
         </Text>
       </View>
-
-      {/* List */}
+      {}
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#1B5E20" />
@@ -146,7 +133,6 @@ export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
           )}
         />
       )}
-
       <MediaViewerModal
         visible={mediaModalVisible}
         imageUrl={mediaModalUrl}
@@ -158,7 +144,6 @@ export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -4,27 +4,22 @@ import { AdminHeader } from '../../components/admin/AdminHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { useNavigation } from '@react-navigation/native';
-
 const mockOrders = [
   { id: '#ORD-123', customer: 'Rahul Patil', amount: '₹850', date: '02 Sep, 2:30 PM', status: 'Delivered' },
   { id: '#ORD-122', customer: 'Sneha Sharma', amount: '₹650', date: '02 Sep, 11:15 AM', status: 'Processing' },
   { id: '#ORD-121', customer: 'Amit Kumar', amount: '₹1,250', date: '01 Sep, 5:40 PM', status: 'Pending' },
   { id: '#ORD-120', customer: 'Pooja Singh', amount: '₹430', date: '01 Sep, 1:20 PM', status: 'Cancelled' },
 ];
-
 export const AdminOrdersScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation<any>();
-
   const tabs = ['All', 'Pending', 'Processing', 'Delivered', 'Cancelled'];
-
   const filteredOrders = mockOrders.filter(o => {
     if (activeTab !== 'All' && o.status !== activeTab) return false;
     if (searchQuery && !o.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
-
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.orderCard} onPress={() => navigation.navigate('AdminOrderDetails', { orderId: item.id })}>
       <View style={styles.cardHeader}>
@@ -45,11 +40,9 @@ export const AdminOrdersScreen: React.FC = () => {
       </View>
     </TouchableOpacity>
   );
-
   return (
     <View style={styles.container}>
       <AdminHeader />
-      
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Orders</Text>
         <View style={styles.searchContainer}>
@@ -63,7 +56,6 @@ export const AdminOrdersScreen: React.FC = () => {
           />
         </View>
       </View>
-
       <FlatList
         data={tabs}
         horizontal
@@ -79,7 +71,6 @@ export const AdminOrdersScreen: React.FC = () => {
           </TouchableOpacity>
         )}
       />
-
       <FlatList
         data={filteredOrders}
         keyExtractor={item => item.id}
@@ -90,7 +81,6 @@ export const AdminOrdersScreen: React.FC = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 8 },
@@ -122,5 +112,4 @@ const styles = StyleSheet.create({
   contentRight: { alignItems: 'flex-end' },
   date: { fontSize: 10, color: '#9CA3AF', marginBottom: 4 },
 });
-
 export default AdminOrdersScreen;

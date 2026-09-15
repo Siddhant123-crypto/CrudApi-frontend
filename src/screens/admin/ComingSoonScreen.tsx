@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 interface ComingSoonScreenProps {
   route?: {
     params?: {
@@ -11,10 +10,8 @@ interface ComingSoonScreenProps {
     }
   }
 }
-
 export const ComingSoonScreen: React.FC<ComingSoonScreenProps> = ({ route }) => {
   const { title = 'Module', icon = 'construct-outline' } = route?.params || {};
-
   return (
     <View style={styles.container}>
       <AdminHeader />
@@ -31,7 +28,6 @@ export const ComingSoonScreen: React.FC<ComingSoonScreenProps> = ({ route }) => 
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -77,5 +73,4 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 });
-
 export default ComingSoonScreen;

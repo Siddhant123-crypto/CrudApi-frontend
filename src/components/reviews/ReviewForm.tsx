@@ -19,7 +19,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StarRating } from './StarRating';
 import { createReview, updateReview } from '../../services/reviewService';
 import { Review } from '../../types';
-
 interface ReviewFormProps {
   visible: boolean;
   orderId: string;
@@ -29,7 +28,6 @@ interface ReviewFormProps {
   onClose: () => void;
   onSubmitSuccess: (newReview: Review) => void;
 }
-
 export const ReviewForm = ({
   visible,
   orderId,
@@ -45,16 +43,14 @@ export const ReviewForm = ({
   const [videoUri, setVideoUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
-
   useEffect(() => {
     if (visible) {
       if (existingReview) {
         setRating(existingReview.rating);
         setReviewText(existingReview.reviewText || '');
-        // Expose media preview if available on existing review
         const photo = existingReview.media?.find((m) => m.mediaType === 'IMAGE');
         const video = existingReview.media?.find((m) => m.mediaType === 'VIDEO');
-        setPhotoUri(null); // Keep it clean for new uploads since updating existing media on the backend adds to it
+        setPhotoUri(null);
         setVideoUri(null);
       } else {
         setRating(0);
@@ -65,39 +61,33 @@ export const ReviewForm = ({
       setSuccess(false);
     }
   }, [visible, existingReview]);
-
   const handleSelectPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Denied', 'Gallery access is required to select photos.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setPhotoUri(result.assets[0].uri);
     }
   };
-
   const handleSelectVideo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Denied', 'Gallery access is required to select videos.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['videos'],
       allowsEditing: false,
       quality: 0.8,
       videoMaxDuration: 60,
     });
-
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
       if (asset.type !== 'video') {
@@ -107,13 +97,11 @@ export const ReviewForm = ({
       setVideoUri(asset.uri);
     }
   };
-
   const handleSubmit = async () => {
     if (rating === 0) {
       Alert.alert('Rating Required', 'Please select a rating of 1 to 5 stars.');
       return;
     }
-
     setSubmitting(true);
     try {
       let responseReview: Review;
@@ -135,7 +123,6 @@ export const ReviewForm = ({
           videoUri || undefined
         );
       }
-
       setSuccess(true);
       setTimeout(() => {
         onSubmitSuccess(responseReview);
@@ -155,7 +142,6 @@ export const ReviewForm = ({
       setSubmitting(false);
     }
   };
-
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
@@ -167,18 +153,16 @@ export const ReviewForm = ({
           </View>
         ) : (
           <View style={styles.content}>
-            {/* Header */}
+            {}
             <View style={styles.header}>
               <TouchableOpacity onPress={onClose} disabled={submitting} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>{existingReview ? 'Edit Review' : 'Write Review'}</Text>
             </View>
-
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
               <Text style={styles.productName}>{productName}</Text>
-              
-              {/* Rating Box */}
+              {}
               <View style={styles.ratingCard}>
                 <Text style={styles.ratingLabel}>Rate this product</Text>
                 <StarRating rating={rating} onRatingChange={setRating} size={40} />
@@ -188,8 +172,7 @@ export const ReviewForm = ({
                   </Text>
                 ) : null}
               </View>
-
-              {/* Review Text */}
+              {}
               <Text style={styles.sectionLabel}>Share your experience</Text>
               <TextInput
                 style={styles.reviewInput}
@@ -202,10 +185,8 @@ export const ReviewForm = ({
                 textAlignVertical="top"
                 editable={!submitting}
               />
-
-              {/* Optional Media */}
+              {}
               <Text style={styles.sectionLabel}>Photos and videos are optional</Text>
-              
               <View style={styles.mediaButtonsRow}>
                 <TouchableOpacity
                   style={[styles.mediaButton, photoUri && styles.mediaButtonActive]}
@@ -217,7 +198,6 @@ export const ReviewForm = ({
                     {photoUri ? 'Change Photo' : 'Add Photo'}
                   </Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={[styles.mediaButton, videoUri && styles.mediaButtonActive]}
                   onPress={handleSelectVideo}
@@ -229,8 +209,7 @@ export const ReviewForm = ({
                   </Text>
                 </TouchableOpacity>
               </View>
-
-              {/* Media Preview Box */}
+              {}
               {photoUri || videoUri ? (
                 <View style={styles.previewContainer}>
                   {photoUri ? (
@@ -246,7 +225,6 @@ export const ReviewForm = ({
                       <Text style={styles.previewTypeText}>Photo Selected</Text>
                     </View>
                   ) : null}
-
                   {videoUri ? (
                     <View style={styles.previewWrapper}>
                       <View style={styles.videoPreviewThumbnail}>
@@ -265,8 +243,7 @@ export const ReviewForm = ({
                 </View>
               ) : null}
             </ScrollView>
-
-            {/* Submit Button */}
+            {}
             <View style={styles.footer}>
               <TouchableOpacity
                 style={[styles.submitBtn, rating === 0 && styles.submitBtnDisabled]}
@@ -289,11 +266,10 @@ export const ReviewForm = ({
     </Modal>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9', // Cream green
+    backgroundColor: '#E8F5E9',
   },
   content: {
     flex: 1,
@@ -306,7 +282,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 24 : (StatusBar.currentHeight ? StatusBar.currentHeight + 12 : 36),
     paddingBottom: 20,
     borderBottomColor: '#1E3A8A',
-    backgroundColor: '#1E3A8A', // Customer theme blue
+    backgroundColor: '#1E3A8A',
   },
   backButton: {
     padding: 4,
@@ -314,8 +290,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFFFFF', // White text
-    marginLeft: 12, // Near back arrow
+    color: '#FFFFFF',
+    marginLeft: 12,
   },
   scrollContent: {
     padding: 20,
@@ -333,7 +309,7 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#4CAF50', // Highlighted
+    borderColor: '#4CAF50',
     marginBottom: 20,
     shadowColor: '#1B5E20',
     shadowOffset: { width: 0, height: 4 },
@@ -363,7 +339,7 @@ const styles = StyleSheet.create({
   reviewInput: {
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
-    borderColor: '#81C784', // Highlighted
+    borderColor: '#81C784',
     borderRadius: 12,
     padding: 16,
     fontSize: 15,
@@ -388,7 +364,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
-    borderColor: '#A7F3D0', // Highlighted
+    borderColor: '#A7F3D0',
     borderRadius: 12,
     paddingVertical: 12,
     marginHorizontal: 4,
@@ -459,7 +435,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
   },
   submitBtn: {
-    backgroundColor: '#F5A623', // Orange yellow
+    backgroundColor: '#F5A623',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

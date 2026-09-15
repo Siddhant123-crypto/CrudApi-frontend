@@ -11,15 +11,12 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import CustomRangeSlider from './CustomRangeSlider';
-
 interface FilterModalProps {
   visible: boolean;
   onClose: () => void;
   onApply: (minPrice: number, maxPrice: number) => void;
 }
-
 const { width } = Dimensions.get('window');
-
 const FILTER_CATEGORIES = [
   'Brand',
   'Size',
@@ -32,13 +29,10 @@ const FILTER_CATEGORIES = [
   'Customer Ratings',
   'Occasion',
 ];
-
 const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) => {
   const [activeCategory, setActiveCategory] = useState('Price');
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(2000);
-
-  // Example price ranges for the checkboxes
   const priceRanges = [
     'Rs. 249 and Below',
     'Rs. 250 - Rs. 399',
@@ -47,21 +41,18 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
     'Rs. 700 - Rs. 999',
     'Rs. 1000 and above',
   ];
-
   const handleApply = () => {
     onApply(minPrice, maxPrice);
     onClose();
   };
-
   const handleClearAll = () => {
     setMinPrice(0);
     setMaxPrice(2000);
   };
-
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={styles.container}>
-        {/* HEADER */}
+        {}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#111" />
@@ -71,10 +62,9 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
             <Text style={styles.clearText}>Clear All Filters</Text>
           </TouchableOpacity>
         </View>
-
-        {/* BODY */}
+        {}
         <View style={styles.body}>
-          {/* LEFT SIDEBAR */}
+          {}
           <View style={styles.sidebar}>
             <ScrollView showsVerticalScrollIndicator={false}>
               {FILTER_CATEGORIES.map((cat) => (
@@ -98,18 +88,16 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
               ))}
             </ScrollView>
           </View>
-
-          {/* RIGHT PANEL */}
+          {}
           <View style={styles.panel}>
             {activeCategory === 'Price' ? (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.panelContent}>
-                {/* RANGE SLIDER BOX */}
+                {}
                 <View style={styles.sliderBox}>
                   <Text style={styles.sliderSubtitle}>Selected Price Range</Text>
                   <Text style={styles.sliderTitle}>
                     Min - ₹{minPrice}{maxPrice >= 2000 ? '+' : ` to ₹${maxPrice}`}
                   </Text>
-                  
                   <View style={styles.sliderWrapper}>
                     <CustomRangeSlider
                       min={0}
@@ -120,12 +108,11 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
                         setMinPrice(min);
                         setMaxPrice(max);
                       }}
-                      sliderWidth={width * 0.55} // Adjust based on panel width
+                      sliderWidth={width * 0.55}
                     />
                   </View>
                 </View>
-
-                {/* CHECKBOXES (Visual only for the UI mockup) */}
+                {}
                 <View style={styles.checkboxContainer}>
                   {priceRanges.map((range, index) => (
                     <TouchableOpacity key={index} style={styles.checkboxRow}>
@@ -142,8 +129,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
             )}
           </View>
         </View>
-
-        {/* BOTTOM BUTTON */}
+        {}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
             <Text style={styles.applyButtonText}>See 50000+ products</Text>
@@ -153,7 +139,6 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
     </Modal>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -199,7 +184,7 @@ const styles = StyleSheet.create({
   },
   sidebarItemActive: {
     backgroundColor: '#FFFFFF',
-    borderLeftColor: '#2874F0', // Flipkart blue
+    borderLeftColor: '#2874F0',
   },
   sidebarText: {
     fontSize: 14,
@@ -283,5 +268,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
 export default FilterModal;

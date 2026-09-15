@@ -15,13 +15,11 @@ import {getProductImageUrl} from '../services/productService';
 import { getFarmerItemsStatus } from '../services/orderService';
 import { OrderStatusBadge } from '../components/orders/OrderStatusBadge';
 import { OrderTimeline } from '../components/orders/OrderTimeline';
-
 const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
   const {orderId, initialOrder} = route.params;
   const [order, setOrder] = useState<any>(initialOrder || null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-
   const fetchOrderDetails = async () => {
     try {
       const response = await api.get(`/order/${orderId}`);
@@ -36,11 +34,9 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchOrderDetails();
   }, [orderId]);
-
   const updateStatus = async (newStatus: string) => {
     setUpdating(true);
     try {
@@ -61,7 +57,6 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
       setUpdating(false);
     }
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -69,23 +64,20 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
       </View>
     );
   }
-
   if (!order) return null;
-
   const fStatus = getFarmerItemsStatus(order.items || []);
-
   const getAvailableActions = () => {
     if (fStatus === 'PENDING') {
       return (
         <>
-          <TouchableOpacity 
-            style={[styles.actionBtn, {backgroundColor: '#1E5631', flex: 1, marginRight: 8}]} 
+          <TouchableOpacity
+            style={[styles.actionBtn, {backgroundColor: '#1E5631', flex: 1, marginRight: 8}]}
             onPress={() => updateStatus('CONFIRMED')}
             disabled={updating}>
             <Text style={styles.actionBtnText}>Accept Order</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.actionBtn, {backgroundColor: '#EF4444', flex: 1, marginLeft: 8}]} 
+          <TouchableOpacity
+            style={[styles.actionBtn, {backgroundColor: '#EF4444', flex: 1, marginLeft: 8}]}
             onPress={() => updateStatus('CANCELLED')}
             disabled={updating}>
             <Text style={styles.actionBtnText}>Decline</Text>
@@ -95,8 +87,8 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
     }
     if (fStatus === 'CONFIRMED') {
       return (
-        <TouchableOpacity 
-          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]} 
+        <TouchableOpacity
+          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]}
           onPress={() => updateStatus('PROCESSING')}
           disabled={updating}>
           <Text style={styles.actionBtnText}>Start Processing</Text>
@@ -105,8 +97,8 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
     }
     if (fStatus === 'PROCESSING') {
       return (
-        <TouchableOpacity 
-          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]} 
+        <TouchableOpacity
+          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]}
           onPress={() => updateStatus('OUT_FOR_DELIVERY')}
           disabled={updating}>
           <Text style={styles.actionBtnText}>Mark as Out for Delivery</Text>
@@ -115,8 +107,8 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
     }
     if (fStatus === 'OUT_FOR_DELIVERY') {
       return (
-        <TouchableOpacity 
-          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]} 
+        <TouchableOpacity
+          style={[styles.actionBtn, {backgroundColor: '#1E5631', width: '100%'}]}
           onPress={() => updateStatus('DELIVERED')}
           disabled={updating}>
           <Text style={styles.actionBtnText}>Confirm Delivery</Text>
@@ -125,7 +117,6 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
     }
     return null;
   };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -136,10 +127,8 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
           Customer Product Detail
         </Text>
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        
-        {/* Customer Details */}
+        {}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <Ionicons name="person-circle" size={40} color="#1B5E20" />
@@ -148,9 +137,7 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
               <Text style={styles.customerMobile}>{order.customerMobile}</Text>
             </View>
           </View>
-          
           <View style={styles.divider} />
-          
           <View style={styles.addressRow}>
             <Ionicons name="location" size={20} color="#6B7280" style={{marginTop: 2}} />
             <View style={{marginLeft: 8, flex: 1}}>
@@ -159,8 +146,7 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
             </View>
           </View>
         </View>
-
-        {/* Status Card */}
+        {}
         <View style={styles.card}>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
             <Text style={styles.sectionTitle}>Current Status</Text>
@@ -168,8 +154,7 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
           </View>
           <OrderTimeline status={fStatus} isFarmer={true} />
         </View>
-
-        {/* Cancellation Reason Card (if cancelled) */}
+        {}
         {fStatus === 'CANCELLED' && (
           <View style={[styles.card, {borderColor: '#FCA5A5', backgroundColor: '#FEF2F2'}]}>
             <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
@@ -181,8 +166,7 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
             </Text>
           </View>
         )}
-
-        {/* Ordered Items */}
+        {}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Ordered Items</Text>
           {order.items.map((item: any, index: number) => {
@@ -205,17 +189,14 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
               </View>
             );
           })}
-          
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Amount</Text>
             <Text style={styles.totalValue}>₹{order.totalAmount.toFixed(2)}</Text>
           </View>
         </View>
-
         <View style={{height: 100}} />
       </ScrollView>
-
-      {/* Action Buttons */}
+      {}
       {fStatus !== 'DELIVERED' && fStatus !== 'CANCELLED' && (
         <View style={styles.bottomBar}>
           {updating ? (
@@ -232,11 +213,10 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // Cream green -> match dashboard
+    backgroundColor: '#F8FAFC',
   },
   loadingContainer: {
     flex: 1,
@@ -246,7 +226,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start', // Align left
+    justifyContent: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
@@ -332,8 +312,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '500',
   },
-  
-  // Items
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -394,7 +372,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#1B5E20',
   },
-
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -426,5 +403,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
 export default FarmerOrderDetailsScreen;

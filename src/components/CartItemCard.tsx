@@ -6,25 +6,20 @@ import { BASE_URL } from '../services/api';
 import QuantitySelector from './QuantitySelector';
 import { useCart } from '../context/CartContext';
 import { useNavigation } from '@react-navigation/native';
-
 interface CartItemCardProps {
   item: CartItemResponse;
 }
-
 const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
   const { updateQuantity, removeFromCart } = useCart();
   const navigation = useNavigation<any>();
-
   const handleIncrease = () => {
     updateQuantity(item.productId, item.quantity + 1);
   };
-
   const handleDecrease = () => {
     if (item.quantity > 1) {
       updateQuantity(item.productId, item.quantity - 1);
     }
   };
-
   const handleRemove = () => {
     Alert.alert(
       'Remove Item',
@@ -35,7 +30,6 @@ const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
       ]
     );
   };
-
   const handleProductPress = () => {
     const product = {
       productId: item.productId,
@@ -46,7 +40,6 @@ const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
     };
     navigation.navigate('ProductDetail', { product });
   };
-
   return (
     <View style={styles.card}>
       <TouchableOpacity onPress={handleProductPress} activeOpacity={0.9}>
@@ -60,7 +53,6 @@ const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
           resizeMode="cover"
         />
       </TouchableOpacity>
-      
       <View style={styles.infoContainer}>
         <View style={styles.titleRow}>
           <TouchableOpacity onPress={handleProductPress} activeOpacity={0.7} style={{ flex: 1 }}>
@@ -70,12 +62,10 @@ const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
             <Ionicons name="trash-outline" size={20} color="#EF4444" />
           </TouchableOpacity>
         </View>
-        
         <TouchableOpacity onPress={handleProductPress} activeOpacity={0.9}>
           <Text style={styles.unitText}>{item.unit}</Text>
           <Text style={styles.priceText}>₹{item.price}</Text>
         </TouchableOpacity>
-
         <View style={styles.bottomRow}>
           <QuantitySelector
             quantity={item.quantity}
@@ -88,7 +78,6 @@ const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
@@ -153,5 +142,4 @@ const styles = StyleSheet.create({
     color: '#1E3A8A',
   },
 });
-
 export default CartItemCard;

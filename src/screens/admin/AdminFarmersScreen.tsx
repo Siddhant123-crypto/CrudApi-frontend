@@ -5,7 +5,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { useNavigation } from '@react-navigation/native';
 import api from '../../services/api';
-
 interface Farmer {
   id: string;
   name: string;
@@ -14,20 +13,16 @@ interface Farmer {
   status: string;
   profilePhoto?: string | null;
 }
-
 export const AdminFarmersScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [farmers, setFarmers] = useState<Farmer[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-
   const tabs = ['All', 'Active', 'Pending', 'Blocked', 'Inactive'];
-
   useEffect(() => {
     fetchFarmers();
   }, []);
-
   const fetchFarmers = async () => {
     try {
       setLoading(true);
@@ -50,26 +45,22 @@ export const AdminFarmersScreen: React.FC = () => {
       setLoading(false);
     }
   };
-
   const filteredFarmers = farmers.filter(f => {
     if (activeTab !== 'All' && f.status !== activeTab) return false;
     if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
-
   const FarmerAvatar = ({ item }: { item: any }) => {
     const defaultUri = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=17212F&color=F5C16C&size=100&bold=true`;
-
     return (
       <View style={styles.avatar}>
-        <Image 
-          source={{ uri: defaultUri }} 
-          style={styles.profileImage} 
+        <Image
+          source={{ uri: defaultUri }}
+          style={styles.profileImage}
         />
       </View>
     );
   };
-
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.farmerCard} onPress={() => navigation.navigate('AdminFarmerDetails', { farmerId: item.id })}>
       <View style={styles.cardLeft}>
@@ -85,11 +76,9 @@ export const AdminFarmersScreen: React.FC = () => {
       </View>
     </TouchableOpacity>
   );
-
   return (
     <View style={styles.container}>
       <AdminHeader />
-      
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Farmers</Text>
         <View style={styles.searchContainer}>
@@ -103,7 +92,6 @@ export const AdminFarmersScreen: React.FC = () => {
           />
         </View>
       </View>
-
       <View style={styles.tabsContainer}>
         {tabs.map(tab => (
           <TouchableOpacity
@@ -115,7 +103,6 @@ export const AdminFarmersScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
-
       {loading ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#F5C16C" />
@@ -132,7 +119,6 @@ export const AdminFarmersScreen: React.FC = () => {
           }
         />
       )}
-
       <TouchableOpacity style={styles.fab}>
         <Ionicons name="add" size={24} color="#17212F" />
         <Text style={styles.fabText}>Add Farmer</Text>
@@ -140,7 +126,6 @@ export const AdminFarmersScreen: React.FC = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 8 },
@@ -180,5 +165,4 @@ const styles = StyleSheet.create({
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { textAlign: 'center', color: '#6B7280', marginTop: 40 },
 });
-
 export default AdminFarmersScreen;

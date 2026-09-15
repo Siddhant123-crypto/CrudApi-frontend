@@ -6,7 +6,6 @@ export interface User {
   farmerId?: string;
   profilePhoto?: string;
 }
-
 export interface Farmer {
   farmerId: string;
   name: string;
@@ -20,7 +19,6 @@ export interface Farmer {
   status?: string;
   isActive?: boolean;
 }
-
 export interface Product {
   productId: string;
   farmerId: string;
@@ -41,14 +39,12 @@ export interface Product {
   reviewCount?: number;
   harvestDate?: string;
 }
-
 export interface ReviewMedia {
   mediaId: string;
   mediaType: 'IMAGE' | 'VIDEO';
   mediaUrl: string;
   createdAt: string;
 }
-
 export interface Review {
   reviewId: string;
   productId: string;
@@ -62,29 +58,24 @@ export interface Review {
   updatedAt?: string;
   media?: ReviewMedia[];
 }
-
 export interface LoginResponse {
   message: string;
   response: User;
 }
-
 export interface RegisterResponse {
   message: string;
   response: any;
 }
-
 export interface ApiResponse<T> {
   message: string;
   response: T;
 }
-
 export interface ProductRatingResponse {
   productId: string;
   productName: string;
   averageRating: number;
   reviewCount: number;
 }
-
 export interface CartItemResponse {
   cartItemId: string;
   productId: string;
@@ -95,7 +86,6 @@ export interface CartItemResponse {
   price: number;
   subtotal: number;
 }
-
 export interface CartResponse {
   cartId: string;
   totalAmount: number;
@@ -104,7 +94,6 @@ export interface CartResponse {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface WishlistResponse {
   wishlistId: string;
   productId: string;
@@ -120,7 +109,6 @@ export interface WishlistResponse {
   reviewCount?: number;
   createdAt: string;
 }
-
 export interface WishlistCheckResponse {
   inWishlist: boolean;
   wishlistId?: string;

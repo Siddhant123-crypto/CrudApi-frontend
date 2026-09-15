@@ -14,22 +14,18 @@ import { useWishlist } from '../context/WishlistContext';
 import WishlistProductCard from '../components/WishlistProductCard';
 import EmptyState from '../components/EmptyState';
 import { useNavigation } from '@react-navigation/native';
-
 const WishlistScreen = () => {
   const { wishlist, isLoading, refreshWishlist } = useWishlist();
   const navigation = useNavigation<any>();
   const [refreshing, setRefreshing] = useState(false);
-
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshWishlist();
     setRefreshing(false);
   };
-
   const navigateToProduct = (product: any) => {
     navigation.navigate('ProductDetail', { product });
   };
-
   if (isLoading && !refreshing && wishlist.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -37,7 +33,6 @@ const WishlistScreen = () => {
       </View>
     );
   }
-
   if (wishlist.length === 0) {
     return (
       <View style={styles.container}>
@@ -57,7 +52,6 @@ const WishlistScreen = () => {
       </View>
     );
   }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -66,16 +60,15 @@ const WishlistScreen = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Wishlist</Text>
       </View>
-
       <FlatList
         data={wishlist}
         keyExtractor={(item) => item.wishlistId}
         contentContainerStyle={styles.listContent}
         numColumns={2}
         renderItem={({ item }) => (
-          <WishlistProductCard 
-            item={item} 
-            onPress={() => navigateToProduct(item)} 
+          <WishlistProductCard
+            item={item}
+            onPress={() => navigateToProduct(item)}
           />
         )}
         refreshControl={
@@ -85,7 +78,6 @@ const WishlistScreen = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -123,5 +115,4 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 });
-
 export default WishlistScreen;

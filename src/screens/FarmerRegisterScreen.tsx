@@ -12,35 +12,20 @@ import {
   Image,
   ImageBackground,
 } from 'react-native';
-
 import Ionicons from '@expo/vector-icons/Ionicons';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
-
 import {farmerRegister} from '../services/authService';
 import {useAuth} from '../context/AuthContext';
-
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-
 const FarmerRegisterScreen = ({route, navigation}: any) => {
-
-  /*
-   * IMPORTANT:
-   * Google Sign-In flow ke liye isGoogleSignUp true rahega.
-   *
-   * Manual Create Account flow me isGoogleSignUp false rahega.
-   *
-   * Google wale existing code ko hum change nahi kar rahe.
-   */
   const {
     name = '',
     email = '',
     isGoogleSignUp = false,
   } = route?.params || {};
-
   const {login} = useAuth();
-
   const [formData, setFormData] = useState<Record<string, string>>({
     name: name,
     email: email,
@@ -52,22 +37,17 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
     postalCode: '',
     state: '',
   });
-
   const [photo, setPhoto] = useState<any>(null);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
-
   const [loading, setLoading] = useState(false);
-
   const [errors, setErrors] = useState<
     Record<string, string | null>
   >({});
-
   const updateField = (field: string, value: string) => {
     setFormData({
       ...formData,
       [field]: value,
     });
-
     if (errors[field]) {
       setErrors({
         ...errors,
@@ -75,37 +55,26 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
       });
     }
   };
-
   const validate = () => {
     const newErrors: Record<string, string | null> = {};
-
-    // Name
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     }
-
-    // Email
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Enter a valid email';
     }
-
-    // Mobile
     if (!formData.mobile.trim()) {
       newErrors.mobile = 'Mobile number is required';
     } else if (!/^[6-9]\d{9}$/.test(formData.mobile)) {
       newErrors.mobile = 'Enter a valid mobile number';
     }
-
-    // Password
     if (!formData.password.trim()) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
-
-    // Confirm Password
     if (!formData.confirmPassword.trim()) {
       newErrors.confirmPassword = 'Confirm password is required';
     } else if (
@@ -113,61 +82,38 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
     ) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
-
-  // =========================
-  // PICK IMAGE
-  // =========================
-
   const pickImage = async () => {
     setShowPhotoOptions(false);
-
     const result =
       await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
         quality: 1,
       });
-
     if (!result.canceled) {
       setPhoto(result.assets[0]);
     }
   };
-
-  // =========================
-  // TAKE PHOTO
-  // =========================
-
   const takePhoto = async () => {
     setShowPhotoOptions(false);
-
     const result =
       await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         quality: 1,
       });
-
     if (!result.canceled) {
       setPhoto(result.assets[0]);
     }
   };
-
-  // =========================
-  // PICK DOCUMENT
-  // =========================
-
   const pickDocument = async () => {
     setShowPhotoOptions(false);
-
     const result =
       await DocumentPicker.getDocumentAsync({
         type: 'image/*',
       });
-
     if (
       result.canceled === false &&
       result.assets &&
@@ -176,23 +122,13 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
       setPhoto(result.assets[0]);
     }
   };
-
-  // =========================
-  // REGISTER
-  // =========================
-
   const handleRegister = async () => {
-
     if (!validate()) {
       return;
     }
-
     setLoading(true);
-
     try {
-
       const data = new FormData();
-
       const registerData = {
         name: formData.name.trim(),
         email: formData.email.trim(),
@@ -203,28 +139,18 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
         postalCode: formData.postalCode.trim(),
         state: formData.state.trim(),
       };
-
       data.append(
         'data',
         JSON.stringify(registerData),
       );
-
-      // =========================
-      // PROFILE PHOTO
-      // =========================
-
       if (photo) {
-
         const filename =
           photo.uri.split('/').pop() || 'profile.jpg';
-
         const match =
           /\.(\w+)$/.exec(filename);
-
         const type = match
           ? `image/${match[1]}`
           : 'image/jpeg';
-
         data.append(
           'photo',
           {
@@ -234,52 +160,29 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
           } as any,
         );
       }
-
       console.log(
         'Farmer Registration Started',
       );
-
       const result = await farmerRegister(data);
-
       console.log(
         'Farmer Registration Result:',
         result,
       );
-
-      // ==================================================
-      // CHECK FOR BACKEND VALIDATION ERRORS (SILENT FAILURES)
-      // ==================================================
       if (result && result.message && !result.message.includes('Registration Successful')) {
         setLoading(false);
         Alert.alert('Registration Failed', result.message);
         return;
       }
-
-      // ==================================================
-      // GOOGLE SIGN-UP FLOW
-      // ==================================================
-      //
-      // IMPORTANT:
-      // Ye tumhara existing Google flow hai.
-      // Isko hum manually registration ke liye use nahi karenge.
-      //
-      // ==================================================
-
       if (isGoogleSignUp) {
-
         console.log(
           'Google Farmer Registration Flow',
         );
-
         const responseData =
           result.response || result;
-
         if (!responseData.accessToken) {
-
           console.warn(
             'Backend Limitation: Farmer registration API does not return an accessToken.',
           );
-
           Alert.alert(
             'Registration Successful',
             'Backend did not return an access token. Please login manually.',
@@ -293,80 +196,31 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               },
             ],
           );
-
           return;
         }
-
         const userData = {
           name:
             responseData.name ||
             formData.name.trim(),
-
           email:
             responseData.email ||
             formData.email.trim(),
-
           role: 'FARMER' as const,
-
           farmerId:
             responseData.farmerId ||
             responseData.id,
-
           profilePhoto:
             responseData.profilePhoto,
         };
-
-        /*
-         * GOOGLE FLOW:
-         *
-         * Registration successful
-         *       ↓
-         * accessToken
-         *       ↓
-         * login()
-         *       ↓
-         * Farmer Dashboard
-         *
-         * THIS IS NOT USED FOR MANUAL REGISTRATION.
-         */
-
         await login(
           userData,
           responseData.accessToken,
         );
-
         return;
       }
-
-      // ==================================================
-      // MANUAL REGISTRATION FLOW
-      // ==================================================
-      //
-      // Yaha login() call NAHI karna hai.
-      //
-      // User ne:
-      //
-      // NewUserLogin
-      //      ↓
-      // Create Account
-      //      ↓
-      // Select Role
-      //      ↓
-      // Farmer
-      //      ↓
-      // Registration
-      //
-      // kiya hai.
-      //
-      // Registration complete hone ke baad
-      // directly NewUserLogin par jayega.
-      //
-      // ==================================================
-
       console.log(
         'Manual Farmer Registration Flow',
       );
-
       Alert.alert(
         'Registration Successful',
         'Your farmer account has been created successfully. Please login.',
@@ -381,29 +235,22 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
           },
         ],
       );
-
     } catch (error: any) {
-
       console.log(
         'Farmer Registration Error Status:',
         error.response?.status,
       );
-
       console.log(
         'Farmer Registration Error Response:',
         error.response?.data,
       );
-
       console.log(
         'Farmer Registration Error Message:',
         error.message,
       );
-
       let errorMessage =
         'Something went wrong. Please try again.';
-
       if (error.response?.data) {
-
         if (
           typeof error.response.data ===
           'string'
@@ -424,26 +271,20 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-
       Alert.alert(
         'Registration Failed',
         errorMessage,
       );
-
     } finally {
-
       setLoading(false);
-
     }
   };
-
   return (
     <ImageBackground
       source={require('../../assets/Farmerreg.png')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >
-
       <KeyboardAvoidingView
         style={styles.container}
         behavior={
@@ -457,85 +298,64 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
             : 20
         }
       >
-
         <ScrollView
           contentContainerStyle={
             styles.scrollContent
           }
           showsVerticalScrollIndicator={false}
         >
-
-          {/* HEADER */}
-
+          {}
           <View style={styles.header}>
-
             <Image
               source={require('../farm2home_logo.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
-
             <Text style={styles.appName}>
               Farm2Home
             </Text>
-
             <Text style={styles.subtitle}>
               Create your farmer account
             </Text>
-
           </View>
-
-          {/* FORM */}
-
+          {}
           <View style={styles.formContainer}>
-
-            {/* PHOTO */}
-
+            {}
             <View style={styles.photoContainer}>
-
               <TouchableOpacity
                 onPress={() =>
                   setShowPhotoOptions(true)
                 }
               >
-
                 {photo ? (
-
                   <Image
                     source={{
                       uri: photo.uri,
                     }}
                     style={styles.photoPreview}
                   />
-
                 ) : (
-
                   <View
                     style={
                       styles.photoPlaceholder
                     }
                   >
-
                     <Ionicons
                       name="person-outline"
                       size={50}
                       color="#BDBDBD"
                     />
-
                     <View
                       style={
                         styles.cameraIconBadge
                       }
                     >
-
                       <Ionicons
                         name="camera"
                         size={16}
                         color="#FFFFFF"
                       />
-
                     </View>
-
                     <Text
                       style={
                         styles.photoPlaceholderText
@@ -543,17 +363,11 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                     >
                       Tap to upload
                     </Text>
-
                   </View>
-
                 )}
-
               </TouchableOpacity>
-
             </View>
-
-            {/* NAME */}
-
+            {}
             <CustomInput
               label="Full Name *"
               value={formData.name}
@@ -563,9 +377,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               placeholder="Enter your full name"
               error={errors.name}
             />
-
-            {/* EMAIL */}
-
+            {}
             <CustomInput
               label="Email *"
               value={formData.email}
@@ -576,9 +388,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               keyboardType="email-address"
               error={errors.email}
             />
-
-            {/* MOBILE */}
-
+            {}
             <CustomInput
               label="Mobile Number *"
               value={formData.mobile}
@@ -589,9 +399,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               keyboardType="phone-pad"
               error={errors.mobile}
             />
-
-            {/* VILLAGE */}
-
+            {}
             <CustomInput
               label="Village"
               value={formData.village}
@@ -600,9 +408,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               }
               placeholder="Enter your village"
             />
-
-            {/* ADDRESS */}
-
+            {}
             <CustomInput
               label="Address"
               value={formData.address}
@@ -612,9 +418,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               placeholder="Enter your address"
               multiline
             />
-
-            {/* POSTAL CODE */}
-
+            {}
             <CustomInput
               label="Postal Code"
               value={formData.postalCode}
@@ -624,9 +428,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               placeholder="Enter postal code"
               keyboardType="numeric"
             />
-
-            {/* STATE */}
-
+            {}
             <CustomInput
               label="State"
               value={formData.state}
@@ -635,9 +437,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               }
               placeholder="Enter your state"
             />
-
-            {/* PASSWORD */}
-
+            {}
             <CustomInput
               label="Password *"
               value={formData.password}
@@ -648,9 +448,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
               secureTextEntry
               error={errors.password}
             />
-
-            {/* CONFIRM PASSWORD */}
-
+            {}
             <CustomInput
               label="Confirm Password *"
               value={formData.confirmPassword}
@@ -666,9 +464,7 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                 errors.confirmPassword
               }
             />
-
-            {/* SIGN UP BUTTON */}
-
+            {}
             <CustomButton
               title="Sign Up"
               onPress={handleRegister}
@@ -683,17 +479,13 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                 fontWeight: 'bold',
               }}
             />
-
-            {/* LOGIN */}
-
+            {}
             <View style={styles.loginRow}>
-
               <Text
                 style={styles.loginLabel}
               >
                 Already have an account?{' '}
               </Text>
-
               <TouchableOpacity
                 onPress={() =>
                   navigation.navigate(
@@ -701,23 +493,16 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                   )
                 }
               >
-
                 <Text
                   style={styles.loginLink}
                 >
                   Sign In
                 </Text>
-
               </TouchableOpacity>
-
             </View>
-
           </View>
-
         </ScrollView>
-
-        {/* PHOTO OPTIONS MODAL */}
-
+        {}
         <Modal
           visible={showPhotoOptions}
           transparent={true}
@@ -726,21 +511,17 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
             setShowPhotoOptions(false)
           }
         >
-
           <View
             style={styles.modalOverlay}
           >
-
             <View
               style={styles.modalContent}
             >
-
               <Text
                 style={styles.modalTitle}
               >
                 Choose Photo From
               </Text>
-
               <TouchableOpacity
                 style={styles.modalOption}
                 onPress={takePhoto}
@@ -753,7 +534,6 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                   Take Photo
                 </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.modalOption}
                 onPress={pickImage}
@@ -766,7 +546,6 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                   Gallery
                 </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.modalOption}
                 onPress={pickDocument}
@@ -779,7 +558,6 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                   Document
                 </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[
                   styles.modalOption,
@@ -791,7 +569,6 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                   setShowPhotoOptions(false)
                 }
               >
-
                 <Text
                   style={[
                     styles.modalOptionText,
@@ -802,66 +579,51 @@ const FarmerRegisterScreen = ({route, navigation}: any) => {
                 >
                   Cancel
                 </Text>
-
               </TouchableOpacity>
-
             </View>
-
           </View>
-
         </Modal>
-
       </KeyboardAvoidingView>
-
     </ImageBackground>
   );
 };
-
 const styles = StyleSheet.create({
-
   backgroundImage: {
     flex: 1,
     width: '100%',
     height: '100%',
   },
-
   container: {
     flex: 1,
     backgroundColor: 'transparent',
   },
-
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingVertical: 40,
     paddingBottom: 60,
   },
-
   header: {
     alignItems: 'center',
     marginBottom: 24,
   },
-
   logoImage: {
     width: 80,
     height: 80,
     marginBottom: 8,
     borderRadius: 40,
   },
-
   appName: {
     fontSize: 28,
     fontWeight: '800',
     color: '#1B5E20',
     letterSpacing: 1,
   },
-
   subtitle: {
     fontSize: 14,
     color: '#757575',
     marginTop: 4,
   },
-
   formContainer: {
     backgroundColor:
       'rgba(255, 255, 255, 0.6)',
@@ -879,12 +641,10 @@ const styles = StyleSheet.create({
     borderColor:
       'rgba(255, 255, 255, 0.5)',
   },
-
   photoContainer: {
     alignItems: 'center',
     marginBottom: 20,
   },
-
   photoPlaceholder: {
     width: 110,
     height: 110,
@@ -897,13 +657,11 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     position: 'relative',
   },
-
   photoPlaceholderText: {
     marginTop: 6,
     fontSize: 12,
     color: '#757575',
   },
-
   cameraIconBadge: {
     position: 'absolute',
     bottom: 0,
@@ -917,7 +675,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
-
   photoPreview: {
     width: 110,
     height: 110,
@@ -925,18 +682,15 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#C8E6C9',
   },
-
   loginRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 20,
   },
-
   loginLabel: {
     color: '#212121',
     fontSize: 14,
   },
-
   loginLink: {
     backgroundColor: '#C8E6C9',
     color: '#212121',
@@ -947,40 +701,33 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     textAlign: 'center',
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor:
       'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
-
   modalContent: {
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
   },
-
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 15,
     textAlign: 'center',
   },
-
   modalOption: {
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#EEEEEE',
   },
-
   modalOptionText: {
     fontSize: 16,
     textAlign: 'center',
     color: '#212121',
   },
-
 });
-
 export default FarmerRegisterScreen;

@@ -10,19 +10,15 @@ import {
   Text,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 import { Review } from '../../types';
 import { StarRating } from './StarRating';
-
 interface MediaViewerModalProps {
   visible: boolean;
   imageUrl: string | null;
   onClose: () => void;
   review?: Review | null;
 }
-
 const { width, height } = Dimensions.get('window');
-
 export const MediaViewerModal = ({
   visible,
   imageUrl,
@@ -30,12 +26,10 @@ export const MediaViewerModal = ({
   review,
 }: MediaViewerModalProps) => {
   if (!imageUrl) return null;
-
   const maskName = (name: string) => {
     if (!name || name.length <= 2) return name;
     return `${name[0]}***${name[name.length - 1]}`;
   };
-
   return (
     <Modal
       visible={visible}
@@ -54,7 +48,6 @@ export const MediaViewerModal = ({
             resizeMode="contain"
           />
         </View>
-
         {review && (
           <View style={styles.reviewOverlay}>
             <View style={styles.overlayHeader}>
@@ -70,7 +63,6 @@ export const MediaViewerModal = ({
     </Modal>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -19,26 +19,19 @@ import {getProductReviews} from '../services/reviewService';
 import {StarRating} from '../components/reviews/StarRating';
 import {MediaViewerModal} from '../components/reviews/MediaViewerModal';
 import {Review} from '../types';
-
 const {width} = Dimensions.get('window');
-
 const FarmerProductDetailScreen = ({route, navigation}: any) => {
   const {product} = route.params;
-
   const [productData, setProductData] = useState<any>(product);
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState<boolean>(true);
-
-  // Media Viewer state
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [mediaModalUrl, setMediaModalUrl] = useState<string | null>(null);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
-
   const fetchProductAndReviews = async () => {
     try {
       const updatedProduct = await getProductById(product.productId);
       setProductData(updatedProduct);
-
       const reviews = await getProductReviews(product.productId);
       setReviewsList(reviews);
     } catch (error) {
@@ -47,20 +40,17 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
       setReviewsLoading(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       fetchProductAndReviews();
     }, [product.productId])
   );
-
   const imageUrl = productData.productPhoto
     ? getProductImageUrl(productData.productPhoto)
     : null;
-
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
@@ -69,9 +59,8 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
           My Product Details
         </Text>
       </View>
-
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 100}}>
-        {/* Header Image Section */}
+        {}
         <View style={styles.headerImageContainer}>
           {imageUrl ? (
             <Image source={{uri: imageUrl}} style={styles.headerImage} />
@@ -80,17 +69,15 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
               <Text style={{fontSize: 50}}>🌾</Text>
             </View>
           )}
-
-          {/* Organic Tag */}
+          {}
           <View style={styles.organicTagOverlay}>
             <Ionicons name="leaf" size={14} color="#FFF" style={{marginRight: 4}} />
             <Text style={styles.organicTagText}>Organic</Text>
           </View>
         </View>
-
-        {/* Content Container (Overlaps Image) */}
+        {}
         <View style={styles.contentContainer}>
-          {/* Title & Rating */}
+          {}
           <Text style={styles.productName}>{productData.productName}</Text>
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color="#FFC107" />
@@ -104,8 +91,7 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
               </Text>
             </Text>
           </View>
-
-          {/* Price & Status */}
+          {}
           <View style={styles.priceStatusRow}>
             <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
               <Text style={styles.price}>₹{productData.price?.toFixed(2) || '0.00'}</Text>
@@ -117,8 +103,7 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
               </Text>
             </View>
           </View>
-
-          {/* Tags */}
+          {}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsContainer}>
             <View style={styles.tag}>
               <Ionicons name="nutrition-outline" size={14} color="#1E3A8A" />
@@ -129,8 +114,7 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
               <Text style={styles.tagText}>100% Organic</Text>
             </View>
           </ScrollView>
-
-          {/* Product Details Card */}
+          {}
           <Text style={styles.sectionTitle}>Product Details</Text>
           <View style={styles.card}>
             <View style={styles.detailRow}>
@@ -164,8 +148,7 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
               </Text>
             </View>
           </View>
-
-          {/* Customer Reviews Section */}
+          {}
           <Text style={styles.sectionTitle}>Customer Photos & Videos</Text>
           <View style={styles.reviewsSection}>
             {reviewsLoading ? (
@@ -182,7 +165,6 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
                     (review.media || []).map((m) => {
                       const isVideo = m.mediaType === 'VIDEO';
                       const url = isVideo ? getProductVideoUrl(m.mediaUrl) : getProductImageUrl(m.mediaUrl);
-                      
                       return (
                         <TouchableOpacity
                           key={m.mediaId}
@@ -213,7 +195,7 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
                     })
                   )}
                 </ScrollView>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.viewAllBtn}
                   onPress={() => navigation.navigate('FarmerProductReviews', { product: productData })}
                 >
@@ -222,21 +204,18 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
               </View>
             )}
           </View>
-
         </View>
       </ScrollView>
-
-      {/* Bottom Action Area */}
+      {}
       <View style={styles.farmerBottomBar}>
         <View style={styles.farmerButtonsRow}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('AddProduct', {product: productData})}
           >
             <Ionicons name="pencil" size={18} color="#2E7D32" style={{marginRight: 8}} />
             <Text style={styles.editButtonText}>Edit Product</Text>
           </TouchableOpacity>
-          
           <TouchableOpacity style={styles.deactivateButton}>
             <Ionicons name="power" size={18} color="#FFF" style={{marginRight: 8}} />
             <Text style={styles.deactivateButtonText}>Deactivate</Text>
@@ -247,7 +226,6 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
           <Text style={styles.helpText}>You can edit product details anytime.</Text>
         </View>
       </View>
-
       <MediaViewerModal
         visible={mediaModalVisible}
         imageUrl={mediaModalUrl}
@@ -261,7 +239,6 @@ const FarmerProductDetailScreen = ({route, navigation}: any) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -572,5 +549,4 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
-
 export default FarmerProductDetailScreen;

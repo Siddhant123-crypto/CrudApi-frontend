@@ -1,6 +1,5 @@
 import React from 'react';
 import {TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, StyleProp, View} from 'react-native';
-
 interface CustomButtonProps {
   title: string;
   onPress: () => void;
@@ -11,7 +10,6 @@ interface CustomButtonProps {
   variant?: 'primary' | 'outline' | 'danger';
   rightIcon?: React.ReactNode;
 }
-
 const CustomButton: React.FC<CustomButtonProps> = ({
   title,
   onPress,
@@ -32,7 +30,6 @@ const CustomButton: React.FC<CustomButtonProps> = ({
         return styles.primaryButton;
     }
   };
-
   const getTextStyle = () => {
     switch (variant) {
       case 'outline':
@@ -41,7 +38,6 @@ const CustomButton: React.FC<CustomButtonProps> = ({
         return styles.primaryText;
     }
   };
-
   return (
     <TouchableOpacity
       style={[
@@ -64,7 +60,6 @@ const CustomButton: React.FC<CustomButtonProps> = ({
     </TouchableOpacity>
   );
 };
-
 const styles = StyleSheet.create({
   button: {
     paddingVertical: 14,
@@ -112,5 +107,4 @@ const styles = StyleSheet.create({
     color: '#1B5E20',
   },
 });
-
 export default CustomButton;

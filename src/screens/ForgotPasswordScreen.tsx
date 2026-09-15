@@ -12,14 +12,12 @@ import {
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import {forgotPassword} from '../services/authService';
-
 const ForgotPasswordScreen = ({navigation}: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
-
   const validate = () => {
     const newErrors: any = {};
     if (!email.trim()) {
@@ -38,10 +36,8 @@ const ForgotPasswordScreen = ({navigation}: any) => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleResetPassword = async () => {
     if (!validate()) return;
-
     setLoading(true);
     try {
       const result = await forgotPassword(
@@ -60,7 +56,6 @@ const ForgotPasswordScreen = ({navigation}: any) => {
       setLoading(false);
     }
   };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -75,7 +70,6 @@ const ForgotPasswordScreen = ({navigation}: any) => {
             Enter your email and set a new password
           </Text>
         </View>
-
         <View style={styles.formContainer}>
           <CustomInput
             label="Email"
@@ -88,7 +82,6 @@ const ForgotPasswordScreen = ({navigation}: any) => {
             keyboardType="email-address"
             error={errors.email}
           />
-
           <CustomInput
             label="New Password"
             value={password}
@@ -100,7 +93,6 @@ const ForgotPasswordScreen = ({navigation}: any) => {
             secureTextEntry
             error={errors.password}
           />
-
           <CustomInput
             label="Confirm New Password"
             value={confirmPassword}
@@ -113,14 +105,12 @@ const ForgotPasswordScreen = ({navigation}: any) => {
             secureTextEntry
             error={errors.confirmPassword}
           />
-
           <CustomButton
             title="Reset Password"
             onPress={handleResetPassword}
             loading={loading}
             style={{marginTop: 16}}
           />
-
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}>
@@ -131,7 +121,6 @@ const ForgotPasswordScreen = ({navigation}: any) => {
     </KeyboardAvoidingView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -182,5 +171,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
 export default ForgotPasswordScreen;

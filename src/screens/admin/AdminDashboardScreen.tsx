@@ -5,23 +5,18 @@ import { StatCard } from '../../components/admin/StatCard';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBadge } from '../../components/admin/StatusBadge';
-
 export const AdminDashboardScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-
   const currentDate = new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
-
   return (
     <View style={styles.container}>
       <AdminHeader />
-      
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        {/* Welcome Section */}
+        {}
         <View style={styles.welcomeSection}>
           <View style={styles.welcomeLeft}>
             <View>
@@ -34,16 +29,14 @@ export const AdminDashboardScreen: React.FC = () => {
             <Text style={styles.dateText}>{currentDate}</Text>
           </View>
         </View>
-
-        {/* Stats Row */}
+        {}
         <View style={styles.statsRow}>
           <StatCard title="Farmers" value="165" growth="↑ 12 this month" icon="people" />
           <StatCard title="Customers" value="82" growth="↑ 8 this month" icon="people-outline" />
           <StatCard title="Products" value="86" growth="↑ 10 this month" icon="cube" />
           <StatCard title="Orders" value="23" growth="↑ 5 this month" icon="cart" />
         </View>
-
-        {/* Order Summary Row */}
+        {}
         <View style={styles.orderSummaryRow}>
           <View style={styles.summaryItem}>
             <View style={[styles.summaryIcon, { backgroundColor: '#FEF3C7' }]}>
@@ -82,11 +75,9 @@ export const AdminDashboardScreen: React.FC = () => {
             </View>
           </View>
         </View>
-
-        {/* Revenue Overview & Recent Orders Row */}
+        {}
         <View style={styles.middleRow}>
-          
-          {/* Revenue Card */}
+          {}
           <View style={styles.revenueCard}>
             <View style={styles.revenueHeader}>
               <Text style={styles.revenueTitle} numberOfLines={1} adjustsFontSizeToFit>Revenue Overview</Text>
@@ -97,8 +88,7 @@ export const AdminDashboardScreen: React.FC = () => {
             </View>
             <Text style={styles.revenueAmount} numberOfLines={1} adjustsFontSizeToFit>₹17,081</Text>
             <Text style={styles.revenueGrowth} numberOfLines={1} adjustsFontSizeToFit>↑ 18% from last month</Text>
-            
-            {/* Simple Line Graph Visual */}
+            {}
             <View style={styles.chartContainer}>
               <View style={styles.yAxis}>
                 <Text style={styles.axisText}>30k</Text>
@@ -110,22 +100,18 @@ export const AdminDashboardScreen: React.FC = () => {
                 {[12, 28, 15, 22, 18, 30].map((val, idx, data) => {
                   if (idx === data.length - 1) return null;
                   const nextVal = data[idx + 1];
-                  
-                  const stepX = 22; // 5 steps fit in ~110px width
+                  const stepX = 22;
                   const maxHeight = 100;
-                  
                   const x1 = idx * stepX;
                   const y1 = maxHeight - (val / 30) * maxHeight;
                   const x2 = (idx + 1) * stepX;
                   const y2 = maxHeight - (nextVal / 30) * maxHeight;
-
                   const dx = x2 - x1;
                   const dy = y2 - y1;
                   const length = Math.sqrt(dx * dx + dy * dy);
                   const angle = Math.atan2(dy, dx) * (180 / Math.PI);
                   const cx = (x1 + x2) / 2;
                   const cy = (y1 + y2) / 2;
-
                   return (
                     <View key={`line-${idx}`} style={{
                       position: 'absolute',
@@ -160,8 +146,7 @@ export const AdminDashboardScreen: React.FC = () => {
               </View>
             </View>
           </View>
-
-          {/* Recent Orders Card */}
+          {}
           <View style={styles.recentOrdersCard}>
             <View style={styles.recentOrdersHeader}>
               <Text style={styles.recentOrdersTitle} numberOfLines={1} adjustsFontSizeToFit>Recent Orders</Text>
@@ -169,9 +154,8 @@ export const AdminDashboardScreen: React.FC = () => {
                 <Text style={styles.viewAllText} numberOfLines={1} adjustsFontSizeToFit>View All</Text>
               </TouchableOpacity>
             </View>
-            
             <View style={styles.orderList}>
-              {/* Order 1 */}
+              {}
               <View style={styles.orderItem}>
                 <View style={styles.orderLeft}>
                   <View style={styles.orderIconBg}>
@@ -187,10 +171,8 @@ export const AdminDashboardScreen: React.FC = () => {
                   <StatusBadge status="Delivered" />
                 </View>
               </View>
-              
               <View style={styles.orderDivider} />
-
-              {/* Order 2 */}
+              {}
               <View style={styles.orderItem}>
                 <View style={styles.orderLeft}>
                   <View style={styles.orderIconBg}>
@@ -206,10 +188,8 @@ export const AdminDashboardScreen: React.FC = () => {
                   <StatusBadge status="Processing" />
                 </View>
               </View>
-
               <View style={styles.orderDivider} />
-
-              {/* Order 3 */}
+              {}
               <View style={styles.orderItem}>
                 <View style={styles.orderLeft}>
                   <View style={styles.orderIconBg}>
@@ -228,8 +208,7 @@ export const AdminDashboardScreen: React.FC = () => {
             </View>
           </View>
         </View>
-
-        {/* Quick Actions */}
+        {}
         <View style={styles.quickActionsSection}>
           <Text style={styles.quickActionsTitle}>Quick Actions</Text>
           <View style={styles.quickActionsRow}>
@@ -255,12 +234,10 @@ export const AdminDashboardScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
-
       </ScrollView>
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -268,7 +245,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100, // For bottom tabs
+    paddingBottom: 100,
   },
   welcomeSection: {
     flexDirection: 'row',
@@ -429,7 +406,7 @@ const styles = StyleSheet.create({
     height: 100,
     position: 'relative',
     marginLeft: 8,
-    marginTop: 10, // Align with Y-axis properly
+    marginTop: 10,
   },
   recentOrdersCard: {
     flex: 1.1,
@@ -540,5 +517,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
 export default AdminDashboardScreen;

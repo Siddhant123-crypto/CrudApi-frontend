@@ -3,11 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } fr
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-
 const AdminMenuScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
-
   const menuItems = [
     { title: 'Dashboard', icon: 'home-outline', route: 'Home' },
     { title: 'Farmers', icon: 'people-outline', route: 'AdminFarmers' },
@@ -18,7 +16,6 @@ const AdminMenuScreen: React.FC = () => {
     { title: 'Farm Verification', icon: 'shield-checkmark-outline', route: 'AdminFarmVerification' },
     { title: 'Analytics & Reports', icon: 'bar-chart-outline', route: 'Analytics' },
   ];
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -29,8 +26,8 @@ const AdminMenuScreen: React.FC = () => {
       </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         {menuItems.map((item, index) => (
-          <TouchableOpacity 
-            key={index} 
+          <TouchableOpacity
+            key={index}
             style={styles.menuItem}
             onPress={() => {
               if (item.route === 'Home') {
@@ -61,7 +58,6 @@ const AdminMenuScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -127,5 +123,4 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
 });
-
 export default AdminMenuScreen;

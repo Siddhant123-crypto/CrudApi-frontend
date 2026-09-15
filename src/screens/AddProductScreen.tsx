@@ -19,7 +19,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { saveProductFormData, updateProductFormData } from '../services/productService';
 import { BASE_URL } from '../services/api';
-
 const CATEGORIES = [
   'Vegetable',
   'Root Vegetable',
@@ -38,11 +37,8 @@ const UNITS = [
   'BOX',
   'BUNDLE',
 ];
-
 const AddProductScreen = ({ navigation, route }: any) => {
   const { user } = useAuth();
-
-  // ── Edit mode: product passed from MyProductsScreen ──────────────────────
   const editProduct = route?.params?.product ?? null;
   const isEditMode  = !!editProduct;
   const [productName, setProductName] = useState(editProduct?.productName ?? '');
@@ -52,26 +48,20 @@ const AddProductScreen = ({ navigation, route }: any) => {
   const [quantity, setQuantity] = useState(editProduct?.quantity != null ? String(editProduct.quantity) : '');
   const [description, setDescription] = useState(editProduct?.description ?? '');
   const [harvestDate, setHarvestDate] = useState(editProduct?.harvestDate ?? '');
-
-  // New local URIs (null = user did not pick anything new → keep existing)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedVideoName, setSelectedVideoName] = useState<string>('product_video.mp4');
   const [removeVideo, setRemoveVideo] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [mediaSelectionType, setMediaSelectionType] = useState<'Images' | 'Videos'>('Images');
-
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
-
-  // ── Update header title ─────────────────────────────────────────────────
   React.useLayoutEffect(() => {
-    navigation.setOptions({ 
+    navigation.setOptions({
       headerTitle: isEditMode ? 'Edit Product' : 'Add Product',
       headerStyle: { backgroundColor: '#1E5631', elevation: 0, shadowOpacity: 0 },
       headerTintColor: '#FFF',
@@ -82,7 +72,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
       ),
     });
   }, [isEditMode, navigation]);
-
   const requestCameraPermission = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
@@ -91,7 +80,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
     }
     return true;
   };
-
   const handlePickMediaFromGallery = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -100,35 +88,25 @@ const AddProductScreen = ({ navigation, route }: any) => {
         setMediaModalVisible(false);
         return;
       }
-
       const isVideo = mediaSelectionType === 'Videos';
-
       const result = await ImagePicker.launchImageLibraryAsync({
-        // For video mode: open normal system gallery with both images & videos so
-        // the user sees the familiar mixed-media grid (not a Videos-only tab).
-        // For photo mode: images only (unchanged behaviour).
         mediaTypes: isVideo ? ['images', 'videos'] : 'images',
-        allowsEditing: !isVideo,   // editing only for photos
+        allowsEditing: !isVideo,
         quality: isVideo ? 1 : 0.8,
         videoMaxDuration: isVideo ? 120 : undefined,
       });
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-
         if (isVideo) {
-          // Validate that the user actually selected a video, not a photo.
           if (asset.type !== 'video') {
             Alert.alert(
               'Wrong file type',
               'Please select a video from the gallery.',
             );
-            // Don't close the modal — let them try again.
             return;
           }
           setSelectedVideo(asset.uri);
           setRemoveVideo(false);
-          // Extract filename; ensure .mp4 extension for backend MIME type.
           const name = asset.uri.split('/').pop() || 'product_video.mp4';
           setSelectedVideoName(name.endsWith('.mp4') ? name : name.replace(/\.[^.]+$/, '.mp4'));
         } else {
@@ -141,7 +119,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
     }
     setMediaModalVisible(false);
   };
-
   const handlePickMediaFromCamera = async () => {
     try {
       const hasPermission = await requestCameraPermission();
@@ -149,16 +126,13 @@ const AddProductScreen = ({ navigation, route }: any) => {
         setMediaModalVisible(false);
         return;
       }
-
       const isVideo = mediaSelectionType === 'Videos';
-
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: isVideo ? 'videos' : 'images', // ✅ new non-deprecated API
-        allowsEditing: !isVideo,                   // editing only for photos
+        mediaTypes: isVideo ? 'videos' : 'images',
+        allowsEditing: !isVideo,
         quality: isVideo ? 1 : 0.8,
         videoMaxDuration: isVideo ? 120 : undefined,
       });
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         if (isVideo) {
@@ -176,12 +150,11 @@ const AddProductScreen = ({ navigation, route }: any) => {
     }
     setMediaModalVisible(false);
   };
-
   const handlePickMediaFromDocument = async () => {
     try {
       const isVideo = mediaSelectionType === 'Videos';
       const result = await DocumentPicker.getDocumentAsync({
-        type: isVideo ? 'video/*' : 'image/*', // ✅ video/* for video, image/* for photo
+        type: isVideo ? 'video/*' : 'image/*',
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -190,7 +163,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
         if (isVideo) {
           setSelectedVideo(asset.uri);
           setRemoveVideo(false);
-          // Use actual filename, fallback to .mp4
           const name = asset.name || asset.uri.split('/').pop() || 'product_video.mp4';
           setSelectedVideoName(name);
         } else {
@@ -203,7 +175,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
     }
     setMediaModalVisible(false);
   };
-
   const handleSaveProduct = async () => {
     if (!productName.trim() || !price.trim() || !quantity.trim() || !harvestDate.trim()) {
       Alert.alert('Validation Error', 'Please fill in all required fields (including Harvest Date)');
@@ -213,7 +184,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
       Alert.alert('Validation Error', 'Price and Quantity must be valid numbers greater than 0');
       return;
     }
-
     setLoading(true);
     try {
       const productPayload = {
@@ -227,7 +197,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
         harvestDate: harvestDate.trim(),
         removeVideo: removeVideo,
       };
-
       if (isEditMode) {
         await updateProductFormData(
           editProduct.productId || editProduct.id,
@@ -256,17 +225,13 @@ const AddProductScreen = ({ navigation, route }: any) => {
       setLoading(false);
     }
   };
-
-  // ── Calendar Picker Helper Methods ─────────────────────────────────────────
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
-
   const getFirstDayOfMonth = (year: number, month: number) => {
     const day = new Date(year, month, 1).getDay();
-    return day === 0 ? 6 : day - 1; // Mon = 0, Sun = 6
+    return day === 0 ? 6 : day - 1;
   };
-
   const handleSelectDay = (day: number) => {
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth();
@@ -275,15 +240,12 @@ const AddProductScreen = ({ navigation, route }: any) => {
     setHarvestDate(`${year}-${mm}-${dd}`);
     setShowCalendarModal(false);
   };
-
   const handlePrevMonth = () => {
     setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1));
   };
-
   const handleNextMonth = () => {
     setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1));
   };
-
   const renderCalendarModal = () => {
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth();
@@ -292,10 +254,8 @@ const AddProductScreen = ({ navigation, route }: any) => {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     const dayNames = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-
     const totalDays = getDaysInMonth(year, month);
     const firstDayIndex = getFirstDayOfMonth(year, month);
-
     const daysArray = [];
     for (let i = 0; i < firstDayIndex; i++) {
       daysArray.push(null);
@@ -303,12 +263,11 @@ const AddProductScreen = ({ navigation, route }: any) => {
     for (let i = 1; i <= totalDays; i++) {
       daysArray.push(i);
     }
-
     return (
       <Modal visible={showCalendarModal} transparent animationType="fade" onRequestClose={() => setShowCalendarModal(false)}>
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowCalendarModal(false)}
         >
           <View style={styles.calendarContainer} onStartShouldSetResponder={() => true}>
@@ -321,13 +280,11 @@ const AddProductScreen = ({ navigation, route }: any) => {
                 <Ionicons name="chevron-forward" size={20} color="#2D983A" />
               </TouchableOpacity>
             </View>
-
             <View style={styles.weekDaysRow}>
               {dayNames.map(d => (
                 <Text key={d} style={styles.weekDayLabel}>{d}</Text>
               ))}
             </View>
-
             <View style={styles.daysGrid}>
               {daysArray.map((day, index) => {
                 if (day === null) {
@@ -335,7 +292,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
                 }
                 const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const isSelected = harvestDate === formattedDate;
-
                 return (
                   <TouchableOpacity
                     key={`day-${day}`}
@@ -349,7 +305,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
                 );
               })}
             </View>
-            
             <TouchableOpacity style={styles.calCancelBtn} onPress={() => setShowCalendarModal(false)}>
               <Text style={styles.calCancelBtnText}>Cancel</Text>
             </TouchableOpacity>
@@ -358,7 +313,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
       </Modal>
     );
   };
-
   const renderDropdownModal = (
     visible: boolean,
     onClose: () => void,
@@ -390,20 +344,16 @@ const AddProductScreen = ({ navigation, route }: any) => {
       </TouchableOpacity>
     </Modal>
   );
-
   const getBorderColor = (field: string) => {
     return focusedInput === field ? '#4CAF50' : '#E8F5E9';
   };
-
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
         <View style={styles.formContainer}>
-            {/* Media Upload Section */}
+            {}
             <View style={styles.mediaSection}>
-
-                {/* Photo Card */}
+                {}
                 <View style={styles.mediaCard}>
                   <TouchableOpacity
                     style={styles.mediaCardInner}
@@ -438,8 +388,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     )}
                   </TouchableOpacity>
                 </View>
-
-                {/* Video Card */}
+                {}
                 <View style={[styles.mediaCard, { borderStyle: selectedVideo ? 'solid' : 'dashed' }]}>
                   <TouchableOpacity
                     style={styles.mediaCardInner}
@@ -459,7 +408,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
                           </Text>
                           <Text style={styles.videoReplaceText}>Tap to replace</Text>
                         </View>
-                        {/* Remove button */}
+                        {}
                         <TouchableOpacity
                           style={styles.removeVideoBtn}
                           onPress={(e) => {
@@ -489,10 +438,8 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     )}
                   </TouchableOpacity>
                 </View>
-
             </View>
-
-            {/* Form Fields */}
+            {}
             <View style={styles.fieldRow}>
                 <View style={styles.fieldContent}>
                     <Text style={styles.label}>Product Name *</Text>
@@ -507,12 +454,11 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     />
                 </View>
             </View>
-
             <View style={styles.fieldRow}>
                 <View style={styles.fieldContent}>
                     <Text style={styles.label}>Category *</Text>
-                    <TouchableOpacity 
-                        style={[styles.dropdownInput, { borderColor: '#E8F5E9' }]} 
+                    <TouchableOpacity
+                        style={[styles.dropdownInput, { borderColor: '#E8F5E9' }]}
                         onPress={() => setShowCategoryModal(true)}
                     >
                         <Text style={styles.inputText}>{category}</Text>
@@ -520,7 +466,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     </TouchableOpacity>
                 </View>
             </View>
-
             <View style={styles.fieldRow}>
                 <View style={styles.fieldContent}>
                     <Text style={styles.label}>Price (₹) *</Text>
@@ -536,7 +481,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     />
                 </View>
             </View>
-
             <View style={styles.fieldRow}>
                 <View style={styles.fieldContent}>
                     <Text style={styles.label}>Quantity *</Text>
@@ -552,12 +496,11 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     />
                 </View>
             </View>
-
             <View style={styles.fieldRow}>
                 <View style={styles.fieldContent}>
                     <Text style={styles.label}>Unit *</Text>
-                    <TouchableOpacity 
-                        style={[styles.dropdownInput, { borderColor: '#E8F5E9' }]} 
+                    <TouchableOpacity
+                        style={[styles.dropdownInput, { borderColor: '#E8F5E9' }]}
                         onPress={() => setShowUnitModal(true)}
                     >
                         <Text style={styles.inputText}>{unit}</Text>
@@ -565,7 +508,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     </TouchableOpacity>
                 </View>
             </View>
-
             <View style={[styles.fieldRow, { marginBottom: 28 }]}>
                 <View style={styles.fieldContent}>
                     <Text style={styles.label}>Description (Optional)</Text>
@@ -581,7 +523,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     />
                 </View>
             </View>
-
             <View style={[styles.fieldRow, { marginTop: 4 }]}>
                 <View style={styles.fieldContent}>
                     <Text style={styles.label}>Harvest Date *</Text>
@@ -605,8 +546,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     </View>
                 </View>
             </View>
-
-            {/* Save Button */}
+            {}
             <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProduct} disabled={loading}>
                 {loading ? (
                     <ActivityIndicator color="#FFF" />
@@ -618,23 +558,19 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     </>
                 )}
             </TouchableOpacity>
-
         </View>
       </ScrollView>
-
-      {/* Modals */}
+      {}
       {renderDropdownModal(showCategoryModal, () => setShowCategoryModal(false), CATEGORIES, setCategory, 'Select Category')}
       {renderDropdownModal(showUnitModal, () => setShowUnitModal(false), UNITS, setUnit, 'Select Unit')}
       {renderCalendarModal()}
-      
-      {/* Media Selection Modal */}
+      {}
       <Modal visible={mediaModalVisible} transparent animationType="slide" onRequestClose={() => setMediaModalVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMediaModalVisible(false)}>
           <View style={styles.mediaOptionsContainer}>
             <Text style={styles.mediaOptionsTitle}>
               Select {mediaSelectionType === 'Images' ? 'Photo' : 'Video'} Source
             </Text>
-            
             <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromCamera}>
               <Ionicons
                 name={mediaSelectionType === 'Images' ? 'camera-outline' : 'videocam-outline'}
@@ -643,17 +579,14 @@ const AddProductScreen = ({ navigation, route }: any) => {
               />
               <Text style={styles.mediaOptionText}>Take {mediaSelectionType === 'Images' ? 'Photo' : 'Video'}</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromGallery}>
               <Ionicons name="image-outline" size={24} color="#4CAF50" />
               <Text style={styles.mediaOptionText}>Choose from Gallery</Text>
             </TouchableOpacity>
-
             <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromDocument}>
               <Ionicons name="document-outline" size={24} color="#4CAF50" />
               <Text style={styles.mediaOptionText}>Choose from Documents</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity style={[styles.mediaOptionBtn, { borderBottomWidth: 0 }]} onPress={() => setMediaModalVisible(false)}>
               <Ionicons name="close-circle-outline" size={24} color="#E53935" />
               <Text style={[styles.mediaOptionText, { color: '#E53935' }]}>Cancel</Text>
@@ -661,22 +594,20 @@ const AddProductScreen = ({ navigation, route }: any) => {
           </View>
         </TouchableOpacity>
       </Modal>
-
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E5631', // updated to match dashboard
+    backgroundColor: '#1E5631',
   },
   scrollContent: {
     flexGrow: 1,
     backgroundColor: '#1E5631',
   },
   formContainer: {
-    backgroundColor: '#FFFFFF', // cleaner white for form area
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     marginTop: 16,
@@ -812,10 +743,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     height: 52,
-    backgroundColor: '#FFFCF8', // Slightly lighter cream/white
+    backgroundColor: '#FFFCF8',
     color: '#2E3D2E',
     fontSize: 15,
-    elevation: 2, // 3D effect
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -841,7 +772,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   saveBtn: {
-    backgroundColor: '#1E5631', // updated to primary theme
+    backgroundColor: '#1E5631',
     borderRadius: 24,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -918,8 +849,6 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     fontWeight: '500',
   },
-
-  // ── Calendar Input and Modal Styles ────────────────────────────────────────
   harvestDateCard: {
     marginTop: 28,
     marginBottom: 24,
@@ -1056,6 +985,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
 export default AddProductScreen;
-

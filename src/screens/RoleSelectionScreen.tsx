@@ -1,36 +1,33 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Image, Dimensions, ImageBackground } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 const RoleSelectionScreen = ({ route, navigation }: any) => {
   const params = route?.params || {};
   return (
-    <ImageBackground 
+    <ImageBackground
       source={require('../../assets/Rolle.png')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >
       <View style={styles.overlay} />
       <SafeAreaView style={styles.container}>
-        {/* Home Button in top right */}
-        <TouchableOpacity 
+        {}
+        <TouchableOpacity
           style={styles.homeButton}
           onPress={() => navigation.navigate('Welcome')}
         >
           <Ionicons name="home-outline" size={24} color="#1B5E20" />
           <Text style={styles.homeButtonText}>Home</Text>
         </TouchableOpacity>
-
         <View style={styles.content}>
-          <Image 
-            source={require('../farm2home_logo.png')} 
-            style={styles.logoImage} 
-            resizeMode="contain" 
+          <Image
+            source={require('../farm2home_logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
           />
           <Text style={styles.title}>Select Your Role</Text>
           <Text style={styles.subtitle}>Choose how you want to continue</Text>
-
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.button, styles.customerButton]}
             onPress={() => navigation.navigate('CustomerRegister', params)}
           >
@@ -38,8 +35,7 @@ const RoleSelectionScreen = ({ route, navigation }: any) => {
             <Text style={styles.customerButtonText}>I am a Customer</Text>
             <Ionicons name="chevron-forward-outline" size={24} color="#B71C1C" />
           </TouchableOpacity>
-
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.button, styles.farmerButton]}
             onPress={() => navigation.navigate('FarmerRegister', params)}
           >
@@ -47,8 +43,7 @@ const RoleSelectionScreen = ({ route, navigation }: any) => {
             <Text style={styles.farmerButtonText}>I am a Farmer</Text>
             <Ionicons name="chevron-forward-outline" size={24} color="#1B5E20" />
           </TouchableOpacity>
-
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.button, styles.backButton]}
             onPress={() => navigation.navigate('NewUserLogin')}
           >
@@ -59,7 +54,6 @@ const RoleSelectionScreen = ({ route, navigation }: any) => {
     </ImageBackground>
   );
 };
-
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
@@ -68,7 +62,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)', // Overlay to make text and buttons readable
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
   },
   container: {
     flex: 1,
@@ -116,7 +110,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   customerButton: {
-    backgroundColor: '#FFCDD2', // Cream red
+    backgroundColor: '#FFCDD2',
     borderWidth: 1,
     borderColor: '#EF9A9A',
   },
@@ -128,7 +122,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   farmerButton: {
-    backgroundColor: '#C8E6C9', // Cream green
+    backgroundColor: '#C8E6C9',
     borderWidth: 1,
     borderColor: '#A5D6A7',
   },
@@ -140,7 +134,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   backButton: {
-    backgroundColor: '#E8F5E9', // Slightly lighter cream green
+    backgroundColor: '#E8F5E9',
     borderWidth: 1,
     borderColor: '#C8E6C9',
     marginTop: 10,
@@ -173,5 +167,4 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
-
 export default RoleSelectionScreen;

@@ -3,7 +3,6 @@ import { wishlistService } from '../services/wishlistService';
 import { WishlistResponse } from '../types';
 import { useAuth } from './AuthContext';
 import { Alert } from 'react-native';
-
 interface WishlistContextType {
   wishlist: WishlistResponse[];
   isLoading: boolean;
@@ -11,14 +10,11 @@ interface WishlistContextType {
   toggleWishlist: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
 }
-
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
-
 export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [wishlist, setWishlist] = useState<WishlistResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isLoggedIn } = useAuth();
-
   const refreshWishlist = useCallback(async () => {
     if (!isLoggedIn) {
       setWishlist([]);
@@ -38,28 +34,23 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       setIsLoading(false);
     }
   }, [isLoggedIn]);
-
   useEffect(() => {
     refreshWishlist();
   }, [refreshWishlist]);
-
   const isInWishlist = useCallback((productId: string) => {
     if (!productId) return false;
     return wishlist.some(
       item => String(item.productId).toLowerCase() === String(productId).toLowerCase()
     );
   }, [wishlist]);
-
   const toggleWishlist = async (productId: string) => {
     if (!isLoggedIn) {
       Alert.alert('Login Required', 'Please login to manage wishlist.');
       return;
     }
-    
     try {
       const exists = isInWishlist(productId);
       if (exists) {
-        // Optimistic UI update could go here
         await wishlistService.removeFromWishlist(productId);
       } else {
         await wishlistService.addToWishlist(productId);
@@ -70,7 +61,6 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       Alert.alert('Error', 'Failed to update wishlist');
     }
   };
-
   return (
     <WishlistContext.Provider
       value={{
@@ -85,7 +75,6 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     </WishlistContext.Provider>
   );
 };
-
 export const useWishlist = (): WishlistContextType => {
   const context = useContext(WishlistContext);
   if (!context) {
@@ -93,5 +82,4 @@ export const useWishlist = (): WishlistContextType => {
   }
   return context;
 };
-
 export default WishlistContext;

@@ -5,20 +5,16 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { useNavigation } from '@react-navigation/native';
 import api, { BASE_URL } from '../../services/api';
-
 export const AdminProductsScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-
   const tabs = ['All', 'APPROVED', 'PENDING', 'REJECTED'];
-
   useEffect(() => {
     fetchProducts();
   }, []);
-
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -32,13 +28,11 @@ export const AdminProductsScreen: React.FC = () => {
       setLoading(false);
     }
   };
-
   const filteredProducts = products.filter(p => {
     if (activeTab !== 'All' && p.status !== activeTab) return false;
     if (searchQuery && !p.productName?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
-
   const getProductImage = (item: any) => {
     if (item.productPhoto) {
       if (item.productPhoto.startsWith('http')) {
@@ -48,7 +42,6 @@ export const AdminProductsScreen: React.FC = () => {
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.productName || 'Product')}&background=F3F4F6&color=6B7280`;
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -56,7 +49,6 @@ export const AdminProductsScreen: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(amount || 0);
   };
-
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.productCard} onPress={() => navigation.navigate('AdminProductDetails', { productId: item.productId })}>
       {item.productPhoto ? (
@@ -77,11 +69,9 @@ export const AdminProductsScreen: React.FC = () => {
       </View>
     </TouchableOpacity>
   );
-
   return (
     <View style={styles.container}>
       <AdminHeader />
-      
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Products</Text>
         <View style={styles.searchContainer}>
@@ -95,7 +85,6 @@ export const AdminProductsScreen: React.FC = () => {
           />
         </View>
       </View>
-
       <View style={styles.tabsContainer}>
         {tabs.map(tab => (
           <TouchableOpacity
@@ -109,7 +98,6 @@ export const AdminProductsScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
-
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#17212F" />
@@ -127,7 +115,6 @@ export const AdminProductsScreen: React.FC = () => {
           <Text style={styles.emptyText}>No products found.</Text>
         </View>
       )}
-
       <TouchableOpacity style={styles.fab}>
         <Ionicons name="add" size={24} color="#17212F" />
         <Text style={styles.fabText}>Add Product</Text>
@@ -135,7 +122,6 @@ export const AdminProductsScreen: React.FC = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 8 },
@@ -182,5 +168,4 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: '#6B7280', fontSize: 16 },
 });
-
 export default AdminProductsScreen;

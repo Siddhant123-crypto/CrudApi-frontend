@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 const CategoriesScreen = ({ navigation }: any) => {
   const categories = [
     { name: 'Vegetable',       icon: 'leaf',       color: '#10B981', bg: '#E6F4EA' },
@@ -11,7 +10,6 @@ const CategoriesScreen = ({ navigation }: any) => {
     { name: 'Wild Veggies',    icon: 'flower',     color: '#8B5CF6', bg: '#F3E5F5' },
     { name: 'Dairy',           icon: 'water',      color: '#3B82F6', bg: '#DBEAFE' },
   ];
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -26,10 +24,10 @@ const CategoriesScreen = ({ navigation }: any) => {
               onPress={() => navigation.navigate('CategoryDashboard', { category: category.name })}
               activeOpacity={0.7}
             >
-              <View 
+              <View
                 style={[
-                  styles.iconBox, 
-                  { 
+                  styles.iconBox,
+                  {
                     backgroundColor: category.bg,
                     borderColor: category.color,
                     borderWidth: 2,
@@ -46,7 +44,6 @@ const CategoriesScreen = ({ navigation }: any) => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -103,5 +100,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
 export default CategoriesScreen;

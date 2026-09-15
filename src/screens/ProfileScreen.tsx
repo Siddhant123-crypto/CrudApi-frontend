@@ -18,13 +18,10 @@ import {useAuth} from '../context/AuthContext';
 import {getUserById, updateUser, uploadUserPhoto} from '../services/userService';
 import {getFarmerById} from '../services/farmerService';
 import {BASE_URL} from '../services/api';
-
 const ProfileScreen = () => {
   const {user, logout} = useAuth();
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
-
-  // Edit states
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -34,11 +31,9 @@ const ProfileScreen = () => {
   const [stateVal, setStateVal] = useState('');
   const [selectedPhotoUri, setSelectedPhotoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     fetchProfile();
   }, []);
-
   const fetchProfile = async () => {
     try {
       if (user?.role === 'FARMER' && user?.farmerId) {
@@ -54,7 +49,6 @@ const ProfileScreen = () => {
       setLoading(false);
     }
   };
-
   const startEditing = () => {
     setName(profileData?.name || '');
     setMobile(profileData?.mobile || '');
@@ -65,7 +59,6 @@ const ProfileScreen = () => {
     setSelectedPhotoUri(null);
     setIsEditing(true);
   };
-
   const handlePickImage = async () => {
     if (!isEditing) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -73,19 +66,16 @@ const ProfileScreen = () => {
       Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to upload profile picture.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setSelectedPhotoUri(result.assets[0].uri);
     }
   };
-
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Name is required');
@@ -93,7 +83,6 @@ const ProfileScreen = () => {
     }
     setSaving(true);
     try {
-      // 1. Update text fields
       const updatedData = {
         name,
         mobile,
@@ -103,16 +92,12 @@ const ProfileScreen = () => {
         state: stateVal,
         email: profileData.email,
       };
-      
       if (user?.userId) {
         await updateUser(user.userId, updatedData);
-
-        // 2. Upload photo if selected
         if (selectedPhotoUri) {
           await uploadUserPhoto(user.userId, selectedPhotoUri);
         }
       }
-
       Alert.alert('Success', 'Profile updated successfully');
       setIsEditing(false);
       setSelectedPhotoUri(null);
@@ -124,31 +109,26 @@ const ProfileScreen = () => {
       setSaving(false);
     }
   };
-
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       {text: 'Cancel', style: 'cancel'},
       {text: 'Logout', style: 'destructive', onPress: () => logout()},
     ]);
   };
-
   if (loading) {
     return <LoadingSpinner message="Loading profile..." />;
   }
-
   const photoUrl = profileData?.profilePhoto
     ? `${BASE_URL}/user/image/${profileData.profilePhoto}`
     : null;
-
   const isFarmer = user?.role === 'FARMER';
-
   return (
     <ScrollView style={[styles.container, !isFarmer && { backgroundColor: '#F8FAFC' }]}>
-      {/* Header */}
+      {}
       <View style={[styles.header, !isFarmer && { backgroundColor: '#1E3A8A' }]}>
-        <TouchableOpacity 
-          onPress={handlePickImage} 
-          disabled={!isEditing} 
+        <TouchableOpacity
+          onPress={handlePickImage}
+          disabled={!isEditing}
           style={styles.avatarWrapper}
         >
           {selectedPhotoUri || photoUrl ? (
@@ -174,12 +154,10 @@ const ProfileScreen = () => {
           </Text>
         </View>
       </View>
-
-      {/* Details Form / View */}
+      {}
       {isEditing ? (
         <View style={styles.detailsContainer}>
           <Text style={styles.sectionTitle}>Edit Personal Information</Text>
-
           <View style={styles.inputRow}>
             <Text style={styles.inputLabel}>Name</Text>
             <TextInput
@@ -189,7 +167,6 @@ const ProfileScreen = () => {
               placeholder="Full Name"
             />
           </View>
-
           <View style={styles.inputRow}>
             <Text style={styles.inputLabel}>Mobile</Text>
             <TextInput
@@ -200,7 +177,6 @@ const ProfileScreen = () => {
               keyboardType="phone-pad"
             />
           </View>
-
           <View style={styles.inputRow}>
             <Text style={styles.inputLabel}>Village</Text>
             <TextInput
@@ -210,7 +186,6 @@ const ProfileScreen = () => {
               placeholder="Village"
             />
           </View>
-
           <View style={styles.inputRow}>
             <Text style={styles.inputLabel}>Address</Text>
             <TextInput
@@ -221,7 +196,6 @@ const ProfileScreen = () => {
               multiline
             />
           </View>
-
           <View style={styles.inputRow}>
             <Text style={styles.inputLabel}>Postal Code</Text>
             <TextInput
@@ -232,7 +206,6 @@ const ProfileScreen = () => {
               keyboardType="number-pad"
             />
           </View>
-
           <View style={styles.inputRow}>
             <Text style={styles.inputLabel}>State</Text>
             <TextInput
@@ -246,7 +219,6 @@ const ProfileScreen = () => {
       ) : (
         <View style={styles.detailsContainer}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-
           <DetailRow label="Mobile" value={profileData?.mobile || 'N/A'} />
           <DetailRow label="Village" value={profileData?.village || 'N/A'} />
           <DetailRow label="Address" value={profileData?.address || 'N/A'} />
@@ -255,8 +227,7 @@ const ProfileScreen = () => {
           <DetailRow label="Status" value={profileData?.status || 'N/A'} />
         </View>
       )}
-
-      {/* Buttons */}
+      {}
       {isEditing ? (
         <View style={styles.actionButtonsContainer}>
           <CustomButton
@@ -296,14 +267,12 @@ const ProfileScreen = () => {
     </ScrollView>
   );
 };
-
 const DetailRow = ({label, value}: {label: string, value: string | undefined | null}) => (
   <View style={styles.detailRow}>
     <Text style={styles.detailLabel}>{label}</Text>
     <Text style={styles.detailValue}>{value}</Text>
   </View>
 );
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -438,5 +407,4 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 });
-
 export default ProfileScreen;

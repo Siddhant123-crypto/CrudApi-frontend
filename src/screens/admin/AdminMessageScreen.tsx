@@ -1,0 +1,437 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  StatusBar,
+  Modal
+} from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { NotificationService } from '../../services/NotificationService';
+import { NotificationSendRequest } from '../../types';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+export const AdminMessageScreen = () => {
+  const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [fetchingUsers, setFetchingUsers] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const route = useRoute<any>();
+  const preSelectedId = route.params?.preSelectedUserId;
+  const preSelectedName = route.params?.preSelectedUserName;
+  const [recipient, setRecipient] = useState<'ALL' | 'SPECIFIC'>(preSelectedId ? 'SPECIFIC' : 'ALL');
+  const [specificUserId, setSpecificUserId] = useState<string>(preSelectedId || '');
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState(preSelectedName || '');
+  const [customersList, setCustomersList] = useState<any[]>([]);
+  const preSelectedRole = route.params?.preSelectedRole;
+  useEffect(() => {
+    if (recipient === 'SPECIFIC') {
+      fetchCustomers();
+    }
+  }, [recipient]);
+  const fetchCustomers = async () => {
+    setFetchingUsers(true);
+    try {
+      const response = await api.get('/user/getAll');
+      const allUsers = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      const validUsers = allUsers.filter((u: any) => {
+        if (preSelectedRole) return u.role === preSelectedRole;
+        return u.role === 'CUSTOMER' || u.role === 'FARMER';
+      });
+      setCustomersList(validUsers);
+    } catch (error) {
+      console.log('Failed to fetch customers:', error);
+      Alert.alert('Error', 'Failed to load customers list.');
+    } finally {
+      setFetchingUsers(false);
+    }
+  };
+  const handleSend = async () => {
+    if (!title.trim() || !message.trim()) {
+      Alert.alert('Error', 'Title and message are required.');
+      return;
+    }
+    if (recipient === 'SPECIFIC' && !specificUserId) {
+      Alert.alert('Error', 'Please select a specific customer.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const senderName = user?.name || user?.email || 'A Farmer';
+      const formattedMessage = `From: ${senderName}\n\n${message.trim()}`;
+      const payload: NotificationSendRequest = {
+        receiverType: specificUserId
+          ? (customersList.find(u => (u.userId || u.id) === specificUserId)?.role || preSelectedRole || 'CUSTOMER')
+          : (preSelectedRole || 'CUSTOMER'),
+        receiverId: recipient === 'ALL' ? undefined : specificUserId,
+        title: title.trim(),
+        message: formattedMessage,
+        notificationType: 'ADMIN',
+      };
+      await NotificationService.sendNotification(payload);
+      Alert.alert('Success', 'Your message send successfully', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (error) {
+      console.error('Send message error:', error);
+      setTimeout(() => {
+        Alert.alert('Error', 'Failed to send message.');
+      }, 100);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const filteredCustomers = customersList.filter(u => {
+    const nameMatch = (u.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const emailMatch = (u.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return nameMatch || emailMatch;
+  });
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#17212F" />
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {preSelectedRole === 'FARMER' ? 'Message Farmer' : preSelectedRole === 'CUSTOMER' ? 'Message Customer' : 'Message User'}
+        </Text>
+      </View>
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.label}>Receiver</Text>
+        {preSelectedId ? (
+          <View style={[styles.input, { backgroundColor: '#F3F4F6' }]}>
+            <Text style={{ color: '#111827', fontWeight: '500' }}>
+              {preSelectedName || 'Selected User'} ({preSelectedRole || 'USER'})
+            </Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.rowSelector}>
+              <TouchableOpacity
+                style={[styles.selectorBtn, recipient === 'ALL' && styles.selectorBtnActive]}
+                onPress={() => setRecipient('ALL')}
+              >
+                <Text style={[styles.selectorText, recipient === 'ALL' && styles.selectorTextActive]}>
+                  All {preSelectedRole === 'FARMER' ? 'Farmers' : preSelectedRole === 'CUSTOMER' ? 'Customers' : 'Users'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.selectorBtn, recipient === 'SPECIFIC' && styles.selectorBtnActive]}
+                onPress={() => setRecipient('SPECIFIC')}
+              >
+                <Text style={[styles.selectorText, recipient === 'SPECIFIC' && styles.selectorTextActive]}>
+                  Select {preSelectedRole === 'FARMER' ? 'Farmer' : preSelectedRole === 'CUSTOMER' ? 'Customer' : 'User'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {recipient === 'SPECIFIC' && (
+              <View style={styles.specificUserContainer}>
+                <View style={styles.searchContainer}>
+                  <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search by name or email..."
+                    placeholderTextColor="#6B7280"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+                {fetchingUsers ? (
+                  <ActivityIndicator size="small" color="#17212F" />
+                ) : filteredCustomers.length === 0 ? (
+                  <Text style={styles.infoText}>No customers found.</Text>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll}>
+                    {filteredCustomers.map((user) => {
+                      const uId = user.userId || user.id;
+                      const isSelected = specificUserId === uId;
+                      return (
+                        <TouchableOpacity
+                          key={uId}
+                          style={[styles.userCard, isSelected && styles.userCardSelected]}
+                          onPress={() => setSpecificUserId(uId)}
+                        >
+                          <Ionicons name="person-circle-outline" size={32} color={isSelected ? "#FFF" : "#6B7280"} />
+                          <Text style={[styles.userName, isSelected && { color: '#FFF' }]} numberOfLines={1}>
+                            {user.name || user.email || 'Unknown'}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+              </View>
+            )}
+          </>
+        )}
+        <View style={styles.readOnlyContainer}>
+          <Text style={styles.label}>Notification Type</Text>
+          <View style={styles.readOnlyBadge}>
+            <Text style={styles.readOnlyBadgeText}>ADMIN</Text>
+          </View>
+        </View>
+        <Text style={styles.label}>Title</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Fresh Produce Available"
+          value={title}
+          onChangeText={setTitle}
+          placeholderTextColor="#9CA3AF"
+        />
+        <Text style={styles.label}>Message</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Enter your message here..."
+          value={message}
+          onChangeText={setMessage}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+          placeholderTextColor="#9CA3AF"
+        />
+        <TouchableOpacity
+          style={[styles.sendButton, loading && styles.sendButtonDisabled]}
+          onPress={handleSend}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.sendButtonText}>Send Message</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+      <Modal transparent visible={showSuccessModal} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={60} color="#10B981" />
+            </View>
+            <Text style={styles.successModalTitle}>Success!</Text>
+            <Text style={styles.successModalMessage}>Message sent successfully</Text>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F5F7F5',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 16 : 16,
+    paddingBottom: 24,
+    backgroundColor: '#17212F',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  backButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 16,
+  },
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  rowSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  selectorBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+  },
+  selectorBtnActive: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#17212F',
+  },
+  selectorText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  selectorTextActive: {
+    color: '#17212F',
+    fontWeight: '700',
+  },
+  readOnlyContainer: {
+    marginTop: 8,
+  },
+  readOnlyBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#17212F',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  readOnlyBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  input: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#111827',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  textArea: {
+    height: 140,
+  },
+  specificUserContainer: {
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+  },
+  infoText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  usersScroll: {
+    flexDirection: 'row',
+  },
+  userCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 12,
+    width: 100,
+    alignItems: 'center',
+  },
+  userCardSelected: {
+    backgroundColor: '#17212F',
+    borderColor: '#17212F',
+  },
+  userName: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  sendButton: {
+    backgroundColor: '#17212F',
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 32,
+    marginBottom: 40,
+    shadowColor: '#17212F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  sendButtonDisabled: {
+    opacity: 0.7,
+  },
+  sendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successModalContent: {
+    width: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  successIconContainer: {
+    marginBottom: 16,
+  },
+  successModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  successModalMessage: {
+    fontSize: 16,
+    color: '#4B5563',
+    textAlign: 'center',
+  },
+});
+export default AdminMessageScreen;
