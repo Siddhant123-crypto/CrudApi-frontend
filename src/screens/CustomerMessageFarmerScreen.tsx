@@ -11,7 +11,8 @@ import {
   Alert,
   Platform,
   StatusBar,
-  Modal
+  Modal,
+  KeyboardAvoidingView
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -90,11 +91,20 @@ export const CustomerMessageFarmerScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Message Farmer</Text>
       </View>
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <Text style={styles.label}>Receiver</Text>
         <View style={styles.rowSelector}>
           <TouchableOpacity
@@ -199,7 +209,8 @@ export const CustomerMessageFarmerScreen = () => {
             <Text style={styles.sendButtonText}>Send Message</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Modal transparent visible={showSuccessModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.successModalContent}>
@@ -235,12 +246,15 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   backButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 38,
+    height: 38,
     borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
     marginLeft: 16,

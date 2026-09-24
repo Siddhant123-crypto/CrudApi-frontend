@@ -3,6 +3,7 @@ import { NotificationService } from '../services/NotificationService';
 import { useAuth } from './AuthContext';
 interface NotificationContextType {
   unreadCount: number;
+  adminSupportUnreadCount: number;
   refreshUnreadCount: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -11,6 +12,7 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [adminSupportUnreadCount, setAdminSupportUnreadCount] = useState(0);
   const { user } = useAuth();
   const refreshUnreadCount = async () => {
     if (!user) {
@@ -23,9 +25,30 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.log('Failed to fetch unread count (could be blocked user)', error);
     }
+
+    if (user?.role === 'ADMIN') {
+      try {
+        const { default: api } = await import('../services/api');
+        const adminSupportRes = await api.get('/support/admin/unread-counts');
+        if (adminSupportRes.data && adminSupportRes.data.data) {
+          const counts = adminSupportRes.data.data;
+          const sum = Object.values(counts).reduce((a: any, b: any) => a + b, 0) as number;
+          setAdminSupportUnreadCount(sum);
+        }
+      } catch (e) {
+        console.log('Failed to fetch admin support counts', e);
+      }
+    }
   };
   useEffect(() => {
     refreshUnreadCount();
+    
+    // Set up polling for notifications
+    const intervalId = setInterval(() => {
+      refreshUnreadCount();
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
   }, [user]);
   const markAsRead = async (id: string) => {
     try {
@@ -52,6 +75,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     <NotificationContext.Provider
       value={{
         unreadCount,
+        adminSupportUnreadCount,
         refreshUnreadCount,
         markAsRead,
         markAllAsRead,

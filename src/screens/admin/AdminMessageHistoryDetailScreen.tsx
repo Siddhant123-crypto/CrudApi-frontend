@@ -24,7 +24,7 @@ const AdminMessageHistoryDetailScreen = () => {
         <View style={[styles.header, { backgroundColor: headerBgColor }]}>
           <View style={styles.headerLeftContainer}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color={headerTextColor} />
+              <Ionicons name="chevron-back" size={24} color={headerTextColor} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: headerTextColor }]}>Error</Text>
           </View>
@@ -51,7 +51,7 @@ const AdminMessageHistoryDetailScreen = () => {
       <View style={[styles.header, { backgroundColor: headerBgColor }]}>
         <View style={styles.headerLeftContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={headerTextColor} />
+            <Ionicons name="chevron-back" size={24} color={headerTextColor} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: headerTextColor }]}>Sent Message Detail</Text>
         </View>

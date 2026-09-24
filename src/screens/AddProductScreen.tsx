@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   Modal,
   FlatList,
   ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -56,8 +58,30 @@ const AddProductScreen = ({ navigation, route }: any) => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [inactiveAlertVisible, setInactiveAlertVisible] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
+  const [categoriesList, setCategoriesList] = useState<string[]>(CATEGORIES);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { default: api } = await import('../services/api');
+      const res = await api.get('/categories');
+      if (res.data && res.data.data) {
+        const catNames = res.data.data.map((c: any) => c.isActive ? c.name : `${c.name} (Inactive)`);
+        setCategoriesList(catNames);
+        if (!isEditMode && !route?.params?.category && catNames.length > 0) {
+          setCategory(catNames[0]);
+        }
+      }
+    } catch (e) {
+      console.log('Failed to load dynamic categories', e);
+    }
+  };
   const [mediaSelectionType, setMediaSelectionType] = useState<'Images' | 'Videos'>('Images');
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   React.useLayoutEffect(() => {
@@ -182,6 +206,11 @@ const AddProductScreen = ({ navigation, route }: any) => {
     }
     if (isNaN(Number(price)) || Number(price) <= 0 || isNaN(Number(quantity)) || Number(quantity) <= 0) {
       Alert.alert('Validation Error', 'Price and Quantity must be valid numbers greater than 0');
+      return;
+    }
+    const isCurrentCategoryInactive = categoriesList.includes(`${category} (Inactive)`);
+    if (isCurrentCategoryInactive) {
+      Alert.alert('Category Unavailable', 'This category is currently unavailable, so you cannot add a product to it.');
       return;
     }
     setLoading(true);
@@ -327,17 +356,28 @@ const AddProductScreen = ({ navigation, route }: any) => {
           <FlatList
             data={data}
             keyExtractor={(item) => item}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.modalItem}
-                onPress={() => {
-                  onSelect(item);
-                  onClose();
-                }}
-              >
-                <Text style={styles.modalItemText}>{item}</Text>
-              </TouchableOpacity>
-            )}
+            renderItem={({ item }) => {
+              const isInactive = item.endsWith(' (Inactive)');
+              const displayText = isInactive ? item.replace(' (Inactive)', '') : item;
+              return (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    if (isInactive) {
+                      onClose();
+                      setInactiveAlertVisible(true);
+                    } else {
+                      onSelect(item);
+                      onClose();
+                    }
+                  }}
+                >
+                  <Text style={[styles.modalItemText, { color: isInactive ? '#EF4444' : '#2E3D2E' }]}>
+                    {displayText} {isInactive && <Text style={{ color: '#EF4444', fontSize: 12 }}>(Inactive)</Text>}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -349,7 +389,11 @@ const AddProductScreen = ({ navigation, route }: any) => {
   };
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.formContainer}>
             {}
             <View style={styles.mediaSection}>
@@ -531,7 +575,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
                             style={styles.inputFlex}
                             value={harvestDate}
                             onChangeText={setHarvestDate}
-                            placeholder="Enter harvest date (e.g. 2026-08-27)"
+                            placeholder="Enter harvest date"
                             placeholderTextColor="#9CA3AF"
                             onFocus={() => setFocusedInput('harvestDate')}
                             onBlur={() => setFocusedInput(null)}
@@ -560,8 +604,9 @@ const AddProductScreen = ({ navigation, route }: any) => {
             </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
       {}
-      {renderDropdownModal(showCategoryModal, () => setShowCategoryModal(false), CATEGORIES, setCategory, 'Select Category')}
+      {renderDropdownModal(showCategoryModal, () => setShowCategoryModal(false), categoriesList, setCategory, 'Select Category')}
       {renderDropdownModal(showUnitModal, () => setShowUnitModal(false), UNITS, setUnit, 'Select Unit')}
       {renderCalendarModal()}
       {}
@@ -594,6 +639,22 @@ const AddProductScreen = ({ navigation, route }: any) => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <Modal visible={inactiveAlertVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 }}>
+            <Ionicons name="alert-circle" size={56} color="#EF4444" style={{ marginBottom: 16 }} />
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1F2937', marginBottom: 8 }}>Notice</Text>
+            <Text style={{ fontSize: 16, color: '#4B5563', textAlign: 'center', marginBottom: 24, alignSelf: 'stretch' }}>This category is inactive</Text>
+            <TouchableOpacity 
+              onPress={() => setInactiveAlertVisible(false)}
+              style={{ backgroundColor: '#10B981', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 12, width: '100%', alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 };
@@ -613,7 +674,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 20,
     paddingTop: 30,
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   mediaSection: {
     flexDirection: 'row',
@@ -770,6 +831,7 @@ const styles = StyleSheet.create({
   inputText: {
     color: '#2E3D2E',
     fontSize: 15,
+    flex: 1,
   },
   saveBtn: {
     backgroundColor: '#1E5631',
@@ -778,7 +840,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 16,
-    marginTop: 20,
+    marginTop: 8,
     elevation: 4,
     shadowColor: '#1E5631',
     shadowOffset: { width: 0, height: 4 },
@@ -801,7 +863,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 20,
     padding: 24,
-    maxHeight: '70%',
+    maxHeight: '45%',
   },
   modalTitle: {
     fontSize: 18,

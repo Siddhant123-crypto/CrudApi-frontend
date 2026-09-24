@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "Node16",
+    "module": "esnext",
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -9,7 +9,7 @@
     "lib": [
       "es2017"
     ],
-    "moduleResolution": "node16",
+    "moduleResolution": "bundler",
 
     "noEmit": true,
     "strict": true,

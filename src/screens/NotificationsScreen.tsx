@@ -65,7 +65,11 @@ const NotificationsScreen = () => {
     }
   };
   const handleNotificationPress = (notification: NotificationResponse) => {
-    navigation.navigate('NotificationDetail', { notification });
+    if (isAdmin && notification.type === 'ADMIN' && notification.senderType === 'FARMER' && notification.senderId) {
+      navigation.navigate('AdminSupportChatScreen', { farmerId: notification.senderId, farmerName: 'Farmer' });
+    } else {
+      navigation.navigate('NotificationDetail', { notification });
+    }
   };
   const handleGroupPress = (group: NotificationGroup) => {
     navigation.navigate('NotificationThread', { group });
@@ -126,7 +130,7 @@ const NotificationsScreen = () => {
             onPress: async () => {
               try {
                 setNotifications(prev => prev.filter(n => n.notificationId !== notification.notificationId));
-                const { api } = await import('../services/api');
+                const api = (await import('../services/api')).default;
                 await api.delete(`/notifications/${notification.notificationId}`);
               } catch (error) {
                 console.log('Failed to delete notification:', error);
@@ -157,7 +161,7 @@ const NotificationsScreen = () => {
       <View style={[styles.header, { backgroundColor: headerBgColor, borderBottomColor: headerBgColor }]}>
         <View style={styles.headerLeftContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={headerTextColor} />
+            <Ionicons name="chevron-back" size={24} color={headerTextColor} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: headerTextColor }]}>Notifications</Text>
         </View>

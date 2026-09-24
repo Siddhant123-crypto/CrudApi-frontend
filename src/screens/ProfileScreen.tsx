@@ -9,6 +9,10 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Modal,
+  Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -16,10 +20,13 @@ import CustomButton from '../components/CustomButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {useAuth} from '../context/AuthContext';
 import {getUserById, updateUser, uploadUserPhoto} from '../services/userService';
-import {getFarmerById} from '../services/farmerService';
+import {getFarmerById, updateFarmerStatus, updateFarmer, uploadFarmerPhoto} from '../services/farmerService';
 import {BASE_URL} from '../services/api';
+import {useNavigation} from '@react-navigation/native';
+
 const ProfileScreen = () => {
   const {user, logout} = useAuth();
+  const navigation = useNavigation<any>();
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -29,8 +36,16 @@ const ProfileScreen = () => {
   const [address, setAddress] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [stateVal, setStateVal] = useState('');
+  const [status, setStatus] = useState('');
+  const [inactiveReason, setInactiveReason] = useState('');
   const [selectedPhotoUri, setSelectedPhotoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Status Modal State
+  const [isStatusModalVisible, setIsStatusModalVisible] = useState(false);
+  const [tempInactiveReason, setTempInactiveReason] = useState('');
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -38,10 +53,10 @@ const ProfileScreen = () => {
     try {
       if (user?.role === 'FARMER' && user?.farmerId) {
         const data = await getFarmerById(user.farmerId);
-        setProfileData(data);
+        setProfileData(data?.response || data);
       } else if (user?.userId) {
         const data = await getUserById(user.userId);
-        setProfileData(data);
+        setProfileData(data?.response || data);
       }
     } catch (error) {
       console.log('Error fetching profile:', error);
@@ -56,6 +71,8 @@ const ProfileScreen = () => {
     setAddress(profileData?.address || '');
     setPostalCode(profileData?.postalCode || '');
     setStateVal(profileData?.state || '');
+    setStatus(profileData?.status || 'ACTIVE');
+    setInactiveReason(profileData?.inactiveReason || '');
     setSelectedPhotoUri(null);
     setIsEditing(true);
   };
@@ -91,8 +108,15 @@ const ProfileScreen = () => {
         postalCode,
         state: stateVal,
         email: profileData.email,
+        status,
+        inactiveReason: status === 'INACTIVE' ? inactiveReason : '',
       };
-      if (user?.userId) {
+      if (isFarmer && user?.farmerId) {
+        await updateFarmer(user.farmerId, updatedData);
+        if (selectedPhotoUri) {
+          await uploadFarmerPhoto(user.farmerId, selectedPhotoUri);
+        }
+      } else if (user?.userId) {
         await updateUser(user.userId, updatedData);
         if (selectedPhotoUri) {
           await uploadUserPhoto(user.userId, selectedPhotoUri);
@@ -109,6 +133,37 @@ const ProfileScreen = () => {
       setSaving(false);
     }
   };
+
+  const handleStatusToggleChange = (value: boolean) => {
+    if (value) {
+      // Toggle to Active
+      submitStatusUpdate(true, '');
+    } else {
+      // Toggle to Inactive - show modal
+      setTempInactiveReason('');
+      setIsStatusModalVisible(true);
+    }
+  };
+
+  const submitStatusUpdate = async (isActive: boolean, reason: string) => {
+    if (!isActive && !reason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for being inactive.');
+      return;
+    }
+    setStatusUpdating(true);
+    try {
+      await updateFarmerStatus({ isActive, inactiveReason: reason });
+      Alert.alert('Success', `Status updated to ${isActive ? 'Active' : 'Inactive'}`);
+      setIsStatusModalVisible(false);
+      fetchProfile();
+    } catch (error: any) {
+      console.log('Error updating status:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update status');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       {text: 'Cancel', style: 'cancel'},
@@ -123,9 +178,16 @@ const ProfileScreen = () => {
     : null;
   const isFarmer = user?.role === 'FARMER';
   return (
-    <ScrollView style={[styles.container, !isFarmer && { backgroundColor: '#F8FAFC' }]}>
-      {}
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: !isFarmer ? '#F8FAFC' : '#F9F9F9' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View style={[styles.header, !isFarmer && { backgroundColor: '#1E3A8A' }]}>
+        <View style={{ position: 'absolute', top: 50, left: 20, zIndex: 10 }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity
           onPress={handlePickImage}
           disabled={!isEditing}
@@ -154,7 +216,7 @@ const ProfileScreen = () => {
           </Text>
         </View>
       </View>
-      {}
+      <ScrollView style={[styles.container, !isFarmer && { backgroundColor: '#F8FAFC' }]} keyboardShouldPersistTaps="handled">
       {isEditing ? (
         <View style={styles.detailsContainer}>
           <Text style={styles.sectionTitle}>Edit Personal Information</Text>
@@ -215,16 +277,98 @@ const ProfileScreen = () => {
               placeholder="State"
             />
           </View>
+          
+          {isFarmer && (
+            <>
+              <View style={styles.inputRow}>
+                <Text style={styles.inputLabel}>Status</Text>
+                <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.statusToggleBtn, status !== 'INACTIVE' && styles.statusActiveBtn]}
+                    onPress={() => setStatus('ACTIVE')}
+                  >
+                    <Text style={[styles.statusToggleText, status !== 'INACTIVE' && styles.statusActiveText]}>Active</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.statusToggleBtn, status === 'INACTIVE' && styles.statusInactiveBtn]}
+                    onPress={() => setStatus('INACTIVE')}
+                  >
+                    <Text style={[styles.statusToggleText, status === 'INACTIVE' && styles.statusInactiveText]}>Inactive</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {status === 'INACTIVE' && (
+                <View style={styles.inputRow}>
+                  <Text style={styles.inputLabel}>Reason for being inactive / kitne dino ke liye</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={inactiveReason}
+                    onChangeText={setInactiveReason}
+                    placeholder="E.g., Out of town for 5 days"
+                    multiline
+                  />
+                </View>
+              )}
+            </>
+          )}
         </View>
       ) : (
         <View style={styles.detailsContainer}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <Text style={[styles.sectionTitle, { flex: 1, marginBottom: 0 }]} numberOfLines={1}>Personal Information</Text>
+            <TouchableOpacity 
+              onPress={startEditing} 
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: isFarmer ? '#1E5631' : '#1E3A8A', 
+                paddingHorizontal: 10, 
+                paddingVertical: 6, 
+                borderRadius: 6,
+                marginLeft: 10,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+                elevation: 2,
+              }}
+            >
+              <Ionicons name="pencil" size={14} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontWeight: 'bold', marginLeft: 4, fontSize: 12 }}>Edit Profile</Text>
+            </TouchableOpacity>
+          </View>
           <DetailRow label="Mobile" value={profileData?.mobile || 'N/A'} />
           <DetailRow label="Village" value={profileData?.village || 'N/A'} />
           <DetailRow label="Address" value={profileData?.address || 'N/A'} />
           <DetailRow label="Postal Code" value={profileData?.postalCode || 'N/A'} />
           <DetailRow label="State" value={profileData?.state || 'N/A'} />
-          <DetailRow label="Status" value={profileData?.status || 'N/A'} />
+          {isFarmer && (
+            <>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Status</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={[styles.detailValue, { marginRight: 8, color: profileData?.status === 'ACTIVE' ? '#16A34A' : '#DC2626' }]}>
+                    {profileData?.status || 'N/A'}
+                  </Text>
+                  {profileData?.status && (
+                    <Switch
+                      value={profileData.status === 'ACTIVE'}
+                      onValueChange={handleStatusToggleChange}
+                      trackColor={{ false: '#FCA5A5', true: '#86EFAC' }}
+                      thumbColor={profileData.status === 'ACTIVE' ? '#16A34A' : '#DC2626'}
+                      disabled={statusUpdating}
+                    />
+                  )}
+                </View>
+              </View>
+              {profileData?.status === 'INACTIVE' && profileData?.inactiveReason && (
+                <View style={styles.reasonBox}>
+                  <Text style={styles.reasonLabel}>Inactive Reason:</Text>
+                  <Text style={styles.reasonText}>{profileData.inactiveReason}</Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
       )}
       {}
@@ -249,14 +393,6 @@ const ProfileScreen = () => {
         </View>
       ) : (
         <View style={styles.actionButtonsContainer}>
-          {!isFarmer && (
-            <CustomButton
-              title="Edit Profile"
-              onPress={startEditing}
-              variant="primary"
-              style={{ marginBottom: 12, backgroundColor: '#1E3A8A' }}
-            />
-          )}
           <CustomButton
             title="Logout"
             onPress={handleLogout}
@@ -264,7 +400,52 @@ const ProfileScreen = () => {
           />
         </View>
       )}
-    </ScrollView>
+
+      {/* Inactive Reason Modal */}
+      <Modal
+        visible={isStatusModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsStatusModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Inactive Status</Text>
+            <Text style={styles.modalSubtitle}>Please provide a reason and how many days you will be inactive:</Text>
+            
+            <TextInput
+              style={[styles.textInput, { minHeight: 80, textAlignVertical: 'top', marginTop: 10 }]}
+              value={tempInactiveReason}
+              onChangeText={setTempInactiveReason}
+              placeholder="E.g., Out of town for 5 days"
+              multiline
+            />
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 20 }}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelButton]} 
+                onPress={() => setIsStatusModalVisible(false)}
+                disabled={statusUpdating}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalSubmitButton]} 
+                onPress={() => submitStatusUpdate(false, tempInactiveReason)}
+                disabled={statusUpdating}
+              >
+                {statusUpdating ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.modalSubmitButtonText}>Submit</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 const DetailRow = ({label, value}: {label: string, value: string | undefined | null}) => (
@@ -282,13 +463,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B5E20',
     alignItems: 'center',
     paddingTop: 50,
-    paddingBottom: 30,
+    paddingBottom: 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: 14,
+    marginBottom: 8,
   },
   avatar: {
     width: 90,
@@ -329,21 +510,26 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     color: '#FFFFFF',
+    textAlign: 'center',
   },
   email: {
     fontSize: 14,
     color: '#C8E6C9',
-    marginTop: 4,
+    marginTop: 2,
+    textAlign: 'center',
   },
   roleBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
-    marginTop: 10,
+    marginTop: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   roleText: {
     color: '#FFFFFF',
+    textAlign: 'center',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -404,7 +590,105 @@ const styles = StyleSheet.create({
   },
   actionButtonsContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 80,
+  },
+  statusToggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    marginHorizontal: 4,
+    borderRadius: 8,
+  },
+  statusActiveBtn: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#16A34A',
+  },
+  statusInactiveBtn: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#DC2626',
+  },
+  statusToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  statusActiveText: {
+    color: '#16A34A',
+  },
+  statusInactiveText: {
+    color: '#DC2626',
+  },
+  reasonBox: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  reasonLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#991B1B',
+    marginBottom: 4,
+  },
+  reasonText: {
+    fontSize: 14,
+    color: '#7F1D1D',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 12,
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginLeft: 12,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#F1F5F9',
+  },
+  modalSubmitButton: {
+    backgroundColor: '#DC2626',
+  },
+  modalCancelButtonText: {
+    color: '#475569',
+    fontWeight: '600',
+  },
+  modalSubmitButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 export default ProfileScreen;

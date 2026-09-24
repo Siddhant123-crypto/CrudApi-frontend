@@ -50,11 +50,12 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
         shadowOpacity: 0.3,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 3 },
+        height: 80,
       },
       headerTintColor: '#FFFFFF',
       headerLeft: () => (
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 16, marginRight: 16 }}>
-          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
+          <Ionicons name="chevron-back-outline" size={26} color="#FFFFFF" />
         </TouchableOpacity>
       ),
       headerTitleStyle: {
@@ -360,12 +361,12 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
-    backgroundColor: '#F5A623', // Orange yellow color
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    bottom: 80,
+    right: 20,
+    backgroundColor: '#F5A623',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,

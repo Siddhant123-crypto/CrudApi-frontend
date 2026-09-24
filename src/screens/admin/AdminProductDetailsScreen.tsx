@@ -77,7 +77,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={28} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Product Details</Text>
         </View>
@@ -89,7 +89,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
       </View>
@@ -113,7 +113,16 @@ export const AdminProductDetailsScreen: React.FC = () => {
         </View>
         {}
         <View style={styles.section3D}>
-          <Text style={styles.sectionTitle}>Full Information</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Full Information</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AdminMessage', { 
+              preSelectedUserId: product.farmerUserId, 
+              preSelectedUserName: product.farmerName,
+              preSelectedRole: 'FARMER'
+            })}>
+              <Ionicons name="chatbubbles" size={26} color="#7C3AED" />
+            </TouchableOpacity>
+          </View>
           <View style={styles.infoRow}>
             <Ionicons name="person-circle-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
             <View style={styles.infoTextContainer}>
@@ -154,7 +163,9 @@ export const AdminProductDetailsScreen: React.FC = () => {
         </View>
         {}
         <View style={styles.section3D}>
-          <Text style={styles.sectionTitle}>Product Activity</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Product Activity</Text>
+          </View>
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{buyersCount}</Text>
@@ -199,15 +210,15 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backButton: { marginRight: 16, padding: 4 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5 },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5 },
   scrollContent: { paddingBottom: 40 },
   profileSection: {
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 16,
     marginHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
@@ -217,25 +228,25 @@ const styles = StyleSheet.create({
     borderColor: '#F3F4F6',
   },
   imageContainer: {
-    width: 130, height: 130, borderRadius: 20,
+    width: 90, height: 90, borderRadius: 16,
     backgroundColor: '#F5C16C',
     justifyContent: 'center', alignItems: 'center',
     overflow: 'hidden',
-    marginBottom: 16,
-    borderWidth: 4, borderColor: '#17212F',
+    marginBottom: 12,
+    borderWidth: 3, borderColor: '#17212F',
     shadowColor: '#000', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8,
   },
   productImage: { width: '100%', height: '100%' },
   imagePlaceholder: { width: '100%', height: '100%', backgroundColor: '#17212F', justifyContent: 'center', alignItems: 'center' },
-  productName: { fontSize: 26, fontWeight: 'bold', color: '#1B2430', marginBottom: 6, textAlign: 'center', paddingHorizontal: 10 },
-  categoryName: { fontSize: 16, color: '#4B5563', marginBottom: 16, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
+  productName: { fontSize: 18, fontWeight: 'bold', color: '#1B2430', marginBottom: 4, textAlign: 'center', paddingHorizontal: 10 },
+  categoryName: { fontSize: 12, color: '#4B5563', marginBottom: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
   statusBadgeContainer: { flexDirection: 'row', justifyContent: 'center' },
   section3D: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 14,
     marginHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
@@ -244,22 +255,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#17212F', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 10 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12 },
-  infoIcon: { marginRight: 16 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#17212F' },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#F9FAFB', padding: 10, borderRadius: 10 },
+  infoIcon: { marginRight: 12 },
   infoTextContainer: { flex: 1 },
-  infoLabel: { fontSize: 14, color: '#6B7280', marginBottom: 4, fontWeight: '600' },
-  infoValue: { fontSize: 17, color: '#111827', fontWeight: 'bold' },
+  infoLabel: { fontSize: 11, color: '#6B7280', marginBottom: 2, fontWeight: '600' },
+  infoValue: { fontSize: 14, color: '#111827', fontWeight: 'bold' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   statBox: {
     width: '47%', backgroundColor: '#17212F',
-    padding: 20, borderRadius: 16, marginBottom: 16,
+    padding: 12, borderRadius: 12, marginBottom: 12,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 6,
   },
-  statValue: { fontSize: 24, fontWeight: '900', color: '#F5C16C', marginBottom: 8 },
-  statLabel: { fontSize: 14, color: '#E5E7EB', fontWeight: '600', textAlign: 'center' },
+  statValue: { fontSize: 18, fontWeight: '900', color: '#F5C16C', marginBottom: 4 },
+  statLabel: { fontSize: 11, color: '#E5E7EB', fontWeight: '600', textAlign: 'center' },
   emptyText: { textAlign: 'center', color: '#6B7280', marginTop: 40, fontSize: 18, fontWeight: '500' },
 });
 export default AdminProductDetailsScreen;

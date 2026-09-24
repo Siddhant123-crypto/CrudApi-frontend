@@ -2,18 +2,25 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNotification } from '../../context/NotificationContext';
 interface AdminHeaderProps {
   onMenuPress?: () => void;
+  showBackButton?: boolean;
 }
-export const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuPress }) => {
+export const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuPress, showBackButton = false }) => {
   const navigation = useNavigation<any>();
+  const { unreadCount, adminSupportUnreadCount } = useNotification();
   return (
     <View style={styles.header}>
       <TouchableOpacity
         style={styles.menuButton}
-        onPress={onMenuPress || (() => navigation.navigate('AdminMenu'))}
+        onPress={
+          showBackButton
+            ? () => navigation.goBack()
+            : onMenuPress || (() => navigation.navigate('AdminMenu'))
+        }
       >
-        <Ionicons name="menu" size={28} color="#FFFFFF" />
+        <Ionicons name={showBackButton ? "chevron-back" : "menu"} size={28} color="#FFFFFF" />
       </TouchableOpacity>
       <View style={styles.titleContainer}>
         <Text style={styles.titleText}>
@@ -21,10 +28,22 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuPress }) => {
         </Text>
       </View>
       <View style={styles.rightActions}>
-        <TouchableOpacity style={styles.profileButton}>
+        <TouchableOpacity 
+          style={styles.iconButton} 
+          onPress={() => navigation.navigate('AdminFarmers', { initialTab: 'Blocked' })}
+        >
+          <Ionicons name="chatbubbles-outline" size={26} color="#FFFFFF" />
+          {adminSupportUnreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{adminSupportUnreadCount > 99 ? '99+' : adminSupportUnreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('Notifications')}>
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="notifications-outline" size={20} color="#17212F" />
-            <View style={styles.badge} />
+            {unreadCount > 0 && <View style={[styles.badge, styles.notificationBadge]} />}
           </View>
         </TouchableOpacity>
       </View>
@@ -44,10 +63,11 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   menuButton: {
-    padding: 8,
+    padding: 4,
   },
   titleContainer: {
-    alignItems: 'center',
+    marginLeft: 8,
+    flex: 1,
   },
   titleText: {
     fontSize: 20,
@@ -63,20 +83,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconButton: {
-    padding: 8,
-    marginRight: 8,
+    padding: 6,
+    marginRight: 2,
     position: 'relative',
   },
   badge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    top: -4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#EF4444',
-    borderWidth: 2,
-    borderColor: '#F5C16C',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#17212F',
+    paddingHorizontal: 2,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
+  notificationBadge: {
+    top: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    minWidth: 12,
+    paddingHorizontal: 0,
   },
   profileButton: {
     padding: 4,

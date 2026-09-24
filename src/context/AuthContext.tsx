@@ -154,7 +154,7 @@ export const AuthProvider: React.FC<{
       );
       setUser(null);
       setInitialAuthRoute(
-        'RoleSelection',
+        'NewUserLogin',
       );
       console.log(
         'LOGOUT SUCCESSFUL',

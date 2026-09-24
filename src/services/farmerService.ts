@@ -44,3 +44,9 @@ export const getFarmerPhoto = async (id: number | string) => {
   const response = await api.get(`/farmer/getPhoto/${id}`);
   return response.data;
 };
+
+export const updateFarmerStatus = async (statusData: { isActive: boolean; inactiveReason?: string }) => {
+  const response = await api.put('/farmer/status', statusData);
+  return response.data;
+};
+

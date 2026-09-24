@@ -11,7 +11,7 @@ export const AdminProductsScreen: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-  const tabs = ['All', 'APPROVED', 'PENDING', 'REJECTED'];
+  const tabs = ['All', 'Active', 'Inactive'];
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -29,8 +29,15 @@ export const AdminProductsScreen: React.FC = () => {
     }
   };
   const filteredProducts = products.filter(p => {
-    if (activeTab !== 'All' && p.status !== activeTab) return false;
-    if (searchQuery && !p.productName?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (activeTab === 'All' && p.isActive !== true) return false;
+    if (activeTab === 'Active' && p.isActive !== true) return false;
+    if (activeTab === 'Inactive' && p.isActive !== false) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchProduct = p.productName?.toLowerCase().includes(q);
+      const matchFarmer = p.farmerName?.toLowerCase().includes(q);
+      if (!matchProduct && !matchFarmer) return false;
+    }
     return true;
   });
   const getProductImage = (item: any) => {
@@ -60,10 +67,10 @@ export const AdminProductsScreen: React.FC = () => {
       )}
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
-          <Text style={styles.productName}>{item.productName}</Text>
-          <StatusBadge status={item.status === 'APPROVED' ? 'Active' : (item.status === 'REJECTED' ? 'Blocked' : (item.status === 'PENDING' ? 'Pending' : item.status))} />
+          <Text style={styles.productName} numberOfLines={1}>{item.productName}</Text>
+          <StatusBadge status={item.isActive ? 'Active' : 'Inactive'} />
         </View>
-        <Text style={styles.farmerName}>{item.farmerName || 'Unknown Farmer'}</Text>
+        <Text style={styles.farmerName} numberOfLines={1}>{item.farmerName || 'Unknown Farmer'}</Text>
         <Text style={styles.price}>{formatCurrency(item.price)} / {item.unit || 'unit'}</Text>
         <Text style={styles.stock}>Stock: {item.quantity || 0} {item.unit || 'units'}</Text>
       </View>
@@ -71,14 +78,14 @@ export const AdminProductsScreen: React.FC = () => {
   );
   return (
     <View style={styles.container}>
-      <AdminHeader />
+      <AdminHeader showBackButton />
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Products</Text>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search products..."
+            placeholder="Search by product or farmer..."
             placeholderTextColor="#6B7280"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -115,17 +122,14 @@ export const AdminProductsScreen: React.FC = () => {
           <Text style={styles.emptyText}>No products found.</Text>
         </View>
       )}
-      <TouchableOpacity style={styles.fab}>
-        <Ionicons name="add" size={24} color="#17212F" />
-        <Text style={styles.fabText}>Add Product</Text>
-      </TouchableOpacity>
+
     </View>
   );
 };
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 8 },
-  screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },
+  screenTitle: { fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 12, height: 44,
@@ -140,7 +144,7 @@ const styles = StyleSheet.create({
   activeTabText: { color: '#F5C16C' },
   listContent: { paddingHorizontal: 16, paddingBottom: 100 },
   productCard: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', height: 100,
     backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
@@ -154,17 +158,11 @@ const styles = StyleSheet.create({
   },
   cardContent: { flex: 1 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  productName: { fontSize: 16, fontWeight: 'bold', color: '#1B2430', flex: 1, marginRight: 8 },
+  productName: { fontSize: 15, fontWeight: 'bold', color: '#1B2430', flex: 1, marginRight: 8 },
   farmerName: { fontSize: 12, color: '#6B7280', marginBottom: 4 },
   price: { fontSize: 14, fontWeight: '700', color: '#17212F', marginBottom: 2 },
   stock: { fontSize: 12, color: '#9CA3AF' },
-  fab: {
-    position: 'absolute', bottom: 30, right: 16, left: 16,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#F5C16C', borderRadius: 12, paddingVertical: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
-  },
-  fabText: { fontSize: 14, fontWeight: 'bold', color: '#17212F', marginLeft: 8 },
+
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: '#6B7280', fontSize: 16 },
 });

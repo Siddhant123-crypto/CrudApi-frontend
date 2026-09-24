@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {View, TextInput, Text, StyleSheet, TouchableOpacity, KeyboardTypeOptions, ViewStyle, TextStyle, StyleProp} from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 interface CustomInputProps {
   label?: string;
   value: string;
@@ -62,9 +63,11 @@ const CustomInput: React.FC<CustomInputProps> = ({
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
             style={styles.eyeButton}>
-            <Text style={styles.eyeText}>
-              {isPasswordVisible ? 'Hide' : 'Show'}
-            </Text>
+            <Ionicons
+              name={isPasswordVisible ? 'eye' : 'eye-off'}
+              size={22}
+              color="#1B5E20"
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -77,7 +80,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   label: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333333',
     marginBottom: 6,

@@ -1,28 +1,110 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { useNavigation } from '@react-navigation/native';
-const mockCategories = [
-  { id: '1', name: 'Vegetables', description: 'Fresh vegetables', status: 'Active', icon: 'leaf-outline' },
-  { id: '2', name: 'Fruits', description: 'Fresh farm fruits', status: 'Active', icon: 'nutrition-outline' },
-  { id: '3', name: 'Grains', description: 'Healthy grains', status: 'Active', icon: 'flower-outline' },
-  { id: '4', name: 'Dairy', description: 'Milk & dairy products', status: 'Active', icon: 'water-outline' },
-  { id: '5', name: 'Root Vegetables', description: 'Potatoes, carrots, etc.', status: 'Active', icon: 'server-outline' },
-  { id: '6', name: 'Wild Forest Vegetables', description: 'Rare forest produce', status: 'Active', icon: 'rose-outline' },
-];export const AdminCategoriesScreen: React.FC = () => {
+
+export const AdminCategoriesScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [categoryToToggle, setCategoryToToggle] = useState<{ id: string, willBeActive: boolean } | null>(null);
   const navigation = useNavigation<any>();
-  const filteredCategories = mockCategories.filter(c =>
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      const { default: api } = await import('../../services/api');
+      const res = await api.get('/admin/categories');
+      if (res.data && res.data.data) {
+        setCategories(res.data.data);
+      }
+    } catch (e) {
+      console.log('Failed to fetch categories:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+    try {
+      setSaving(true);
+      const { default: api } = await import('../../services/api');
+      const res = await api.post('/admin/categories', {
+        name: newCatName.trim(),
+        description: newCatDesc.trim() || 'No description'
+      });
+      if (res.data && res.data.data) {
+        setCategories([...categories, res.data.data]);
+        setIsModalVisible(false);
+        setNewCatName('');
+        setNewCatDesc('');
+      }
+    } catch (e) {
+      console.log('Error adding category:', e);
+      Alert.alert('Failed to add category. It may already exist.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleCategory = (categoryId: string, isActive: boolean) => {
+    setCategoryToToggle({ id: categoryId, willBeActive: !isActive });
+    setConfirmModalVisible(true);
+  };
+
+  const confirmToggle = () => {
+    if (categoryToToggle) {
+      toggleCategoryStatus(categoryToToggle.id, !categoryToToggle.willBeActive);
+    }
+    setConfirmModalVisible(false);
+    setCategoryToToggle(null);
+  };
+
+  const toggleCategoryStatus = async (categoryId: string, isActive: boolean) => {
+    try {
+      const { default: api } = await import('../../services/api');
+      const action = isActive ? 'deactivate' : 'activate';
+      await api.put(`/admin/categories/${categoryId}/${action}`);
+      setCategories(prev => prev.map(c => c.categoryId === categoryId ? { ...c, isActive: !isActive } : c));
+    } catch (e) {
+      console.log('Failed to toggle category status', e);
+      Alert.alert('Failed to update category status.');
+    }
+  };
+
+  const filteredCategories = categories.filter(c =>
     !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );const renderItem = ({ item }: { item: any }) => (
+  );
+
+  const getIconForCategory = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('veg')) return 'leaf-outline';
+    if (n.includes('fruit')) return 'nutrition-outline';
+    if (n.includes('grain')) return 'flower-outline';
+    if (n.includes('dairy') || n.includes('milk')) return 'water-outline';
+    return 'grid-outline';
+  };
+
+  const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.categoryCard}
       onPress={() => navigation.navigate('AdminCategoryProducts', { category: item.name })}
-    ><View style={styles.cardLeft}>
+    >
+      <View style={[styles.cardLeft, { opacity: item.isActive ? 1 : 0.4 }]}>
         <View style={styles.iconContainer}>
-          <Ionicons name={item.icon as any} size={28} color="#F5C16C" />
+          <Ionicons name={getIconForCategory(item.name) as any} size={28} color="#F5C16C" />
         </View>
         <View>
           <Text style={styles.categoryName}>{item.name}</Text>
@@ -30,12 +112,24 @@ const mockCategories = [
         </View>
       </View>
       <View style={styles.cardRight}>
-        <StatusBadge status={item.status} />
+        <View style={{ opacity: item.isActive ? 1 : 0.4 }}>
+          <StatusBadge status={item.isActive ? 'Active' : 'Inactive'} />
+        </View>
+        <TouchableOpacity 
+          style={{ marginTop: 8, padding: 6, backgroundColor: item.isActive ? '#FEE2E2' : '#D1FAE5', borderRadius: 6, alignItems: 'center' }}
+          onPress={() => handleToggleCategory(item.categoryId, item.isActive)}
+        >
+          <Text style={{ fontSize: 10, fontWeight: 'bold', color: item.isActive ? '#EF4444' : '#10B981' }}>
+            {item.isActive ? 'Inactive' : 'Active'}
+          </Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
-  );return (
+  );
+
+  return (
     <View style={styles.container}>
-      <AdminHeader />
+      <AdminHeader showBackButton />
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Categories</Text>
         <View style={styles.searchContainer}>
@@ -51,18 +145,75 @@ const mockCategories = [
       </View>
       <FlatList
         data={filteredCategories}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.categoryId || item.name}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity style={styles.fab} onPress={() => setIsModalVisible(true)}>
         <Ionicons name="add" size={24} color="#17212F" />
         <Text style={styles.fabText}>Add Category</Text>
       </TouchableOpacity>
+
+      <Modal visible={isModalVisible} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', padding: 20, borderRadius: 16 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add New Category</Text>
+            <TextInput 
+              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 }}
+              placeholder="Category Name (e.g. Spices)"
+              value={newCatName}
+              onChangeText={setNewCatName}
+            />
+            <TextInput 
+              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20 }}
+              placeholder="Description (optional)"
+              value={newCatDesc}
+              onChangeText={setNewCatDesc}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <TouchableOpacity onPress={() => setIsModalVisible(false)} style={{ padding: 12, marginRight: 12 }}>
+                <Text style={{ color: '#666', fontWeight: 'bold' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleAddCategory} disabled={saving} style={{ backgroundColor: '#17212F', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>{saving ? 'Adding...' : 'Add'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal visible={confirmModalVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: categoryToToggle?.willBeActive ? '#E6F4EA' : '#FEE2E2', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+               <Ionicons name={categoryToToggle?.willBeActive ? "checkmark-circle" : "warning"} size={40} color={categoryToToggle?.willBeActive ? "#1E8E3E" : "#EF4444"} />
+            </View>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 12, textAlign: 'center' }}>Are you sure?</Text>
+            <Text style={{ fontSize: 15, color: '#6B7280', marginBottom: 30, textAlign: 'center', lineHeight: 22 }}>
+              Are you sure you want to <Text style={{ fontWeight: 'bold', color: categoryToToggle?.willBeActive ? '#1E8E3E' : '#EF4444' }}>{categoryToToggle?.willBeActive ? 'activate' : 'deactivate'}</Text> this category?
+            </Text>
+            <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between', gap: 12 }}>
+              <TouchableOpacity 
+                onPress={() => { setConfirmModalVisible(false); setCategoryToToggle(null); }} 
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center' }}>
+                <Text style={{ color: '#4B5563', fontWeight: 'bold', fontSize: 16 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={confirmToggle} 
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: categoryToToggle?.willBeActive ? '#1E8E3E' : '#EF4444', alignItems: 'center', shadowColor: categoryToToggle?.willBeActive ? '#1E8E3E' : '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Yes, {categoryToToggle?.willBeActive ? 'Activate' : 'Deactivate'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
-};const styles = StyleSheet.create({
+};
+
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 16 },
   screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },

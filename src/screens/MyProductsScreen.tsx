@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   SafeAreaView,
   View,
@@ -40,18 +40,26 @@ interface Product {
   reviewCount?: number;
   harvestDate?: string;
 }
-const MyProductsScreen = ({ navigation }: any) => {
+const MyProductsScreen = ({ navigation, route }: any) => {
   const { user } = useAuth();
   const [products, setProducts]   = useState<Product[]>([]);
   const [loading, setLoading]     = useState(true);
   const [hasError, setHasError]   = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState(route?.params?.searchQuery || '');
   const [filter, setFilter]       = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   useFocusEffect(
     useCallback(() => {
       fetchProducts();
     }, [user?.farmerId]),
   );
+
+  // Sync search text when navigated from dashboard search bar
+  useEffect(() => {
+    const query = route?.params?.searchQuery;
+    if (query !== undefined && query !== null) {
+      setSearchText(query);
+    }
+  }, [route?.params?.searchQuery]);
   const fetchProducts = async () => {
     if (!user?.farmerId) {
       console.log('MY PRODUCTS: No farmerId in user context:', JSON.stringify(user));

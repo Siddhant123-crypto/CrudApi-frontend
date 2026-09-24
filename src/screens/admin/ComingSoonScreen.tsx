@@ -14,7 +14,7 @@ export const ComingSoonScreen: React.FC<ComingSoonScreenProps> = ({ route }) => 
   const { title = 'Module', icon = 'construct-outline' } = route?.params || {};
   return (
     <View style={styles.container}>
-      <AdminHeader />
+      <AdminHeader showBackButton />
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={64} color="#F5C16C" />

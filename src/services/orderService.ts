@@ -46,3 +46,12 @@ export const getFarmerItemsStatus = (items: any[]): string => {
   if (allConfirmedOrBeyond) return 'CONFIRMED';
   return 'PENDING';
 };
+
+export const getAllAdminOrders = async () => {
+  try {
+    const response = await api.get('/admin/orders');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

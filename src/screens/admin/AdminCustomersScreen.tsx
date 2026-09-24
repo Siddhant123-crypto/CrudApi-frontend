@@ -55,7 +55,7 @@ export const AdminCustomersScreen: React.FC = () => {
   );
   return (
     <View style={styles.container}>
-      <AdminHeader />
+      <AdminHeader showBackButton />
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Customers</Text>
         <View style={styles.searchContainer}>

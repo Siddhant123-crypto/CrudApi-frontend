@@ -9,10 +9,13 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
 import {getProductImageUrl} from '../services/productService';
+import {getUserById} from '../services/userService';
 import api from '../services/api';
 const CheckoutScreen = ({route, navigation}: any) => {
   const {orderItems, totalAmount} = route.params || {};
@@ -22,6 +25,27 @@ const CheckoutScreen = ({route, navigation}: any) => {
   const [village, setVillage] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [state, setState] = useState('Maharashtra');
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (user?.userId) {
+          const res = await getUserById(user.userId);
+          const userData = res?.response || res;
+          if (userData) {
+            if (userData.address) setAddress(userData.address);
+            if (userData.village) setVillage(userData.village);
+            if (userData.postalCode) setPostalCode(userData.postalCode);
+            if (userData.state) setState(userData.state);
+          }
+        }
+      } catch (error) {
+        console.log('Error fetching user data in checkout:', error);
+      }
+    };
+    fetchUserData();
+  }, [user]);
+
   if (!orderItems || orderItems.length === 0) {
     return (
       <View style={styles.errorContainer}>
@@ -74,11 +98,15 @@ const CheckoutScreen = ({route, navigation}: any) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
@@ -164,7 +192,8 @@ const CheckoutScreen = ({route, navigation}: any) => {
           </View>
         </View>
         <View style={{height: 100}} />
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       {}
       <View style={styles.bottomBar}>
         <View style={styles.totalContainer}>
@@ -199,7 +228,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E3A8A',
   },
   backButton: {
-    padding: 4,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
   headerTitle: {
     fontSize: 18,

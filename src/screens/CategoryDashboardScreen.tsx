@@ -63,10 +63,27 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
       },
       headerTintColor: '#FFFFFF',
       headerTitleStyle: {
-        fontSize: 20,
-        fontWeight: '800',
+        fontSize: 16,
+        fontWeight: '700',
         color: '#FFFFFF',
       },
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: 12,
+            marginRight: 6,
+          }}
+        >
+          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+      ),
     });
   }, [navigation, category]);
   useFocusEffect(
@@ -83,7 +100,7 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
         p =>
           p.isDelete !== true &&
           p.status !== 'DELETED' &&
-          p.category?.toLowerCase() === category.toLowerCase()
+          (category === 'All Products' || p.category?.toLowerCase() === category.toLowerCase())
       );
       setAllProducts(visible);
     } catch (error) {
@@ -105,7 +122,9 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
   const activePreset = PRICE_PRESETS[activePriceIndex];
   const displayedProducts = allProducts.filter(p => {
     const name = p.productName || '';
-    const matchesSearch = name.toLowerCase().includes(searchText.toLowerCase());
+    const farmer = p.farmerName || '';
+    const searchTerm = searchText.toLowerCase();
+    const matchesSearch = name.toLowerCase().includes(searchTerm) || farmer.toLowerCase().includes(searchTerm);
     const inPriceRange = p.price >= activePreset.min && p.price <= activePreset.max;
     return matchesSearch && inPriceRange;
   });

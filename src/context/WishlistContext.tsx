@@ -14,9 +14,9 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [wishlist, setWishlist] = useState<WishlistResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const refreshWishlist = useCallback(async () => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || user?.role === 'ADMIN') {
       setWishlist([]);
       setIsLoading(false);
       return;
@@ -52,8 +52,10 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       const exists = isInWishlist(productId);
       if (exists) {
         await wishlistService.removeFromWishlist(productId);
+        Alert.alert('Success', 'Removed from product wishlist');
       } else {
         await wishlistService.addToWishlist(productId);
+        Alert.alert('Success', 'Added to product wishlist');
       }
       await refreshWishlist();
     } catch (error: any) {

@@ -11,11 +11,11 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, growth, icon }
   return (
     <View style={styles.card}>
       <View style={styles.iconContainer}>
-        <Ionicons name={icon} size={22} color="#FFFFFF" />
+        <Ionicons name={icon} size={18} color="#FFFFFF" />
       </View>
       <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
       <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={styles.growth} numberOfLines={1} adjustsFontSizeToFit>{growth}</Text>
+      {growth ? <Text style={styles.growth} numberOfLines={1} adjustsFontSizeToFit>{growth}</Text> : null}
     </View>
   );
 };
@@ -23,8 +23,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 18,
+    paddingHorizontal: 6,
+    paddingVertical: 12,
     alignItems: 'center',
     width: '23%',
     minWidth: 70,
@@ -36,21 +36,21 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     backgroundColor: '#17212F',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   title: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#6B7280',
-    marginBottom: 6,
+    marginBottom: 4,
     textAlign: 'center',
   },
   value: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1B2430',
     marginBottom: 4,

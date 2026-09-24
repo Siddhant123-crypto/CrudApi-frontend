@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-export const BASE_URL = 'http://172.16.20.219:8080';
+export const BASE_URL = 'http://172.16.21.141:8080';
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

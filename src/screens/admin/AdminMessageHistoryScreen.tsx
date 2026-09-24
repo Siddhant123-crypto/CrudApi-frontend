@@ -67,7 +67,7 @@ export default function AdminMessageHistoryScreen() {
             onPress: async () => {
               try {
                 setHistory(prev => prev.filter(n => n.notificationId !== item.notificationId));
-                const { api } = await import('../../services/api');
+                const api = (await import('../../services/api')).default;
                 await api.delete(`/notifications/${item.notificationId}`);
               } catch (error) {
                 console.log('Failed to delete message:', error);
@@ -128,7 +128,7 @@ export default function AdminMessageHistoryScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Message History</Text>
       </View>

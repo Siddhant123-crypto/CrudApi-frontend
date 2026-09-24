@@ -56,7 +56,7 @@ const NotificationThreadScreen = () => {
             onPress: async () => {
               try {
                 setNotifications(prev => prev.filter(n => n.notificationId !== notification.notificationId));
-                const { api } = await import('../services/api');
+                  const api = (await import('../services/api')).default;
                 await api.delete(`/notifications/${notification.notificationId}`);
               } catch (error) {
                 console.log('Failed to delete notification:', error);
@@ -77,7 +77,7 @@ const NotificationThreadScreen = () => {
       <View style={[styles.header, { backgroundColor: headerBgColor }]}>
         <View style={styles.headerLeftContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={headerTextColor} />
+            <Ionicons name="chevron-back" size={24} color={headerTextColor} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: headerTextColor }]}>{group.senderName}</Text>
         </View>

@@ -1,12 +1,37 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import { StatCard } from '../../components/admin/StatCard';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StatusBadge } from '../../components/admin/StatusBadge';
+import { getAdminDashboardSummary } from '../../services/adminService';
+
 export const AdminDashboardScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const [dashboardData, setDashboardData] = useState({
+    totalFarmers: 0,
+    totalCustomers: 0,
+    totalProducts: 0,
+    totalOrders: 0,
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        try {
+          const res = await getAdminDashboardSummary();
+          if (res && res.data) {
+            setDashboardData(res.data);
+          }
+        } catch (error) {
+          console.error('Error fetching admin dashboard summary:', error);
+        }
+      };
+      fetchData();
+    }, [])
+  );
+
   const currentDate = new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -31,10 +56,10 @@ export const AdminDashboardScreen: React.FC = () => {
         </View>
         {}
         <View style={styles.statsRow}>
-          <StatCard title="Farmers" value="165" growth="↑ 12 this month" icon="people" />
-          <StatCard title="Customers" value="82" growth="↑ 8 this month" icon="people-outline" />
-          <StatCard title="Products" value="86" growth="↑ 10 this month" icon="cube" />
-          <StatCard title="Orders" value="23" growth="↑ 5 this month" icon="cart" />
+          <StatCard title="Farmers" value={dashboardData.totalFarmers} growth="" icon="people" />
+          <StatCard title="Customers" value={dashboardData.totalCustomers} growth="" icon="people-outline" />
+          <StatCard title="Products" value={dashboardData.totalProducts} growth="" icon="cube" />
+          <StatCard title="Orders" value={dashboardData.totalOrders} growth="" icon="cart" />
         </View>
         {}
         <View style={styles.orderSummaryRow}>
@@ -91,17 +116,17 @@ export const AdminDashboardScreen: React.FC = () => {
             {}
             <View style={styles.chartContainer}>
               <View style={styles.yAxis}>
-                <Text style={styles.axisText}>30k</Text>
-                <Text style={styles.axisText}>20k</Text>
-                <Text style={styles.axisText}>10k</Text>
+                <Text style={styles.axisText}>30</Text>
+                <Text style={styles.axisText}>20</Text>
+                <Text style={styles.axisText}>10</Text>
                 <Text style={styles.axisText}>0</Text>
               </View>
               <View style={styles.lineChartContainer}>
                 {[12, 28, 15, 22, 18, 30].map((val, idx, data) => {
                   if (idx === data.length - 1) return null;
                   const nextVal = data[idx + 1];
-                  const stepX = 22;
-                  const maxHeight = 100;
+                  const stepX = 18;
+                  const maxHeight = 80;
                   const x1 = idx * stepX;
                   const y1 = maxHeight - (val / 30) * maxHeight;
                   const x2 = (idx + 1) * stepX;
@@ -125,8 +150,8 @@ export const AdminDashboardScreen: React.FC = () => {
                   );
                 })}
                 {[12, 28, 15, 22, 18, 30].map((val, idx) => {
-                  const stepX = 22;
-                  const maxHeight = 100;
+                  const stepX = 18;
+                  const maxHeight = 80;
                   const x1 = idx * stepX;
                   const y1 = maxHeight - (val / 30) * maxHeight;
                   return (
@@ -150,7 +175,7 @@ export const AdminDashboardScreen: React.FC = () => {
           <View style={styles.recentOrdersCard}>
             <View style={styles.recentOrdersHeader}>
               <Text style={styles.recentOrdersTitle} numberOfLines={1} adjustsFontSizeToFit>Recent Orders</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('AdminOrders')}>
+              <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('AdminOrders')}>
                 <Text style={styles.viewAllText} numberOfLines={1} adjustsFontSizeToFit>View All</Text>
               </TouchableOpacity>
             </View>
@@ -258,12 +283,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   welcomeText: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1B2430',
   },
   welcomeSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
   },
@@ -303,7 +328,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingHorizontal: 4,
     marginHorizontal: 4,
     shadowColor: '#000',
@@ -313,21 +338,21 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   summaryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
     marginBottom: 6,
   },
+  summaryLabel: {
+    fontSize: 10,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
   summaryValue: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#1B2430',
     textAlign: 'center',
@@ -379,23 +404,25 @@ const styles = StyleSheet.create({
   },
   revenueAmount: {
     color: '#FFFFFF',
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   revenueGrowth: {
     color: '#F5C16C',
-    fontSize: 13,
-    marginBottom: 20,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   chartContainer: {
     flexDirection: 'row',
-    height: 120,
+    height: 100,
+    overflow: 'hidden',
   },
   yAxis: {
     justifyContent: 'space-between',
-    marginRight: 8,
-    paddingBottom: 20,
+    marginRight: 6,
+    paddingBottom: 4,
   },
   axisText: {
     color: '#6B7280',
@@ -403,10 +430,11 @@ const styles = StyleSheet.create({
   },
   lineChartContainer: {
     flex: 1,
-    height: 100,
+    height: 80,
     position: 'relative',
-    marginLeft: 8,
-    marginTop: 10,
+    marginLeft: 4,
+    marginTop: 4,
+    overflow: 'hidden',
   },
   recentOrdersCard: {
     flex: 1.1,
@@ -427,16 +455,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   recentOrdersTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#1B2430',
     flexShrink: 1,
   },
+  viewAllButton: {
+    backgroundColor: '#F5C16C',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
   viewAllText: {
-    fontSize: 14,
-    color: '#F5C16C',
-    fontWeight: '600',
-    marginLeft: 4,
+    fontSize: 11,
+    color: '#17212F',
+    fontWeight: '700',
   },
   orderList: {
     flex: 1,

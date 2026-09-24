@@ -124,7 +124,7 @@ const CustomerOrdersScreen = ({navigation}: any) => {
       {}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Home')}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Orders</Text>
       </View>
@@ -177,8 +177,13 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   backBtn: {
-    padding: 4,
-    marginRight: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
   headerTitle: {
     fontSize: 20,

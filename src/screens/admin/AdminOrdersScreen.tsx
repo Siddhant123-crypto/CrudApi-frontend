@@ -1,48 +1,89 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
-import { useNavigation } from '@react-navigation/native';
-const mockOrders = [
-  { id: '#ORD-123', customer: 'Rahul Patil', amount: '₹850', date: '02 Sep, 2:30 PM', status: 'Delivered' },
-  { id: '#ORD-122', customer: 'Sneha Sharma', amount: '₹650', date: '02 Sep, 11:15 AM', status: 'Processing' },
-  { id: '#ORD-121', customer: 'Amit Kumar', amount: '₹1,250', date: '01 Sep, 5:40 PM', status: 'Pending' },
-  { id: '#ORD-120', customer: 'Pooja Singh', amount: '₹430', date: '01 Sep, 1:20 PM', status: 'Cancelled' },
-];
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { getAllAdminOrders } from '../../services/orderService';
+
 export const AdminOrdersScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-  const tabs = ['All', 'Pending', 'Processing', 'Delivered', 'Cancelled'];
-  const filteredOrders = mockOrders.filter(o => {
-    if (activeTab !== 'All' && o.status !== activeTab) return false;
-    if (searchQuery && !o.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.orderCard} onPress={() => navigation.navigate('AdminOrderDetails', { orderId: item.id })}>
-      <View style={styles.cardHeader}>
-        <View style={styles.headerLeft}>
-          <View style={styles.iconBg}>
-            <Ionicons name="bag-handle-outline" size={16} color="#FFFFFF" />
-          </View>
-          <Text style={styles.orderId}>{item.id}</Text>
-        </View>
-        <Text style={styles.amount}>{item.amount}</Text>
-      </View>
-      <View style={styles.cardContent}>
-        <Text style={styles.customer}>{item.customer}</Text>
-        <View style={styles.contentRight}>
-          <Text style={styles.date}>{item.date}</Text>
-          <StatusBadge status={item.status} />
-        </View>
-      </View>
-    </TouchableOpacity>
+  const tabs = ['All', 'Processing', 'Delivered', 'Cancelled'];
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [])
   );
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await getAllAdminOrders();
+      if (res && res.data) {
+        setOrders(res.data);
+      }
+    } catch (error) {
+      console.error('Error fetching admin orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredOrders = orders.filter(o => {
+    // 1. Search filter
+    const shortId = `#ORD-${o.orderId.substring(0, 5).toUpperCase()}`;
+    if (searchQuery && !shortId.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+
+    // 2. Tab filter
+    if (activeTab === 'All') {
+      return true;
+    } else if (activeTab === 'Processing') {
+      return ['CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY'].includes(o.orderStatus);
+    } else if (activeTab === 'Delivered') {
+      return o.orderStatus === 'DELIVERED';
+    } else if (activeTab === 'Cancelled') {
+      return o.orderStatus === 'CANCELLED';
+    }
+    
+    return false;
+  }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+
+  const renderItem = ({ item }: { item: any }) => {
+    const shortId = `#ORD-${item.orderId.substring(0, 5).toUpperCase()}`;
+    const dateObj = new Date(item.orderDate);
+    const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ', ' + 
+                    dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    
+    return (
+      <TouchableOpacity style={styles.orderCard} onPress={() => navigation.navigate('AdminOrderDetails', { orderId: item.orderId })}>
+        <View style={styles.cardHeader}>
+          <View style={styles.headerLeft}>
+            <View style={styles.iconBg}>
+              <Ionicons name="bag-handle-outline" size={16} color="#FFFFFF" />
+            </View>
+            <Text style={styles.orderId}>{shortId}</Text>
+          </View>
+          <Text style={styles.amount}>₹{item.totalAmount}</Text>
+        </View>
+        <View style={styles.cardContent}>
+          <Text style={styles.customer}>{item.customerName}</Text>
+          <View style={styles.contentRight}>
+            <Text style={styles.date}>{dateStr}</Text>
+            <StatusBadge status={item.orderStatus} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <AdminHeader />
+      <AdminHeader showBackButton />
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Orders</Text>
         <View style={styles.searchContainer}>
@@ -60,6 +101,7 @@ export const AdminOrdersScreen: React.FC = () => {
         data={tabs}
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0, minHeight: 40 }}
         contentContainerStyle={styles.tabsContainer}
         keyExtractor={item => item}
         renderItem={({ item }) => (
@@ -73,7 +115,7 @@ export const AdminOrdersScreen: React.FC = () => {
       />
       <FlatList
         data={filteredOrders}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.orderId}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}

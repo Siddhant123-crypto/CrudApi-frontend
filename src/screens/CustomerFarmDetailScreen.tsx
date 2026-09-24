@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Video, ResizeMode } from 'expo-av';
 import api, { BASE_URL } from '../services/api';
 const { width } = Dimensions.get('window');
 interface FarmDetailsResponse {
@@ -62,8 +61,8 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
         fontWeight: '800',
       },
       headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, marginLeft: 15 }}>
-          <Ionicons name="arrow-back" size={26} color="#FFFFFF" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: 12 }}>
+          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       ),
     });
@@ -181,23 +180,10 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
                   onPress={() => setPlayingVideoId('primary')}
                   style={styles.galleryItem}
                 >
-                  <Video
-                    source={{ uri: `${BASE_URL}/${farm.farmVideo}` }}
-                    style={styles.galleryMedia}
-                    useNativeControls
-                    resizeMode={ResizeMode.COVER}
-                    shouldPlay={playingVideoId === 'primary'}
-                    onPlaybackStatusUpdate={(status) => {
-                      if (status.isLoaded && status.didJustFinish) {
-                        setPlayingVideoId(null);
-                      }
-                    }}
-                  />
-                  {playingVideoId !== 'primary' && (
-                    <View style={styles.playIconOverlay} pointerEvents="none">
-                      <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.8)" />
-                    </View>
-                  )}
+                  <View style={[styles.galleryMedia, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Ionicons name="videocam" size={40} color="rgba(255,255,255,0.8)" />
+                    <Text style={{ color: '#fff', marginTop: 8 }}>Video Player</Text>
+                  </View>
                 </TouchableOpacity>
               )}
               {gallery.map(file => (
@@ -208,23 +194,10 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
                       onPress={() => setPlayingVideoId(file.id)}
                       style={{ flex: 1 }}
                     >
-                      <Video
-                        source={{ uri: `${BASE_URL}/${file.filePath}` }}
-                        style={styles.galleryMedia}
-                        useNativeControls
-                        resizeMode={ResizeMode.COVER}
-                        shouldPlay={playingVideoId === file.id}
-                        onPlaybackStatusUpdate={(status) => {
-                          if (status.isLoaded && status.didJustFinish) {
-                            setPlayingVideoId(null);
-                          }
-                        }}
-                      />
-                      {playingVideoId !== file.id && (
-                        <View style={styles.playIconOverlay} pointerEvents="none">
-                          <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.8)" />
-                        </View>
-                      )}
+                      <View style={[styles.galleryMedia, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+                        <Ionicons name="videocam" size={40} color="rgba(255,255,255,0.8)" />
+                        <Text style={{ color: '#fff', marginTop: 8 }}>Video Player</Text>
+                      </View>
                     </TouchableOpacity>
                   ) : (
                     <Image

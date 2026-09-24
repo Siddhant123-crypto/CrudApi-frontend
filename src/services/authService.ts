@@ -7,7 +7,7 @@ export const authLogin = async (email: string, password: string) => {
   return response.data;
 };
 export const adminLogin = async (email: string, password: string) => {
-  const response = await api.post('/admin/login', {
+  const response = await api.post('/admin/auth/login', {
     email,
     password,
   });

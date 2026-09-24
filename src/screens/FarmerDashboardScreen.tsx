@@ -11,23 +11,22 @@ import {
   Alert,
   TextInput,
   Linking,
-  SafeAreaView
+  SafeAreaView,
+  Modal
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { getAllProducts, getProductImageUrl } from '../services/productService';
 import { getFarmerOrders, acceptOrder, farmerCancelOrder, getFarmerItemsStatus } from '../services/orderService';
-import { BASE_URL } from '../services/api';
-const categories = [
-  { name: 'Vegetable', icon: 'leaf-outline', bg: '#E6F4EA', color: '#1E8E3E' },
-  { name: 'Fruit', icon: 'nutrition-outline', bg: '#FCE8E6', color: '#D93025' },
-  { name: 'Root Veg', icon: 'flower-outline', bg: '#FCEFE2', color: '#E8710A' },
-  { name: 'Grains', icon: 'basket-outline', bg: '#FFF0D4', color: '#F9AB00' },
-  { name: 'Wild Veg', icon: 'rose-outline', bg: '#F3E8FD', color: '#9334E6' },
-  { name: 'Dairy', icon: 'water-outline', bg: '#E8F0FE', color: '#1A73E8' },
-];
+import { getFarmerById } from '../services/farmerService';
+import api, { BASE_URL } from '../services/api';
+import FarmerWeatherWidget from '../components/FarmerWeatherWidget';
+
 const FarmerDashboardScreen = ({ navigation }: any) => {
+  const { unreadCount } = useNotification();
   const { user, logout, setInitialAuthRoute } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
   const [allGlobalProducts, setAllGlobalProducts] = useState<any[]>([]);
@@ -36,6 +35,35 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [searchText, setSearchText] = useState('');
+  const [isBlockedModalVisible, setIsBlockedModalVisible] = useState(false);
+  const [blockReason, setBlockReason] = useState('');
+  const [blockedUntil, setBlockedUntil] = useState<string | null>(null);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+
+  const getCategoryStyles = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('veg')) return { icon: 'leaf-outline', color: '#1E8E3E', bg: '#E6F4EA' };
+    if (n.includes('fruit')) return { icon: 'nutrition-outline', color: '#D93025', bg: '#FCE8E6' };
+    if (n.includes('root')) return { icon: 'flower-outline', color: '#E8710A', bg: '#FCEFE2' };
+    if (n.includes('grain')) return { icon: 'basket-outline', color: '#F9AB00', bg: '#FFF0D4' };
+    if (n.includes('dairy') || n.includes('milk')) return { icon: 'water-outline', color: '#1A73E8', bg: '#E8F0FE' };
+    if (n.includes('spice')) return { icon: 'flame-outline', color: '#EA4335', bg: '#FCE8E6' };
+    return { icon: 'grid-outline', color: '#9334E6', bg: '#F3E8FD' };
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/categories');
+      if (res.data && res.data.data) {
+        setCategories(res.data.data.filter((c: any) => c.isActive));
+      }
+    } catch (error) {
+      console.log('Error fetching categories:', error);
+    }
+  };
+
   const carouselImages = [
     require('../../assets/vagis4.png'),
     require('../../assets/vagis5.png'),
@@ -49,10 +77,31 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
   }, []);
   const fetchData = async () => {
     try {
-      const [allProducts, farmerOrders] = await Promise.all([
+      const [allProducts, farmerOrders, farmerDetails] = await Promise.all([
         getAllProducts(),
-        getFarmerOrders()
+        getFarmerOrders(),
+        user?.farmerId ? getFarmerById(user.farmerId).catch(() => null) : Promise.resolve(null)
       ]);
+      
+      if (farmerDetails) {
+        if (farmerDetails.status === 'INACTIVE' && farmerDetails.blockReason) {
+          setBlockReason(farmerDetails.blockReason);
+          if (farmerDetails.blockedUntil) {
+            setBlockedUntil(new Date(farmerDetails.blockedUntil).toLocaleDateString());
+          }
+          try {
+            const unreadRes = await api.get('/support/unread-count');
+            if (unreadRes.data && unreadRes.data.data) {
+              setSupportUnreadCount(unreadRes.data.data);
+            }
+          } catch (e) {
+            console.log('Error fetching unread support count', e);
+          }
+          setIsBlockedModalVisible(true);
+          return;
+        }
+      }
+
       setAllGlobalProducts(allProducts);
       const myProducts = allProducts.filter((p: any) => p.farmerId === user?.farmerId);
       setProducts(myProducts);
@@ -66,8 +115,28 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       fetchData();
+      fetchCategories();
     }, [user?.farmerId])
   );
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isBlockedModalVisible) {
+      interval = setInterval(async () => {
+        try {
+          const unreadRes = await api.get('/support/unread-count');
+          if (unreadRes.data && unreadRes.data.data !== undefined) {
+            setSupportUnreadCount(unreadRes.data.data);
+          }
+        } catch (e) {
+          console.log('Error fetching unread support count', e);
+        }
+      }, 5000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isBlockedModalVisible]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData();
@@ -115,43 +184,94 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
           <View style={styles.headerBlock}>
             <View style={styles.headerTopRow}>
               <TouchableOpacity
-                onPress={async () => {
-                  setInitialAuthRoute('NewUserLogin');
-                  await logout();
-                }}
+                onPress={() => navigation.navigate('FarmerMenu')}
                 style={styles.backButton}
               >
-                <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
+                <Ionicons name="menu" size={28} color="#FFFFFF" />
               </TouchableOpacity>
-              <View style={styles.locationContainer}>
-                <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.locationTextContainer}>
-                  <Text style={styles.locationNameText} numberOfLines={1}>
-                    Welcome, {user?.name || 'Farmer'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity style={styles.headerIconButton} onPress={() => Alert.alert('Notifications', 'No new notifications.')}>
-                <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>2</Text>
+              <View style={[styles.locationContainer, { alignItems: 'flex-start', marginLeft: 10 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="location" size={20} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={{ flexDirection: 'row', alignItems: 'center' }} activeOpacity={0.8}>
+                    <Text style={styles.locationNameText} numberOfLines={1}>
+                      {user?.name || 'Farmer'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color="#FFFFFF" style={{ marginLeft: 3 }} />
+                  </TouchableOpacity>
                 </View>
+              </View>
+              <TouchableOpacity style={styles.headerIconButton} onPress={() => navigation.navigate('Notifications')}>
+                <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
+                {unreadCount > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
             {}
-            <View style={styles.searchBox}>
-              <Ionicons name="search-outline" size={20} color="#64748B" style={{ marginRight: 8 }} />
-              <TextInput
-                value={searchText}
-                onChangeText={setSearchText}
-                placeholder="Search your products..."
-                placeholderTextColor="#94A3B8"
-                style={styles.searchInput}
-              />
-            </View>
+            {!isSearchExpanded ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity 
+                  style={styles.searchIconCollapsed}
+                  onPress={() => setIsSearchExpanded(true)}
+                >
+                  <Ionicons name="search-outline" size={22} color="#1E5631" />
+                </TouchableOpacity>
+                <View style={{ flex: 1, marginLeft: 16 }}>
+                  <FarmerWeatherWidget />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.searchBox}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    setSearchText('');
+                    setIsSearchExpanded(false);
+                  }}
+                  style={styles.searchBoxBackBtn}
+                >
+                  <Ionicons name="arrow-back" size={20} color="#1E5631" />
+                </TouchableOpacity>
+                <TextInput
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  placeholder="Search your products..."
+                  placeholderTextColor="#94A3B8"
+                  style={styles.searchInput}
+                  returnKeyType="search"
+                  autoFocus
+                  onBlur={() => {
+                    if (!searchText.trim()) {
+                      setIsSearchExpanded(false);
+                    }
+                  }}
+                  onSubmitEditing={() => {
+                    if (searchText.trim()) {
+                      navigation.navigate('MyProducts', { searchQuery: searchText.trim() });
+                      setSearchText('');
+                      setIsSearchExpanded(false);
+                    } else {
+                      setIsSearchExpanded(false);
+                    }
+                  }}
+                />
+                <TouchableOpacity 
+                  onPress={() => {
+                    setSearchText('');
+                    setIsSearchExpanded(false);
+                  }} 
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons name="close-circle" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
           <View style={styles.mainContentCard}>
             <View style={styles.contentPadding}>
-              {}
+              
+              {/* Promo Banner */}
               <ImageBackground
                 source={carouselImages[currentImageIndex]}
                 style={styles.promoCardBg}
@@ -178,27 +298,31 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                   ))}
                 </View>
               </ImageBackground>
-              {}
+
+              {/* Category Section */}
               <View style={styles.categorySection}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Farm Categories</Text>
                 </View>
                 <View style={styles.categoryGridContainer}>
-                  {categories.map((category) => (
-                    <TouchableOpacity
-                      key={category.name}
-                      style={styles.categoryWrap}
-                      onPress={() => openCategory(category.name)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[styles.categoryCard, { borderColor: category.color }]}>
-                        <Ionicons name={category.icon as any} size={22} color={category.color} />
-                      </View>
-                      <Text style={styles.categoryText} numberOfLines={1}>
-                        {category.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {categories.map((category) => {
+                    const stylesObj = getCategoryStyles(category.name);
+                    return (
+                      <TouchableOpacity
+                        key={category.categoryId || category.name}
+                        style={styles.categoryWrap}
+                        onPress={() => openCategory(category.name)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.categoryCard, { borderColor: stylesObj.color }]}>
+                          <Ionicons name={stylesObj.icon as any} size={22} color={stylesObj.color} />
+                        </View>
+                        <Text style={styles.categoryText} numberOfLines={1} adjustsFontSizeToFit>
+                          {category.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
               {}
@@ -212,7 +336,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                       <View style={[styles.actionIconBox, { backgroundColor: '#E6F4EA' }]}>
                         <Ionicons name="add" size={24} color="#1E8E3E" />
                       </View>
-                      <Text style={styles.actionLabel}>Add</Text>
+                      <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>Add</Text>
                     </View>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('MyProducts')}>
@@ -220,7 +344,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                       <View style={[styles.actionIconBox, { backgroundColor: '#E8F0FE' }]}>
                         <Ionicons name="leaf" size={24} color="#1A73E8" />
                       </View>
-                      <Text style={styles.actionLabel}>My Product</Text>
+                      <Text style={styles.actionLabel} numberOfLines={2} adjustsFontSizeToFit>My Product</Text>
                     </View>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('Orders')}>
@@ -228,7 +352,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                       <View style={[styles.actionIconBox, { backgroundColor: '#FFF0D4' }]}>
                         <Ionicons name="receipt" size={24} color="#F9AB00" />
                       </View>
-                      <Text style={styles.actionLabel}>Orders</Text>
+                      <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>Orders</Text>
                     </View>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionWrap} onPress={() => navigation.navigate('Market')}>
@@ -236,16 +360,18 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                       <View style={[styles.actionIconBox, { backgroundColor: '#F3E8FD' }]}>
                         <Ionicons name="storefront" size={24} color="#9334E6" />
                       </View>
-                      <Text style={styles.actionLabel}>Market</Text>
+                      <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>Market</Text>
                     </View>
                   </TouchableOpacity>
                 </View>
               </View>
               {}
-              {videoProducts.length > 0 && (
                 <View style={styles.shortsSection}>
-                  <View style={styles.sectionHeader}>
+                  <View style={styles.sectionHeaderRow}>
                     <Text style={styles.sectionTitle}>🎬 Farmer Shorts</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('FarmerShorts')}>
+                      <Text style={styles.viewAllText}>View All</Text>
+                    </TouchableOpacity>
                   </View>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shortsScroll} decelerationRate="fast" snapToInterval={155} snapToAlignment="start">
                     {videoProducts.map(product => (
@@ -253,7 +379,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                         key={`video-${product.productId}`}
                         style={styles.shortCard}
                         activeOpacity={0.85}
-                        onPress={() => handlePlayVideo(product.productVideo!)}
+                        onPress={() => navigation.navigate('FarmerShorts')}
                       >
                         <Image
                           source={
@@ -274,13 +400,11 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                           <Ionicons name="videocam" size={10} color="#FF0000" />
                           <Text style={styles.shortsBadgeText}> Shorts</Text>
                         </View>
-                        <Text style={styles.shortTitle} numberOfLines={2}>{product.productName}</Text>
-                        <Text style={styles.shortPrice}>₹{product.price}/{product.unit?.toLowerCase()}</Text>
+                        <Text style={styles.shortTitle} numberOfLines={2}>@{product.farmerName || 'Farmer'}</Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
-              )}
               {}
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Recent Orders</Text>
@@ -367,10 +491,164 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
           </View>
         </ScrollView>
       </View>
+      <Modal
+        visible={isBlockedModalVisible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalIconContainer}>
+              <Ionicons name="warning" size={48} color="#EF4444" />
+            </View>
+            <Text style={styles.modalTitle}>Account Blocked</Text>
+            <Text style={styles.modalMessage}>
+              Your account has been blocked by the admin. You can no longer access the farmer dashboard or perform actions.
+            </Text>
+            
+            <View style={styles.reasonContainer}>
+              <Text style={styles.reasonLabel}>Reason for Block:</Text>
+              <Text style={styles.reasonText}>{blockReason}</Text>
+            </View>
+
+            {blockedUntil && (
+              <View style={[styles.reasonContainer, { marginTop: 4 }]}>
+                <Text style={styles.reasonLabel}>Blocked Until:</Text>
+                <Text style={styles.reasonText}>{blockedUntil}</Text>
+              </View>
+            )}
+
+            <View style={{ width: '100%', gap: 8, marginTop: 16 }}>
+              <TouchableOpacity 
+                style={[styles.modalButton, { backgroundColor: '#2D983A', position: 'relative' }]} 
+                onPress={() => {
+                  setIsBlockedModalVisible(false);
+                  navigation.navigate('FarmerSupportChatScreen');
+                }}
+              >
+                <Ionicons name="notifications-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.modalButtonText}>Contact Admin</Text>
+                {supportUnreadCount > 0 && (
+                  <View style={{
+                    marginLeft: 8,
+                    backgroundColor: '#EF4444',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 10,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}>
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' }}>
+                      {supportUnreadCount > 99 ? '99+' : supportUnreadCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, { backgroundColor: '#EF4444' }]} 
+                onPress={() => {
+                  setIsBlockedModalVisible(false);
+                  logout();
+                }}
+              >
+                <Ionicons name="log-out-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.modalButtonText}>Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  modalIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FEF2F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 4,
+    borderColor: '#FEE2E2',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 13,
+    color: '#4B5563',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  reasonContainer: {
+    backgroundColor: '#F3F4F6',
+    width: '100%',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+  },
+  reasonLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  reasonText: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
+  modalButton: {
+    backgroundColor: '#EF4444',
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#1E5631',
@@ -387,14 +665,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E5631',
     paddingTop: 50,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 35,
     zIndex: 10,
   },
   headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   backButton: {
     marginRight: 10,
@@ -435,18 +713,39 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: 'bold',
   },
+  searchIconCollapsed: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 30,
-    paddingHorizontal: 16,
+    paddingRight: 16,
+    paddingLeft: 4,
     height: 50,
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
+  },
+  searchBoxBackBtn: {
+    padding: 10,
+    borderRadius: 20,
+    backgroundColor: '#E6F4EA',
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
@@ -460,7 +759,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingTop: 20,
-    marginTop: -25,
+    marginTop: -15,
     zIndex: 20,
   },
   contentPadding: {
@@ -469,8 +768,8 @@ const styles = StyleSheet.create({
   promoCardBg: {
     borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 28,
-    height: 180,
+    marginBottom: 12,
+    height: 140,
     backgroundColor: '#1E5631',
     elevation: 4,
     shadowColor: '#000',
@@ -544,7 +843,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.4)',
   },
   categorySection: {
-    marginBottom: 4,
+    marginBottom: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -589,7 +888,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   quickActionsSection: {
-    marginBottom: 28,
+    marginBottom: 20,
+    marginTop: -8,
   },
   quickActionsContainer: {
     flexDirection: 'row',
@@ -625,10 +925,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionLabel: {
-    fontSize: 11,
+    fontSize: 9,
     color: '#334155',
     fontWeight: '700',
     textAlign: 'center',
+    paddingHorizontal: 1,
   },
   shortsSection: {
     marginBottom: 24,

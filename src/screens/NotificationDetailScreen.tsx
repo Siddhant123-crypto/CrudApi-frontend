@@ -35,7 +35,7 @@ const NotificationDetailScreen = () => {
         <View style={[styles.header, { backgroundColor: headerBgColor, borderBottomColor: headerBgColor }]}>
           <View style={styles.headerLeftContainer}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color={headerTextColor} />
+              <Ionicons name="chevron-back" size={24} color={headerTextColor} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: headerTextColor }]}>Error</Text>
           </View>
@@ -61,7 +61,7 @@ const NotificationDetailScreen = () => {
       <View style={[styles.header, { backgroundColor: headerBgColor, borderBottomColor: headerBgColor }]}>
         <View style={styles.headerLeftContainer}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={headerTextColor} />
+            <Ionicons name="chevron-back" size={24} color={headerTextColor} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: headerTextColor }]}>Notification</Text>
         </View>
@@ -93,6 +93,7 @@ const NotificationDetailScreen = () => {
               const senderType = notification.senderType;
               const isCustomer = !isAdmin && !isFarmer;
               const canReply = () => {
+                if (isFarmer && notification.title === 'Farm Verification Update') return true;
                 if (!notification.senderId && senderType !== 'ADMIN') return false;
                 if (isCustomer && senderType === 'FARMER') return true;
                 if (isFarmer && senderType === 'CUSTOMER') return true;
@@ -117,7 +118,7 @@ const NotificationDetailScreen = () => {
                         preSelectedCustomerName: senderName || 'Customer',
                         preSelectedRole: 'CUSTOMER'
                       });
-                    } else if (isFarmer && senderType === 'ADMIN') {
+                    } else if (isFarmer && (senderType === 'ADMIN' || notification.title === 'Farm Verification Update')) {
                       navigation.navigate('FarmerContactAdmin');
                     } else if (isAdmin) {
                       navigation.navigate('AdminMessage', {

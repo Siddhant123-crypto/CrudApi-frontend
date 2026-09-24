@@ -113,3 +113,28 @@ export interface WishlistCheckResponse {
   inWishlist: boolean;
   wishlistId?: string;
 }
+
+export interface NotificationResponse {
+  notificationId: string;
+  userId: string;
+  senderId?: string;
+  senderName?: string;
+  message: string;
+  type: NotificationType;
+  isRead: boolean;
+  createdAt: string;
+  title?: string;
+  senderType?: string;
+}
+
+export interface NotificationSendRequest {
+  targetUserId?: string;
+  message: string;
+  type?: string;
+  receiverType?: string;
+  receiverId?: string;
+  title?: string;
+  notificationType?: NotificationType;
+}
+
+export type NotificationType = 'ORDER' | 'SYSTEM' | 'MESSAGE' | 'ALERT' | 'PRODUCT' | 'FARMER' | 'CUSTOMER' | 'ADMIN';

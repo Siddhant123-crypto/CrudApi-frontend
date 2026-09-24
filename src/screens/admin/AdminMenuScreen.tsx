@@ -8,44 +8,68 @@ const AdminMenuScreen: React.FC = () => {
   const { logout } = useAuth();
   const menuItems = [
     { title: 'Dashboard', icon: 'home-outline', route: 'Home' },
-    { title: 'Farmers', icon: 'people-outline', route: 'AdminFarmers' },
-    { title: 'Customers', icon: 'person-outline', route: 'AdminCustomers' },
+    { title: 'Farmers & Customers', icon: 'people-outline', route: 'AdminFarmers', params: { title: 'Farmers & Customers' } },
     { title: 'Products', icon: 'cube-outline', route: 'AdminProducts' },
     { title: 'Categories', icon: 'grid-outline', route: 'AdminCategories' },
     { title: 'Orders', icon: 'receipt-outline', route: 'AdminOrders' },
+    { title: 'Messages', icon: 'chatbubbles-outline', isDropdown: true },
     { title: 'Farm Verification', icon: 'shield-checkmark-outline', route: 'AdminFarmVerification' },
-    { title: 'Analytics & Reports', icon: 'bar-chart-outline', route: 'Analytics' },
   ];
+  const [messagesExpanded, setMessagesExpanded] = React.useState(false);
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Menu</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {menuItems.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.menuItem}
-            onPress={() => {
-              if (item.route === 'Home') {
-                navigation.navigate('AdminMain', { screen: 'Home' });
-              } else {
-                navigation.navigate(item.route);
-              }
-            }}
-          >
-            <View style={styles.menuItemLeft}>
-              <View style={styles.iconContainer}>
-                <Ionicons name={item.icon as any} size={20} color="#F5C16C" />
-              </View>
-              <Text style={styles.menuText}>{item.title}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#E5E7EB" />
+    <View style={styles.overlay}>
+      <TouchableOpacity style={styles.overlayBackground} activeOpacity={1} onPress={() => navigation.goBack()} />
+      <SafeAreaView style={styles.drawerContainer}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Menu</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="close" size={28} color="#FFFFFF" />
           </TouchableOpacity>
-        ))}
+        </View>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          {menuItems.map((item, index) => (
+            <View key={index}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  if (item.isDropdown) {
+                    setMessagesExpanded(!messagesExpanded);
+                  } else if (item.route === 'Home') {
+                    navigation.navigate('AdminMain', { screen: 'Home' });
+                  } else {
+                    navigation.navigate(item.route, (item as any).params);
+                  }
+                }}
+              >
+                <View style={styles.menuItemLeft}>
+                  <View style={styles.iconContainer}>
+                    <Ionicons name={item.icon as any} size={20} color="#F5C16C" />
+                  </View>
+                  <Text style={styles.menuText}>{item.title}</Text>
+                </View>
+                <Ionicons name={item.isDropdown ? (messagesExpanded ? "chevron-up" : "chevron-down") : "chevron-forward"} size={20} color="#E5E7EB" />
+              </TouchableOpacity>
+              
+              {item.isDropdown && messagesExpanded && (
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity 
+                    style={styles.dropdownItem}
+                    onPress={() => navigation.navigate('AdminMessage', { preSelectedRole: 'FARMER' })}
+                  >
+                    <Ionicons name="leaf-outline" size={18} color="#6B7280" style={styles.dropdownIcon} />
+                    <Text style={styles.dropdownText}>Farmer Message</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.dropdownItem}
+                    onPress={() => navigation.navigate('AdminMessage', { preSelectedRole: 'CUSTOMER' })}
+                  >
+                    <Ionicons name="person-outline" size={18} color="#6B7280" style={styles.dropdownIcon} />
+                    <Text style={styles.dropdownText}>Customer Message</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))}
         <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={logout}>
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
@@ -55,12 +79,22 @@ const AdminMenuScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
+    flexDirection: 'row',
+  },
+  overlayBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  drawerContainer: {
+    width: '80%',
+    height: '100%',
     backgroundColor: '#F8F1E6',
   },
   header: {
@@ -75,7 +109,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -87,9 +121,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
+    padding: 11,
+    borderRadius: 14,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -101,26 +135,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#17212F',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   menuText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1B2430',
   },
   logoutItem: {
-    marginTop: 20,
+    marginTop: 10,
+    paddingVertical: 8,
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#EF4444',
+  },
+  dropdownContainer: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    marginTop: -8,
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  dropdownIcon: {
+    marginRight: 12,
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: '#4B5563',
+    fontWeight: '500',
   },
 });
 export default AdminMenuScreen;

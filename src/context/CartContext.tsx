@@ -17,9 +17,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const refreshCart = useCallback(async () => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || user?.role === 'ADMIN') {
       setCart(null);
       setIsLoading(false);
       return;

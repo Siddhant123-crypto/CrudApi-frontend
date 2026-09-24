@@ -11,7 +11,8 @@ import {
   Alert,
   Platform,
   StatusBar,
-  Modal
+  Modal,
+  KeyboardAvoidingView
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -57,11 +58,20 @@ export const FarmerContactAdminScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor="#176B2C" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Contact Admin</Text>
       </View>
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.adminProfileCard}>
           <View style={styles.adminAvatarContainer}>
             <Ionicons name="shield-checkmark" size={32} color="#FFFFFF" />
@@ -101,7 +111,8 @@ export const FarmerContactAdminScreen = () => {
             <Text style={styles.sendButtonText}>Send Message</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Modal transparent visible={showSuccessModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.successModalContent}>
@@ -142,7 +153,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
     marginLeft: 16,

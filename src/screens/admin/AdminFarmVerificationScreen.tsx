@@ -1,30 +1,65 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
-import { useNavigation } from '@react-navigation/native';
-const mockVerifications = [
-  { id: '1', farmer: 'Rahul Patil', farm: 'Green Valley Farm', date: '03 Sep, 10:30 AM', status: 'Verified' },
-  { id: '2', farmer: 'Amit Kumar', farm: 'Fresh Farm', date: '02 Sep, 09:15 AM', status: 'Pending' },
-  { id: '3', farmer: 'Ravi Sharma', farm: 'Sharma Farm', date: '01 Sep, 04:20 PM', status: 'Rejected' },
-  { id: '4', farmer: 'Suresh Yadav', farm: 'Yadav Farm', date: '31 Aug, 11:00 AM', status: 'Verified' },
-];
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { getVerificationFarmers } from '../../services/adminService';
+
 export const AdminFarmVerificationScreen: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useState('Pending');
   const [searchQuery, setSearchQuery] = useState('');
+  const [verifications, setVerifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-  const tabs = ['All', 'Verified', 'Pending', 'Rejected'];
-  const filteredVerifications = mockVerifications.filter(v => {
-    if (activeTab !== 'All' && v.status !== activeTab) return false;
-    if (searchQuery && !v.farm.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+  const tabs = ['Pending', 'Verified', 'Rejected'];
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchFarmers();
+    }, [])
+  );
+
+  const fetchFarmers = async () => {
+    try {
+      setLoading(true);
+      const res = await getVerificationFarmers();
+      if (res && res.data) {
+        // Map AdminFarmVerificationListResponse to Verification item format
+        const mapped = res.data.map((f: any) => {
+          let mappedStatus = 'Pending';
+          if (f.status === 'VERIFIED') mappedStatus = 'Verified';
+          else if (f.status === 'REJECTED') mappedStatus = 'Rejected';
+          
+          return {
+            id: f.farmerId,
+            farmer: f.farmerName || 'Unknown',
+            farm: f.farmName || 'Unnamed Farm',
+            date: f.verificationRequestedOn ? new Date(f.verificationRequestedOn).toLocaleDateString() : 'Recent',
+            status: mappedStatus
+          };
+        });
+        setVerifications(mapped);
+      }
+    } catch (error) {
+      console.error('Error fetching verification farmers', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredVerifications = verifications.filter(v => {
+    if (activeTab === 'Verified' && v.status !== 'Verified') return false;
+    if (activeTab === 'Pending' && v.status !== 'Pending') return false;
+    if (activeTab === 'Rejected' && v.status !== 'Rejected') return false;
+    if (searchQuery && !v.farm.toLowerCase().includes(searchQuery.toLowerCase()) && !v.farmer.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.verificationCard} onPress={() => navigation.navigate('AdminFarmVerificationDetails', { verificationId: item.id })}>
       <View style={styles.cardLeft}>
         <View style={styles.imagePlaceholder}>
-          <Ionicons name="image-outline" size={24} color="#6B7280" />
+          <Ionicons name="leaf" size={28} color="#10B981" />
         </View>
         <View>
           <Text style={styles.farmName}>{item.farm}</Text>
@@ -40,7 +75,7 @@ export const AdminFarmVerificationScreen: React.FC = () => {
   );
   return (
     <View style={styles.container}>
-      <AdminHeader />
+      <AdminHeader showBackButton />
       <View style={styles.headerArea}>
         <Text style={styles.screenTitle}>Farm Verification</Text>
         <View style={styles.searchContainer}>
@@ -65,13 +100,18 @@ export const AdminFarmVerificationScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
-      <FlatList
-        data={filteredVerifications}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#F5C16C" style={{ marginTop: 50 }} />
+      ) : (
+        <FlatList
+          data={filteredVerifications}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 50, color: '#6B7280' }}>No farmers found.</Text>}
+        />
+      )}
     </View>
   );
 };
@@ -98,7 +138,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
   cardLeft: { flexDirection: 'row', alignItems: 'center' },
-  imagePlaceholder: { width: 60, height: 60, borderRadius: 12, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  imagePlaceholder: { width: 60, height: 60, borderRadius: 12, backgroundColor: '#ECFDF5', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   farmName: { fontSize: 14, fontWeight: 'bold', color: '#1B2430', marginBottom: 4 },
   farmerName: { fontSize: 12, color: '#6B7280', marginBottom: 2 },
   date: { fontSize: 10, color: '#9CA3AF' },

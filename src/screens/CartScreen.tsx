@@ -63,7 +63,7 @@ const CartScreen = () => {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Cart</Text>
           </View>
@@ -84,7 +84,7 @@ const CartScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Cart</Text>
         </View>
@@ -145,8 +145,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backBtn: {
-    padding: 4,
-    marginRight: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
   headerTitle: {
     fontSize: 20,

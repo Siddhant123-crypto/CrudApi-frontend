@@ -42,7 +42,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   const {user} = useAuth();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(0);
   const [ordering, setOrdering] = useState(false);
   const [productData, setProductData] = useState<any>(product);
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
@@ -103,7 +103,9 @@ const ProductDetailScreen = ({route, navigation}: any) => {
       Alert.alert('Login Required', 'Please log in to add items to cart.');
       return;
     }
-    addToCart(productData.productId, quantity);
+    const finalQuantity = quantity === 0 ? 1 : quantity;
+    addToCart(productData.productId, finalQuantity);
+    if (quantity === 0) setQuantity(1);
     navigation.navigate('Cart');
   };
   const handleBuyNow = () => {
@@ -111,11 +113,14 @@ const ProductDetailScreen = ({route, navigation}: any) => {
       Alert.alert('Login Required', 'Please log in to place an order.');
       return;
     }
+    const finalQuantity = quantity === 0 ? 1 : quantity;
+    if (quantity === 0) setQuantity(1);
+    
     const orderItems = [{
       product: productData,
-      quantity: quantity
+      quantity: finalQuantity
     }];
-    const totalAmount = productData.price * quantity;
+    const totalAmount = productData.price * finalQuantity;
     navigation.navigate('Checkout', { orderItems, totalAmount });
   };
   const isCustomer = user?.role === 'USER';
@@ -465,13 +470,22 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           {}
           <View style={styles.bottomTopRow}>
             <View style={styles.quantityContainer}>
-              <TouchableOpacity style={styles.quantityBtn} onPress={() => setQuantity(q => Math.max(1, q - 1))}>
-                <Text style={styles.quantityBtnText}>-</Text>
-              </TouchableOpacity>
-              <Text style={styles.quantityValue}>{quantity}</Text>
-              <TouchableOpacity style={styles.quantityBtn} onPress={() => setQuantity(q => q + 1)}>
-                <Text style={styles.quantityBtnText}>+</Text>
-              </TouchableOpacity>
+              {quantity === 0 ? (
+                <TouchableOpacity style={styles.addBtn} onPress={() => setQuantity(1)}>
+                  <Text style={styles.addBtnText}>Add</Text>
+                  <Ionicons name="add" size={16} color="#1E3A8A" style={{marginLeft: 4}} />
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity style={styles.quantityBtn} onPress={() => setQuantity(q => Math.max(0, q - 1))}>
+                    <Text style={styles.quantityBtnText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.quantityValue}>{quantity}</Text>
+                  <TouchableOpacity style={styles.quantityBtn} onPress={() => setQuantity(q => q + 1)}>
+                    <Text style={styles.quantityBtnText}>+</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
             <Text style={styles.totalPriceText}>₹{(productData.price * quantity).toFixed(2)}</Text>
           </View>
@@ -629,7 +643,7 @@ const styles = StyleSheet.create({
     minHeight: 500,
   },
   productName: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '800',
     color: '#111827',
   },
@@ -665,7 +679,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   price: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '800',
     color: '#1E3A8A',
   },
@@ -843,7 +857,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 20,
+    paddingBottom: 60,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     shadowColor: '#000',
@@ -886,6 +900,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingHorizontal: 12,
     color: '#111827',
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  addBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E3A8A',
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -946,7 +972,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 24,
+    paddingBottom: 60,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },

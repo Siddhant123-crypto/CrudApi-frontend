@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
   Image,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Modal
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
@@ -39,7 +40,6 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
   const [farmAreaUnit, setFarmAreaUnit] = useState(existingData.farmAreaUnit || 'ACRE');
   const [cropsGrownCount, setCropsGrownCount] = useState(existingData.cropsGrownCount ? String(existingData.cropsGrownCount) : '');
   const [yearsExperience, setYearsExperience] = useState(existingData.yearsExperience ? String(existingData.yearsExperience) : '');
-  const [happyCustomersCount, setHappyCustomersCount] = useState(existingData.happyCustomersCount ? String(existingData.happyCustomersCount) : '');
   const [farmerName, setFarmerName] = useState(existingData.farmerName || user?.name || '');
   const [mainCrops, setMainCrops] = useState(existingData.mainCrops || '');
   const [irrigationSource, setIrrigationSource] = useState(existingData.irrigationSource || '');
@@ -48,6 +48,8 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
   const [farmerPhotoUri, setFarmerPhotoUri] = useState<string | null>(null);
   const [farmVideoUri, setFarmVideoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showUnitDropdown, setShowUnitDropdown] = useState(false);
+  const UNITS = ['ACRE', 'GUNTHA', 'BIGHA', 'HECTOR'];
   const getExistingPhotoUrl = () => {
     if (existingData.farmerPhotoPath) {
       return `${BASE_URL}/${existingData.farmerPhotoPath}`;
@@ -102,7 +104,6 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
       farmAreaUnit,
       cropsGrownCount: cropsGrownCount ? parseInt(cropsGrownCount) : null,
       yearsExperience: yearsExperience ? parseInt(yearsExperience) : null,
-      happyCustomersCount: happyCustomersCount ? parseInt(happyCustomersCount) : null,
       farmerName,
       mainCrops,
       irrigationSource,
@@ -163,7 +164,8 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'android' ? 0 : 0}
       >
         <View style={styles.headerBlock}>
           <View style={styles.headerTopRow}>
@@ -173,7 +175,11 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
             <Text style={styles.headerTitle}>Edit Farm Details</Text>
           </View>
         </View>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {}
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Media</Text>
@@ -255,9 +261,10 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                 <Text style={styles.label}>Unit</Text>
                 <TouchableOpacity
                   style={styles.unitToggle}
-                  onPress={() => setFarmAreaUnit(farmAreaUnit === 'ACRE' ? 'HECTARE' : 'ACRE')}
+                  onPress={() => setShowUnitDropdown(true)}
                 >
                   <Text style={styles.unitToggleText}>{farmAreaUnit}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#176B2C" style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -270,10 +277,6 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                 <Text style={styles.label}>Years Experience</Text>
                 <TextInput style={styles.input} value={yearsExperience} onChangeText={setYearsExperience} placeholder="E.g. 6" keyboardType="numeric" />
               </View>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Happy Customers Count</Text>
-              <TextInput style={styles.input} value={happyCustomersCount} onChangeText={setHappyCustomersCount} placeholder="E.g. 1200" keyboardType="numeric" />
             </View>
           </View>
           {}
@@ -306,13 +309,37 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Unit Dropdown Modal */}
+      {showUnitDropdown && (
+        <Modal transparent animationType="fade" visible={showUnitDropdown} onRequestClose={() => setShowUnitDropdown(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowUnitDropdown(false)}>
+            <View style={styles.dropdownMenu}>
+              <Text style={styles.dropdownTitle}>Select Unit</Text>
+              {UNITS.map((u) => (
+                <TouchableOpacity
+                  key={u}
+                  style={[styles.dropdownItem, farmAreaUnit === u && styles.dropdownItemActive]}
+                  onPress={() => {
+                    setFarmAreaUnit(u);
+                    setShowUnitDropdown(false);
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, farmAreaUnit === u && styles.dropdownItemTextActive]}>{u}</Text>
+                  {farmAreaUnit === u && <Ionicons name="checkmark" size={20} color="#176B2C" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 };
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#1E5631',
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
@@ -444,11 +471,58 @@ const styles = StyleSheet.create({
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
   },
   unitToggleText: {
     color: '#176B2C',
     fontWeight: '700',
     fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dropdownMenu: {
+    width: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  dropdownTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#334155',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  dropdownItemActive: {
+    backgroundColor: '#F1FAF2',
+    borderRadius: 8,
+    borderBottomWidth: 0,
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#475569',
+  },
+  dropdownItemTextActive: {
+    color: '#176B2C',
+    fontWeight: 'bold',
   },
   submitBtn: {
     backgroundColor: '#176B2C',

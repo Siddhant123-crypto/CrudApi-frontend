@@ -57,8 +57,8 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
         color: '#FFFFFF',
       },
       headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, marginLeft: 15 }}>
-          <Ionicons name="arrow-back" size={26} color="#FFFFFF" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: 12 }}>
+          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       ),
     });

@@ -16,13 +16,13 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
+import { getMyGallery, uploadGalleryFile, deleteGalleryFile } from '../services/farmGalleryService';
 import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../services/api';
 import { getFarmDetails } from '../services/farmDetailsService';
-import { getMyGallery, uploadGalleryFile, deleteGalleryFile } from '../services/farmGalleryService';
+import { getFarmerById } from '../services/farmerService';
 const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
   <View style={[style, { backgroundColor: '#0F3320', justifyContent: 'center', alignItems: 'center', opacity: blurred ? 0.6 : 1 }]}>
-    {}
     <View style={{
       width: 44,
       height: 44,
@@ -36,7 +36,6 @@ const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
     }}>
       <Ionicons name="play" size={20} color="#FFFFFF" style={{ marginLeft: 2 }} />
     </View>
-    {}
     <View style={{
       backgroundColor: 'rgba(255,255,255,0.15)',
       paddingHorizontal: 8,
@@ -49,7 +48,7 @@ const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
 );
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MyFarmScreen = ({ navigation }: any) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [farmDetails, setFarmDetails] = useState<any>(null);
   const [gallery, setGallery] = useState<any[]>([]);
@@ -64,10 +63,23 @@ const MyFarmScreen = ({ navigation }: any) => {
     }
     try {
       setLoading(true);
-      const [detailsResponse, galleryResponse] = await Promise.all([
+      const [detailsResponse, galleryResponse, farmerDetails] = await Promise.all([
         getFarmDetails(user.farmerId).catch(() => null),
-        getMyGallery().catch(() => ({ data: [] }))
+        getMyGallery().catch(() => ({ data: [] })),
+        getFarmerById(user.farmerId).catch(() => null)
       ]);
+      
+      if (farmerDetails) {
+        if (farmerDetails.status === 'INACTIVE' && farmerDetails.blockReason) {
+          Alert.alert(
+            'Account Blocked',
+            `Your account has been blocked by the admin.\n\nReason: ${farmerDetails.blockReason}`,
+            [{ text: 'OK', onPress: () => logout() }]
+          );
+          return;
+        }
+      }
+
       if (detailsResponse && detailsResponse.data) {
         setFarmDetails(detailsResponse.data);
       }
@@ -192,12 +204,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Farm</Text>
               </View>
-              <TouchableOpacity style={styles.headerIconButton}>
-                <Ionicons name="notifications-outline" size={30} color="#FFFFFF" />
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>2</Text>
-                </View>
-              </TouchableOpacity>
+
             </View>
           </View>
           {}
@@ -296,28 +303,28 @@ const MyFarmScreen = ({ navigation }: any) => {
                 <View style={styles.detailsCol}>
                   <View style={styles.detailItem}>
                     <Ionicons name="person-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.detailLabel}>Farmer Name</Text>
                       <Text style={styles.detailValue}>{fd.farmerName || user?.name || '-'}</Text>
                     </View>
                   </View>
                   <View style={styles.detailItem}>
                     <Ionicons name="location-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.detailLabel}>Location</Text>
                       <Text style={styles.detailValue}>{fd.location || '-'}</Text>
                     </View>
                   </View>
                   <View style={styles.detailItem}>
                     <Ionicons name="expand-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.detailLabel}>Farm Size</Text>
                       <Text style={styles.detailValue}>{fd.farmArea ? `${fd.farmArea} ${fd.farmAreaUnit}` : '-'}</Text>
                     </View>
                   </View>
                   <View style={styles.detailItem}>
                     <Ionicons name="water-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.detailLabel}>Irrigation Source</Text>
                       <Text style={styles.detailValue}>{fd.irrigationSource || '-'}</Text>
                     </View>
@@ -327,14 +334,14 @@ const MyFarmScreen = ({ navigation }: any) => {
                 <View style={styles.detailsCol}>
                   <View style={styles.detailItem}>
                     <Ionicons name="leaf-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.detailLabel}>Farming Type</Text>
                       <Text style={styles.detailValue}>{fd.farmingType || '-'}</Text>
                     </View>
                   </View>
                   <View style={styles.detailItem}>
                     <Ionicons name="basket-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.detailLabel}>Main Crops</Text>
                       <Text style={styles.detailValue}>{fd.mainCrops || '-'}</Text>
                     </View>
@@ -372,8 +379,8 @@ const MyFarmScreen = ({ navigation }: any) => {
             </View>
             {}
             <View style={styles.gallerySection}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Farm Photos</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#176B2C' }}>Farm Photos</Text>
                 <View style={styles.actionButtonsRow}>
                   {isSelectionMode ? (
                     <>
@@ -495,8 +502,8 @@ const MyFarmScreen = ({ navigation }: any) => {
                 <Text style={styles.verifiedDesc}>Your farm has been verified by our team.</Text>
                 <Text style={styles.verifiedDate}>Verified on 12 Jan 2025</Text>
               </View>
-              <TouchableOpacity style={styles.certBtn} onPress={() => Alert.alert('Certificate', 'Feature coming soon.')}>
-                <Ionicons name="document-text-outline" size={16} color="#176B2C" />
+              <TouchableOpacity style={styles.certBtn} onPress={() => navigation.navigate('FarmCertificate', { farmDetails: fd })}>
+                <Ionicons name="document-text-outline" size={16} color="#FFFFFF" />
                 <Text style={styles.certBtnText}>View Certificate</Text>
               </TouchableOpacity>
             </View>
@@ -603,8 +610,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   profileLeft: {
-    flex: 1.3,
-    paddingRight: 10,
+    flex: 1.1,
+    paddingRight: 6,
   },
   farmNameRow: {
     flexDirection: 'row',
@@ -654,32 +661,34 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   profileRight: {
-    flex: 0.9,
+    flex: 1.0,
     justifyContent: 'center',
-    gap: 16,
+    gap: 12,
   },
   infoBlock: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   infoIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     backgroundColor: '#F1FAF2',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 6,
   },
   infoValue: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '800',
     color: '#172117',
+    flexShrink: 1,
   },
   infoLabel: {
-    fontSize: 13,
+    fontSize: 10,
     color: '#647064',
     marginTop: 2,
+    flexShrink: 1,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -691,9 +700,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    marginHorizontal: 4,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
+    marginHorizontal: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 2,
     alignItems: 'center',
     elevation: 6,
     shadowColor: '#176B2C',
@@ -716,19 +725,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statVal: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
     color: '#172117',
+    textAlign: 'center',
   },
   statSubVal: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#647064',
     fontWeight: '700',
+    textAlign: 'center',
   },
   statDesc: {
-    fontSize: 11,
+    fontSize: 9,
     color: '#647064',
     marginTop: 2,
+    textAlign: 'center',
   },
   detailsCard: {
     backgroundColor: '#FFFFFF',
@@ -765,15 +777,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   detailLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#647064',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   detailValue: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: '#172117',
-    paddingRight: 8,
+    paddingRight: 4,
+    flexShrink: 1,
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -782,9 +795,9 @@ const styles = StyleSheet.create({
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
     borderWidth: 1,
   },
   addPhotoBtn: {
@@ -892,16 +905,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  addPhotoBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#B8DDBB',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
+
   addPhotoText: {
     fontSize: 12,
     fontWeight: '700',
@@ -992,18 +996,21 @@ const styles = StyleSheet.create({
   certBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#B8DDBB',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    backgroundColor: '#176B2C',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 12,
+    shadowColor: '#176B2C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   certBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#176B2C',
-    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginLeft: 6,
   },
   editBtn: {
     flexDirection: 'row',

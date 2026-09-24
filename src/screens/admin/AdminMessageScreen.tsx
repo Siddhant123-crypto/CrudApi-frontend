@@ -11,7 +11,8 @@ import {
   Alert,
   Platform,
   StatusBar,
-  Modal
+  Modal,
+  KeyboardAvoidingView
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -35,6 +36,7 @@ export const AdminMessageScreen = () => {
   const [searchQuery, setSearchQuery] = useState(preSelectedName || '');
   const [customersList, setCustomersList] = useState<any[]>([]);
   const preSelectedRole = route.params?.preSelectedRole;
+  const preSelectedEmail = route.params?.preSelectedUserEmail;
   useEffect(() => {
     if (recipient === 'SPECIFIC') {
       fetchCustomers();
@@ -50,6 +52,14 @@ export const AdminMessageScreen = () => {
         return u.role === 'CUSTOMER' || u.role === 'FARMER';
       });
       setCustomersList(validUsers);
+      
+      if (preSelectedEmail) {
+        const matchedUser = validUsers.find((u: any) => u.email === preSelectedEmail);
+        if (matchedUser) {
+          setSpecificUserId(matchedUser.userId || matchedUser.id);
+          setRecipient('SPECIFIC');
+        }
+      }
     } catch (error) {
       console.log('Failed to fetch customers:', error);
       Alert.alert('Error', 'Failed to load customers list.');
@@ -102,13 +112,22 @@ export const AdminMessageScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor="#17212F" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {preSelectedRole === 'FARMER' ? 'Message Farmer' : preSelectedRole === 'CUSTOMER' ? 'Message Customer' : 'Message User'}
         </Text>
       </View>
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <Text style={styles.label}>Receiver</Text>
         {preSelectedId ? (
           <View style={[styles.input, { backgroundColor: '#F3F4F6' }]}>
@@ -212,7 +231,8 @@ export const AdminMessageScreen = () => {
             <Text style={styles.sendButtonText}>Send Message</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Modal transparent visible={showSuccessModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.successModalContent}>
@@ -238,7 +258,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 16 : 16,
     paddingBottom: 24,
-    backgroundColor: '#17212F',
+    backgroundColor: '#7C3AED',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     shadowColor: '#000',
@@ -248,12 +268,12 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   backButton: {
-    padding: 8,
+    padding: 6,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
+    borderRadius: 10,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#FFFFFF',
     marginLeft: 16,
@@ -285,8 +305,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectorBtnActive: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#17212F',
+    backgroundColor: '#F3E8FF',
+    borderColor: '#7C3AED',
   },
   selectorText: {
     fontSize: 14,
@@ -294,7 +314,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectorTextActive: {
-    color: '#17212F',
+    color: '#7C3AED',
     fontWeight: '700',
   },
   readOnlyContainer: {
@@ -302,7 +322,7 @@ const styles = StyleSheet.create({
   },
   readOnlyBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#17212F',
+    backgroundColor: '#7C3AED',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -371,8 +391,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   userCardSelected: {
-    backgroundColor: '#17212F',
-    borderColor: '#17212F',
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
   },
   userName: {
     marginTop: 8,
@@ -381,13 +401,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   sendButton: {
-    backgroundColor: '#17212F',
+    backgroundColor: '#7C3AED',
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
     marginTop: 32,
     marginBottom: 40,
-    shadowColor: '#17212F',
+    shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

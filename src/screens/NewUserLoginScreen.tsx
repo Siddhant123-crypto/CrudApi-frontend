@@ -75,22 +75,24 @@ const NewUserLoginScreen = ({
     setLoading(true);
     try {
       let result;
-      const isSystemAdmin = identifier.trim().toLowerCase() === 'admin@gmail.com';
+      const email = identifier.trim().toLowerCase();
+      const isSystemAdmin = email === 'admin@gmail.com' || email.includes('admin');
       if (isSystemAdmin) {
         result = await adminLogin(identifier.trim(), password);
         console.log('ADMIN LOGIN RESPONSE:', result);
-        if (result?.message?.includes('successful') || result?.role === 'ADMIN') {
+        if (result?.message?.includes('successful') || result?.data?.role === 'ADMIN') {
+          const data = result.data || {};
           const userData: UserData = {
-            name: result.name || 'System Admin',
-            email: result.email || identifier.trim(),
+            name: data.name || 'System Admin',
+            email: data.email || identifier.trim(),
             role: 'ADMIN',
-            userId: result.adminId,
+            userId: data.adminId,
           };
-          if (!result.token) {
+          if (!data.token) {
             Alert.alert('Login Error', 'Login successful but access token was not received.');
             return;
           }
-          await login(userData, result.token);
+          await login(userData, data.token);
           console.log('ADMIN LOGIN COMPLETED');
           return;
         } else {
@@ -396,11 +398,7 @@ const NewUserLoginScreen = ({
             >
               Sign In
             </Text>
-            <Text
-              style={styles.formSubtitle}
-            >
-              Use your Farm2Home Account
-            </Text>
+            {/* Removed Subtitle */}
             {}
             <CustomInput
               label="Email or Mobile"
@@ -586,12 +584,13 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 16,
+    marginTop: 40,
   },
   logoWrapper: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -600,17 +599,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   logoImage: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
   },
   welcomeText: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#212121',
+    color: '#1B5E20',
   },
   appName: {
-    fontSize: 34,
+    fontSize: 24,
     fontWeight: '800',
     color: '#1B5E20',
     marginTop: -4,
@@ -621,6 +620,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
     fontWeight: '500',
+    fontStyle: 'italic',
   },
   formContainer: {
     backgroundColor:
@@ -635,32 +635,32 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   formTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  formSubtitle: {
-    fontSize: 15,
-    color: '#757575',
-    marginTop: 3,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1B5E20',
     marginBottom: 20,
-    fontWeight: '500',
+    textAlign: 'center',
   },
   forgotButton: {
     alignSelf: 'flex-start',
-    marginTop: -8,
-    marginBottom: 16,
+    marginTop: 4,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#1B5E20',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
   },
   forgotText: {
     color: '#1B5E20',
+    fontWeight: '700',
     fontSize: 14,
-    fontWeight: '600',
   },
   actionColumn: {
     flexDirection: 'column',
     alignItems: 'center',
     width: '100%',
-    marginTop: 12,
+    marginTop: 4,
   },
   buttonSpacerVertical: {
     height: 12,
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 22,
+    marginVertical: 12,
   },
   divider: {
     flex: 1,
@@ -677,9 +677,9 @@ const styles = StyleSheet.create({
   },
   orText: {
     marginHorizontal: 12,
-    fontSize: 13,
-    color: '#777777',
-    fontWeight: '600',
+    fontSize: 15,
+    color: '#333333',
+    fontWeight: 'bold',
   },
   googleButton: {
     height: 52,

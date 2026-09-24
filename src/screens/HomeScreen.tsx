@@ -20,6 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useNotification } from '../context/NotificationContext';
 import api, { BASE_URL } from '../services/api';
 import { StarRating } from '../components/reviews/StarRating';
 import { getUserById } from '../services/userService';
@@ -42,6 +43,7 @@ interface ProductItem {
 }
 const CustomerDashboard = ({ navigation }: any) => {
   const { logout, user } = useAuth();
+  const { unreadCount } = useNotification();
   const { cartCount, addToCart } = useCart();
   const { wishlist, toggleWishlist, isInWishlist } = useWishlist();
   const [currentBanner, setCurrentBanner] = useState(0);
@@ -62,8 +64,18 @@ const CustomerDashboard = ({ navigation }: any) => {
       try {
         if (user?.userId) {
           const profile = await getUserById(user.userId);
-          if (profile && profile.village) {
-            setLocationText(`${profile.village}, ${profile.state || 'Maharashtra'}`);
+          if (profile) {
+            if (profile.status === 'INACTIVE' && profile.blockReason) {
+              Alert.alert(
+                'Account Blocked',
+                `Your account has been blocked by the admin.\n\nReason: ${profile.blockReason}`,
+                [{ text: 'OK', onPress: () => logout() }]
+              );
+              return;
+            }
+            if (profile.village) {
+              setLocationText(`${profile.village}, ${profile.state || 'Maharashtra'}`);
+            }
           }
         }
       } catch (error) {
@@ -83,17 +95,34 @@ const CustomerDashboard = ({ navigation }: any) => {
     require('../../assets/vagis2.png'),
     require('../../assets/vagis3.png'),
   ];
-  const categories = [
-    { name: 'Vegetable',       icon: 'leaf',       color: '#10B981', bg: '#E6F4EA' },
-    { name: 'Fruit',           icon: 'nutrition',  color: '#F59E0B', bg: '#FFF3E0' },
-    { name: 'Root Vegetable',  icon: 'rose',       color: '#EC4899', bg: '#FCE4EC' },
-    { name: 'Grains',          icon: 'basket',     color: '#D97706', bg: '#FEF3C7' },
-    { name: 'Wild Veggies',    icon: 'flower',     color: '#8B5CF6', bg: '#F3E5F5' },
-    { name: 'Dairy',           icon: 'water',      color: '#3B82F6', bg: '#DBEAFE' },
-  ];
+  const [categories, setCategories] = useState<any[]>([]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/categories');
+      if (res.data && res.data.data) {
+        setCategories(res.data.data.filter((c: any) => c.isActive));
+      }
+    } catch (error) {
+      console.log('Error fetching categories:', error);
+    }
+  };
+
+  const getCategoryStyles = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('veg')) return { icon: 'leaf-outline', color: '#1E8E3E', bg: '#E6F4EA' };
+    if (n.includes('fruit')) return { icon: 'nutrition-outline', color: '#D93025', bg: '#FCE8E6' };
+    if (n.includes('root')) return { icon: 'flower-outline', color: '#E8710A', bg: '#FCEFE2' };
+    if (n.includes('grain')) return { icon: 'basket-outline', color: '#F9AB00', bg: '#FFF0D4' };
+    if (n.includes('dairy') || n.includes('milk')) return { icon: 'water-outline', color: '#1A73E8', bg: '#E8F0FE' };
+    if (n.includes('spice')) return { icon: 'flame-outline', color: '#EA4335', bg: '#FCE8E6' };
+    return { icon: 'grid-outline', color: '#9334E6', bg: '#F3E8FD' };
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchAllProducts();
+      fetchCategories();
     }, [])
   );
   const fetchAllProducts = async () => {
@@ -272,6 +301,7 @@ const CustomerDashboard = ({ navigation }: any) => {
     );
   };
   const videoProducts = allProducts.filter(p => !!p.productVideo);
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -279,16 +309,15 @@ const CustomerDashboard = ({ navigation }: any) => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {}
+          {/* HEADER */}
           <View style={styles.headerBlock}>
-            {}
+            {/* Top Row */}
             <View style={styles.headerTopRow}>
-              {}
-              <TouchableOpacity onPress={handleBackPress} style={styles.backButton} activeOpacity={0.8}>
-                <Ionicons name="arrow-back" size={26} color="#FFFFFF" />
+              <TouchableOpacity onPress={() => navigation.navigate('CustomerMenu')} style={styles.backButton} activeOpacity={0.8}>
+                <Ionicons name="menu" size={26} color="#FFFFFF" />
               </TouchableOpacity>
               <View style={styles.locationContainer}>
-                <Ionicons name="location" size={24} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Ionicons name="location" size={20} color="#FFFFFF" style={{ marginRight: 4 }} />
                 <View style={styles.locationTextContainer}>
                   <Text style={styles.deliverToText}>Deliver to</Text>
                   <TouchableOpacity
@@ -299,28 +328,30 @@ const CustomerDashboard = ({ navigation }: any) => {
                     <Text style={styles.locationNameText} numberOfLines={1}>
                       {locationText}
                     </Text>
-                    <Ionicons name="chevron-down" size={16} color="#FFFFFF" style={{ marginLeft: 4 }} />
+                    <Ionicons name="chevron-down" size={14} color="#FFFFFF" style={{ marginLeft: 3 }} />
                   </TouchableOpacity>
                 </View>
               </View>
               <View style={styles.headerActions}>
-                {}
+                {/* Bell icon - closer to cart */}
                 <TouchableOpacity
-                  style={styles.headerIconButton}
-                  onPress={() => Alert.alert('Notifications', 'No new notifications.')}
+                  style={[styles.headerIconButton, { marginLeft: 10 }]}
+                  onPress={() => navigation.navigate('Notifications')}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.badgeText}>2</Text>
-                  </View>
+                  <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+                  {unreadCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.headerIconButton}
+                  style={[styles.headerIconButton, { marginLeft: 10 }]}
                   onPress={() => navigation.navigate('Cart')}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="cart-outline" size={26} color="#FFFFFF" />
+                  <Ionicons name="cart-outline" size={24} color="#FFFFFF" />
                   {cartCount > 0 && (
                     <View style={styles.cartBadge}>
                       <Text style={styles.badgeText}>{cartCount}</Text>
@@ -329,7 +360,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                 </TouchableOpacity>
               </View>
             </View>
-            {}
+            {/* Search box - shifted up via reduced marginBottom on headerTopRow */}
             <View style={styles.searchBox}>
               <Ionicons name="search-outline" size={20} color="#64748B" onPress={handleSearch} style={{ marginRight: 8 }} />
               <TextInput
@@ -372,22 +403,24 @@ const CustomerDashboard = ({ navigation }: any) => {
               ))}
             </ScrollView>
             {}
-            <View style={[StyleSheet.absoluteFillObject, styles.bannerOverlayContainer]} pointerEvents="none">
-              <View style={styles.bannerOverlay} />
-              <View style={styles.bannerContent}>
-                <View style={styles.bannerTag}>
-                  <Text style={styles.bannerTagText}>FRESH & HEALTHY</Text>
-                </View>
+            <View style={[StyleSheet.absoluteFillObject, styles.bannerOverlayContainer]} pointerEvents="box-none">
+              <View style={styles.bannerOverlay} pointerEvents="none" />
+              <View style={styles.bannerContent} pointerEvents="none">
                 <Text style={styles.bannerTitle}>Farm Fresh</Text>
                 <Text style={styles.bannerTitle}>Goodness</Text>
                 <Text style={styles.bannerDescription}>
                   Handpicked • Natural • Chemical Free
                 </Text>
-                <TouchableOpacity style={styles.shopButton} onPress={openAllProducts}>
-                  <Text style={styles.shopButtonText}>Shop Now</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#263D20" />
-                </TouchableOpacity>
               </View>
+              {/* Shop Now button - tappable, redirects to Vegetable */}
+              <TouchableOpacity
+                style={styles.shopButton}
+                onPress={() => navigation.navigate('CategoryDashboard', { category: 'Vegetable' })}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.shopButtonText}>Shop Now</Text>
+                <Ionicons name="arrow-forward" size={16} color="#263D20" />
+              </TouchableOpacity>
               <View style={styles.dotsContainer} pointerEvents="auto">
                 {bannerImages.map((_, index) => (
                   <TouchableOpacity
@@ -402,15 +435,19 @@ const CustomerDashboard = ({ navigation }: any) => {
               </View>
             </View>
           </View>
-          {}
+          {/* Categories Section */}
           <View style={styles.categorySection}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionTitle}>Categories</Text>
               </View>
-              <TouchableOpacity onPress={openAllProducts} style={styles.viewAllRow}>
-                <Text style={styles.viewAllText}>View all</Text>
-                <Ionicons name="chevron-forward" size={16} color="#2563EB" style={{ marginLeft: 2 }} />
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('CategoryDashboard', { category: 'All Products' })} 
+                style={styles.attractiveViewAllBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.attractiveViewAllText}>All Products</Text>
+                <Ionicons name="arrow-forward" size={14} color="#27391F" />
               </TouchableOpacity>
             </View>
             <ScrollView
@@ -418,10 +455,11 @@ const CustomerDashboard = ({ navigation }: any) => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoryScroll}
             >
-              {categories.map((category, index) => {
+              {categories.map((category) => {
+                const stylesObj = getCategoryStyles(category.name);
                 return (
                   <TouchableOpacity
-                    key={category.name}
+                    key={category.categoryId || category.name}
                     style={styles.categoryCard}
                     onPress={() => openCategory(category.name)}
                     activeOpacity={0.7}
@@ -430,20 +468,20 @@ const CustomerDashboard = ({ navigation }: any) => {
                       style={[
                         styles.categoryIconBox,
                         {
-                          backgroundColor: category.bg,
-                          borderColor: category.color,
+                          backgroundColor: stylesObj.bg,
+                          borderColor: stylesObj.color,
                           borderWidth: 1.5,
                         },
                       ]}
                     >
                       <Ionicons
-                        name={category.icon as any}
+                        name={stylesObj.icon as any}
                         size={20}
-                        color={category.color}
+                        color={stylesObj.color}
                       />
                     </View>
                     <Text style={styles.categoryText} numberOfLines={1}>
-                      {category.name === 'Root Vegetable' ? 'Root Veg' : category.name === 'Wild Veggies' ? 'Wild Veg' : category.name}
+                      {category.name}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -457,9 +495,9 @@ const CustomerDashboard = ({ navigation }: any) => {
                 <View style={styles.sectionTitleRow}>
                   <Text style={styles.sectionTitle}>🎬 Farmer Shorts</Text>
                 </View>
-                <TouchableOpacity style={styles.viewAllRow} onPress={openAllProducts}>
+                <TouchableOpacity style={styles.viewAllRow} onPress={() => navigation.navigate('FarmerShorts')}>
                   <Text style={styles.viewAllText}>View All</Text>
-                  <Ionicons name="chevron-forward" size={18} color="#2563EB" />
+                  <Ionicons name="chevron-forward" size={15} color="#2563EB" />
                 </TouchableOpacity>
               </View>
               <ScrollView
@@ -470,7 +508,13 @@ const CustomerDashboard = ({ navigation }: any) => {
                 snapToInterval={155}
                 snapToAlignment="start"
               >
-                {videoProducts.map(product => (
+                {videoProducts.map(product => {
+                  const videoUrl = product.productVideo
+                    ? `${BASE_URL}/product/video/${product.productVideo}`
+                    : null;
+                  const isThisPlaying = playingVideoId === product.productId;
+                  const videoRef = React.createRef<any>();
+                  return (
                   <TouchableOpacity
                     key={`video-${product.productId}`}
                     style={styles.shortCard}
@@ -480,7 +524,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                         Alert.alert('Inactive', 'This product is inactive');
                         return;
                       }
-                      handlePlayVideo(product.productVideo!);
+                      navigation.navigate('FarmerShorts');
                     }}
                   >
                     {product.status === 'INACTIVE' && (
@@ -488,7 +532,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                         <Text style={styles.inactiveLabelText}>Inactive</Text>
                       </View>
                     )}
-                    {}
+                    {/* Thumbnail */}
                     <Image
                       source={
                         product.productPhoto
@@ -498,27 +542,29 @@ const CustomerDashboard = ({ navigation }: any) => {
                       style={styles.shortThumbnail}
                       resizeMode="cover"
                     />
-                    {}
+                    {/* Overlay */}
                     <View style={styles.shortOverlay} />
-                    {}
+                    {/* Play button */}
                     <View style={styles.shortPlayBtn}>
                     <View style={styles.shortPlayCircle}>
                         <Ionicons name="play" size={20} color="#FFFFFF" />
                       </View>
                     </View>
-                    {}
+                    {/* Shorts badge */}
                     <View style={styles.shortsBadge}>
                       <Ionicons name="videocam" size={10} color="#FF0000" />
                       <Text style={styles.shortsBadgeText}> Shorts</Text>
                     </View>
-                    {}
+                    {/* Farmer name only (no price) */}
                     <Text style={styles.shortTitle} numberOfLines={2}>
                       {product.productName}
                     </Text>
-                    {}
-                    <Text style={styles.shortPrice}>₹{product.price}/{product.unit?.toLowerCase()}</Text>
+                    <Text style={styles.shortFarmerName} numberOfLines={1}>
+                      🌾 Farmer
+                    </Text>
                   </TouchableOpacity>
-                ))}
+                );
+                })}
               </ScrollView>
             </>
           )}
@@ -613,7 +659,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                   </View>
                   <TouchableOpacity onPress={() => openCategory('Vegetable')} style={styles.viewAllRow}>
                     <Text style={styles.viewAllText}>View all</Text>
-                    <Ionicons name="chevron-forward" size={16} color="#2563EB" style={{ marginLeft: 2 }} />
+                    <Ionicons name="chevron-forward" size={15} color="#2563EB" style={{ marginLeft: 2 }} />
                   </TouchableOpacity>
                 </View>
                 <ScrollView
@@ -693,7 +739,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                     <Text style={styles.deliverySubtitle}>On order above ₹499</Text>
                   </View>
                 </View>
-                <TouchableOpacity style={styles.deliveryShopBtn} onPress={openAllProducts}>
+                <TouchableOpacity style={styles.deliveryShopBtn} onPress={() => navigation.navigate('CategoryDashboard', { category: 'All Products' })}>
                   <Text style={styles.deliveryShopBtnText}>Shop Now</Text>
                 </TouchableOpacity>
               </View>
@@ -704,7 +750,7 @@ const CustomerDashboard = ({ navigation }: any) => {
               style={styles.backToDashButton}
               onPress={clearFilters}
             >
-              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+              <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
               <Text style={styles.backToDashText}>Back to Dashboard</Text>
             </TouchableOpacity>
           )}
@@ -829,9 +875,9 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     backgroundColor: '#1E3A8A',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingHorizontal: 18,
+    paddingTop: 40,
+    paddingBottom: 12,
   },
   backButton: {
     marginRight: 10,
@@ -851,7 +897,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   locationContainer: {
     flexDirection: 'row',
@@ -873,17 +919,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   locationNameText: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '700',
-    maxWidth: 160,
+    maxWidth: 150,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerIconButton: {
-    marginLeft: 18,
+    marginLeft: 10,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
@@ -936,11 +982,11 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   categorySection: {
-    marginTop: 20,
+    marginTop: 10,
   },
   categoryScroll: {
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 6,
   },
   categoryCard: {
@@ -968,8 +1014,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryText: {
-    marginTop: 6,
-    fontSize: 9,
+    marginTop: 5,
+    fontSize: 8,
     fontWeight: '700',
     color: '#0F172A',
     textAlign: 'center',
@@ -983,10 +1029,10 @@ const styles = StyleSheet.create({
   },
   bannerContainer: {
     marginHorizontal: 20,
-    marginTop: 17,
+    marginTop: 10,
     borderRadius: 22,
     overflow: 'hidden',
-    height: 175,
+    height: 165,
     position: 'relative',
   },
   bannerImage: {
@@ -1023,33 +1069,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   bannerTitle: {
-    marginTop: 4,
+    marginTop: 3,
     color: '#FFFFFF',
-    fontSize: 27,
-    lineHeight: 30,
+    fontSize: 20,
+    lineHeight: 24,
     fontWeight: '900',
   },
   bannerDescription: {
-    marginTop: 9,
+    marginTop: 6,
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
   },
   shopButton: {
-    marginTop: 15,
+    marginTop: 10,
+    marginLeft: 20,
     alignSelf: 'flex-start',
-    minHeight: 41,
-    paddingHorizontal: 16,
-    borderRadius: 21,
+    minHeight: 34,
+    paddingHorizontal: 12,
+    borderRadius: 17,
     backgroundColor: '#FFD02A',
     flexDirection: 'row',
     alignItems: 'center',
+    zIndex: 3,
   },
   shopButtonText: {
     color: '#27391F',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '800',
-    marginRight: 5,
+    marginRight: 4,
   },
   dotsContainer: {
     position: 'absolute',
@@ -1073,7 +1121,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   sectionHeader: {
-    marginTop: 23,
+    marginTop: 14,
     marginHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1084,7 +1132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
     color: '#162018',
   },
@@ -1096,6 +1144,25 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontSize: 14,
     fontWeight: '700',
+  },
+  attractiveViewAllBtn: {
+    backgroundColor: '#FFD02A',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#FFD02A',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  attractiveViewAllText: {
+    color: '#27391F',
+    fontSize: 12,
+    fontWeight: '800',
+    marginRight: 4,
   },
   shortsScroll: {
     paddingHorizontal: 20,
@@ -1166,7 +1233,19 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  shortFarmerName: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    right: 10,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 9,
     fontWeight: '700',
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },

@@ -23,6 +23,11 @@
       "package": "com.siddhant.farm2home",
       "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyD13KSxPnYEtZ88mV6F1CMq-5fLepvbuzQ"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B5E20"
