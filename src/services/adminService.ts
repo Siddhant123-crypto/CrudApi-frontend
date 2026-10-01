@@ -116,3 +116,40 @@ export const deleteAdminMarket = async (id: string | number) => {
     throw error;
   }
 };
+
+export const getAdminGroupMessages = async () => {
+  try {
+    const response = await api.get('/admin/group/messages');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const sendAdminGroupMessage = async (message: string) => {
+  try {
+    const payload = { message };
+    const response = await api.post('/admin/group/messages', payload);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getAvailableAdmins = async () => {
+  try {
+    const response = await api.get('/admin/support/admins');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteAdminGroupMessage = async (messageId: string) => {
+  try {
+    const response = await api.delete(`/admin/group/messages/${messageId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

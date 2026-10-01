@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
@@ -15,6 +15,10 @@ export const AdminCategoriesScreen: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [categoryToToggle, setCategoryToToggle] = useState<{ id: string, willBeActive: boolean } | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editCatId, setEditCatId] = useState('');
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [deleteCatId, setDeleteCatId] = useState('');
   const navigation = useNavigation<any>();
 
   useEffect(() => {
@@ -56,6 +60,54 @@ export const AdminCategoriesScreen: React.FC = () => {
       Alert.alert('Failed to add category. It may already exist.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEditClick = (item: any) => {
+    setEditCatId(item.categoryId);
+    setNewCatName(item.name);
+    setNewCatDesc(item.description || '');
+    setIsEditModalVisible(true);
+  };
+
+  const handleEditCategory = async () => {
+    if (!newCatName.trim()) return;
+    try {
+      setSaving(true);
+      const { default: api } = await import('../../services/api');
+      // Replace with actual edit endpoint if it differs
+      const res = await api.put(`/admin/categories/${editCatId}`, {
+        name: newCatName.trim(),
+        description: newCatDesc.trim()
+      });
+      if (res.data) {
+        setCategories(prev => prev.map(c => c.categoryId === editCatId ? { ...c, name: newCatName.trim(), description: newCatDesc.trim() } : c));
+        setIsEditModalVisible(false);
+        setNewCatName('');
+        setNewCatDesc('');
+      }
+    } catch (e) {
+      console.log('Error editing category:', e);
+      Alert.alert('Failed to edit category.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (item: any) => {
+    setDeleteCatId(item.categoryId);
+    setIsDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const { default: api } = await import('../../services/api');
+      await api.delete(`/admin/categories/${deleteCatId}`);
+      setCategories(prev => prev.filter(c => c.categoryId !== deleteCatId));
+      setIsDeleteModalVisible(false);
+    } catch (e) {
+      console.log('Error deleting category:', e);
+      Alert.alert('Failed to delete category.');
     }
   };
 
@@ -106,23 +158,37 @@ export const AdminCategoriesScreen: React.FC = () => {
         <View style={styles.iconContainer}>
           <Ionicons name={getIconForCategory(item.name) as any} size={28} color="#F5C16C" />
         </View>
-        <View>
-          <Text style={styles.categoryName}>{item.name}</Text>
-          <Text style={styles.description}>{item.description}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.categoryName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
         </View>
       </View>
       <View style={styles.cardRight}>
         <View style={{ opacity: item.isActive ? 1 : 0.4 }}>
           <StatusBadge status={item.isActive ? 'Active' : 'Inactive'} />
         </View>
-        <TouchableOpacity 
-          style={{ marginTop: 8, padding: 6, backgroundColor: item.isActive ? '#FEE2E2' : '#D1FAE5', borderRadius: 6, alignItems: 'center' }}
-          onPress={() => handleToggleCategory(item.categoryId, item.isActive)}
-        >
-          <Text style={{ fontSize: 10, fontWeight: 'bold', color: item.isActive ? '#EF4444' : '#10B981' }}>
-            {item.isActive ? 'Inactive' : 'Active'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', marginTop: 8, gap: 6 }}>
+          <TouchableOpacity 
+            style={{ padding: 6, backgroundColor: '#E5E7EB', borderRadius: 6, alignItems: 'center' }}
+            onPress={() => handleEditClick(item)}
+          >
+            <Ionicons name="pencil" size={14} color="#374151" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={{ padding: 6, backgroundColor: '#FEE2E2', borderRadius: 6, alignItems: 'center' }}
+            onPress={() => handleDeleteClick(item)}
+          >
+            <Ionicons name="trash" size={14} color="#EF4444" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={{ padding: 6, backgroundColor: item.isActive ? '#FEE2E2' : '#D1FAE5', borderRadius: 6, alignItems: 'center' }}
+            onPress={() => handleToggleCategory(item.categoryId, item.isActive)}
+          >
+            <Text style={{ fontSize: 9, fontWeight: 'bold', color: item.isActive ? '#EF4444' : '#10B981' }}>
+              {item.isActive ? 'Inactive' : 'Active'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -156,27 +222,86 @@ export const AdminCategoriesScreen: React.FC = () => {
       </TouchableOpacity>
 
       <Modal visible={isModalVisible} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: '#fff', padding: 20, borderRadius: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add New Category</Text>
-            <TextInput 
-              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 }}
-              placeholder="Category Name (e.g. Spices)"
-              value={newCatName}
-              onChangeText={setNewCatName}
-            />
-            <TextInput 
-              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20 }}
-              placeholder="Description (optional)"
-              value={newCatDesc}
-              onChangeText={setNewCatDesc}
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <TouchableOpacity onPress={() => setIsModalVisible(false)} style={{ padding: 12, marginRight: 12 }}>
-                <Text style={{ color: '#666', fontWeight: 'bold' }}>Cancel</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
+            <View style={{ backgroundColor: '#fff', padding: 20, borderRadius: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add New Category</Text>
+              <TextInput 
+                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 }}
+                placeholder="Category Name (e.g. Spices)"
+                value={newCatName}
+                onChangeText={setNewCatName}
+              />
+              <TextInput 
+                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20 }}
+                placeholder="Description (optional)"
+                value={newCatDesc}
+                onChangeText={setNewCatDesc}
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <TouchableOpacity onPress={() => setIsModalVisible(false)} style={{ padding: 12, marginRight: 12 }}>
+                  <Text style={{ color: '#666', fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleAddCategory} disabled={saving} style={{ backgroundColor: '#17212F', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{saving ? 'Adding...' : 'Add'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+      {/* Edit Modal */}
+      <Modal visible={isEditModalVisible} transparent animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
+            <View style={{ backgroundColor: '#fff', padding: 20, borderRadius: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Edit Category</Text>
+              <TextInput 
+                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 }}
+                placeholder="Category Name"
+                value={newCatName}
+                onChangeText={setNewCatName}
+              />
+              <TextInput 
+                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20 }}
+                placeholder="Description"
+                value={newCatDesc}
+                onChangeText={setNewCatDesc}
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <TouchableOpacity onPress={() => setIsEditModalVisible(false)} style={{ padding: 12, marginRight: 12 }}>
+                  <Text style={{ color: '#666', fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleEditCategory} disabled={saving} style={{ backgroundColor: '#17212F', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{saving ? 'Saving...' : 'Save'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal visible={isDeleteModalVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 20, alignItems: 'center' }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+               <Ionicons name="trash" size={32} color="#EF4444" />
+            </View>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 12, textAlign: 'center' }}>Delete Category?</Text>
+            <Text style={{ fontSize: 15, color: '#6B7280', marginBottom: 30, textAlign: 'center', lineHeight: 22 }}>
+              Are you sure you want to delete this category? This action cannot be undone.
+            </Text>
+            <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between', gap: 12 }}>
+              <TouchableOpacity 
+                onPress={() => setIsDeleteModalVisible(false)} 
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center' }}>
+                <Text style={{ color: '#4B5563', fontWeight: 'bold', fontSize: 16 }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleAddCategory} disabled={saving} style={{ backgroundColor: '#17212F', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>{saving ? 'Adding...' : 'Add'}</Text>
+              <TouchableOpacity 
+                onPress={confirmDelete} 
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#EF4444', alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Yes, Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -216,7 +341,7 @@ export const AdminCategoriesScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 16 },
-  screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },
+  screenTitle: { fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 12, height: 44,
@@ -228,10 +353,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-  },cardLeft: { flexDirection: 'row', alignItems: 'center' },
+  },cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
   iconContainer: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#17212F', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-  categoryName: { fontSize: 16, fontWeight: 'bold', color: '#1B2430', marginBottom: 4 },
-  description: { fontSize: 12, color: '#6B7280' },
+  categoryName: { fontSize: 14, fontWeight: 'bold', color: '#1B2430', marginBottom: 4 },
+  description: { fontSize: 10, color: '#6B7280' },
   cardRight: { alignItems: 'flex-end' },
   fab: {position: 'absolute', bottom: 80, right: 16, left: 16,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',

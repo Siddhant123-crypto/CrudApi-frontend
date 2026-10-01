@@ -304,7 +304,7 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Farm Categories</Text>
                 </View>
-                <View style={styles.categoryGridContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryGridContainer}>
                   {categories.map((category) => {
                     const stylesObj = getCategoryStyles(category.name);
                     return (
@@ -317,13 +317,13 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                         <View style={[styles.categoryCard, { borderColor: stylesObj.color }]}>
                           <Ionicons name={stylesObj.icon as any} size={22} color={stylesObj.color} />
                         </View>
-                        <Text style={styles.categoryText} numberOfLines={1} adjustsFontSizeToFit>
+                        <Text style={styles.categoryText} numberOfLines={1}>
                           {category.name}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
-                </View>
+                </ScrollView>
               </View>
               {}
               <View style={styles.quickActionsSection}>
@@ -369,8 +369,9 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
                 <View style={styles.shortsSection}>
                   <View style={styles.sectionHeaderRow}>
                     <Text style={styles.sectionTitle}>🎬 Farmer Shorts</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('FarmerShorts')}>
-                      <Text style={styles.viewAllText}>View All</Text>
+                    <TouchableOpacity style={styles.viewAllVideoBtn} onPress={() => navigation.navigate('FarmerShorts')}>
+                      <Ionicons name="play-circle" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                      <Text style={styles.viewAllVideoBtnText}>Watch All</Text>
                     </TouchableOpacity>
                   </View>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shortsScroll} decelerationRate="fast" snapToInterval={155} snapToAlignment="start">
@@ -408,8 +409,9 @@ const FarmerDashboardScreen = ({ navigation }: any) => {
               {}
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Recent Orders</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
-                  <Text style={styles.viewAllText}>View All</Text>
+                <TouchableOpacity style={styles.viewAllBtn} onPress={() => navigation.navigate('Orders')}>
+                  <Text style={styles.viewAllBtnText}>View All</Text>
+                  <Ionicons name="arrow-forward" size={14} color="#FFF" style={{ marginLeft: 2 }} />
                 </TouchableOpacity>
               </View>
               <View style={styles.ordersList}>
@@ -659,7 +661,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   headerBlock: {
     backgroundColor: '#1E5631',
@@ -857,13 +859,12 @@ const styles = StyleSheet.create({
     color: '#1E5631',
   },
   categoryGridContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingHorizontal: 0,
+    gap: 2,
   },
   categoryWrap: {
     alignItems: 'center',
-    width: '16%',
+    width: 60,
   },
   categoryCard: {
     backgroundColor: '#FFFFFF',
@@ -882,7 +883,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   categoryText: {
-    fontSize: 9,
+    fontSize: 10,
     color: '#334155',
     fontWeight: '700',
     textAlign: 'center',
@@ -1018,6 +1019,42 @@ const styles = StyleSheet.create({
   viewAllText: {
     color: '#176B2C',
     fontWeight: '700',
+    fontSize: 12,
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E5631',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    elevation: 3,
+    shadowColor: '#1E5631',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  viewAllBtnText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  viewAllVideoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    elevation: 3,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  viewAllVideoBtnText: {
+    color: '#FFF',
+    fontWeight: 'bold',
     fontSize: 12,
   },
   ordersList: {

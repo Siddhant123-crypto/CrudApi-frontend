@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
   Platform,
   StatusBar,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  NativeModules,
+  findNodeHandle
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -35,6 +37,10 @@ export const FarmerMessageCustomerScreen = () => {
   const [specificUserId, setSpecificUserId] = useState<string>(preSelectedId || '');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
+  
+  const titleInputRef = useRef<TextInput>(null);
+  const messageInputRef = useRef<TextInput>(null);
+  
   const [searchQuery, setSearchQuery] = useState(preSelectedName || '');
   const [customersList, setCustomersList] = useState<any[]>([]);
   useEffect(() => {
@@ -56,8 +62,49 @@ export const FarmerMessageCustomerScreen = () => {
       setFetchingUsers(false);
     }
   };
+  const titleRef = useRef(title);
+  const messageRef = useRef(message);
+
+  const handleTitleChange = (t: string) => {
+    setTitle(t);
+    titleRef.current = t;
+  };
+  const handleMessageChange = (m: string) => {
+    setMessage(m);
+    messageRef.current = m;
+  };
+
   const handleSend = async () => {
-    if (!title.trim() || !message.trim()) {
+    const reactTitle = (titleRef.current || title || '').trim();
+    let currentTitle = reactTitle;
+    const reactMessage = (messageRef.current || message || '').trim();
+    let currentMessage = reactMessage;
+
+    if (Platform.OS === 'android') {
+      const { TextInputCommiter } = NativeModules;
+      if (TextInputCommiter) {
+        try {
+          if (titleInputRef.current) {
+            const titleTag = findNodeHandle(titleInputRef.current);
+            if (titleTag) {
+              const t = await TextInputCommiter.getAndCommitText(titleTag);
+              if (t && t.trim().length > currentTitle.length) currentTitle = t.trim();
+            }
+          }
+          if (messageInputRef.current) {
+            const msgTag = findNodeHandle(messageInputRef.current);
+            if (msgTag) {
+              const m = await TextInputCommiter.getAndCommitText(msgTag);
+              if (m && m.trim().length > currentMessage.length) currentMessage = m.trim();
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to get native text:", e);
+        }
+      }
+    }
+
+    if (!currentTitle.trim() || !currentMessage.trim()) {
       Alert.alert('Error', 'Title and message are required.');
       return;
     }
@@ -68,11 +115,11 @@ export const FarmerMessageCustomerScreen = () => {
     setLoading(true);
     try {
       const senderName = user?.name || user?.email || 'A Farmer';
-      const formattedMessage = `From: ${senderName}\n\n${message.trim()}`;
+      const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
       const payload: NotificationSendRequest = {
         receiverType: isAdminMessage ? 'ADMIN' : 'CUSTOMER',
         receiverId: isAdminMessage ? specificUserId : (recipient === 'ALL' ? undefined : specificUserId),
-        title: title.trim(),
+        title: currentTitle.trim(),
         message: formattedMessage,
         notificationType: isAdminMessage ? 'ADMIN' : 'FARMER',
       };
@@ -195,18 +242,20 @@ export const FarmerMessageCustomerScreen = () => {
         )}
         <Text style={styles.label}>Title</Text>
         <TextInput
+          ref={titleInputRef}
           style={styles.input}
           placeholder="e.g., Fresh Produce Available"
           value={title}
-          onChangeText={setTitle}
+          onChangeText={handleTitleChange}
           placeholderTextColor="#9CA3AF"
         />
         <Text style={styles.label}>Message</Text>
         <TextInput
+          ref={messageInputRef}
           style={[styles.input, styles.textArea]}
           placeholder="Enter your message here..."
           value={message}
-          onChangeText={setMessage}
+          onChangeText={handleMessageChange}
           multiline
           numberOfLines={4}
           textAlignVertical="top"

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -22,12 +22,24 @@ const FarmerMenuScreen: React.FC = () => {
       title: 'Messages', 
       icon: 'chatbubbles-outline', 
       subItems: [
-        { title: 'Message Admin', icon: 'shield-checkmark-outline', route: 'FarmerContactAdmin' },
+        { title: 'Message Admin', icon: 'shield-checkmark-outline', route: 'FarmerSupportChatScreen' },
         { title: 'Message Customer', icon: 'people-outline', route: 'FarmerMessageCustomer' }
       ] 
     },
     { title: 'My Profile', icon: 'person-outline', route: 'Profile' },
   ];
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', onPress: logout, style: 'destructive' },
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
     <View style={styles.modalOverlay}>
@@ -48,7 +60,7 @@ const FarmerMenuScreen: React.FC = () => {
                     if (item.subItems) {
                       setExpandedItem(expandedItem === item.title ? null : item.title);
                     } else if (item.route) {
-                      if (item.route === 'FarmerContactAdmin' || item.route === 'FarmerMessageCustomer' || item.route === 'AddProduct' || item.route === 'FarmerCategories') {
+                      if (item.route === 'FarmerSupportChatScreen' || item.route === 'FarmerMessageCustomer' || item.route === 'AddProduct' || item.route === 'FarmerCategories') {
                         navigation.navigate(item.route);
                       } else {
                         navigation.navigate('FarmerMain', { screen: item.route });
@@ -85,7 +97,7 @@ const FarmerMenuScreen: React.FC = () => {
               </View>
             ))}
             
-            <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={logout}>
+            <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={handleLogout}>
               <View style={styles.menuItemLeft}>
                 <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
                   <Ionicons name="log-out-outline" size={20} color="#EF4444" />

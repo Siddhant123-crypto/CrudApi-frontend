@@ -133,6 +133,7 @@ export const AuthProvider: React.FC<{
       setInitialAuthRoute(
         'Welcome',
       );
+      
       console.log(
         'AUTH LOGIN SUCCESSFUL',
       );
@@ -156,6 +157,7 @@ export const AuthProvider: React.FC<{
       setInitialAuthRoute(
         'NewUserLogin',
       );
+      
       console.log(
         'LOGOUT SUCCESSFUL',
       );

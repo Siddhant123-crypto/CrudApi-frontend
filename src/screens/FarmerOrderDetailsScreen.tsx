@@ -123,9 +123,11 @@ const FarmerOrderDetailsScreen = ({route, navigation}: any) => {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back-outline" size={28} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          Customer Product Detail
-        </Text>
+        <View style={{ flex: 1, alignItems: 'center', marginRight: 36 }}>
+          <Text style={styles.headerTitle}>
+            Customer Product Detail
+          </Text>
+        </View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {}
@@ -379,6 +381,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#FFFFFF',
     padding: 16,
+    paddingBottom: 50,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     elevation: 10,

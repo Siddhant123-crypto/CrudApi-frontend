@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal, Keyboard, NativeModules, findNodeHandle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useNotification } from '../context/NotificationContext';
@@ -19,10 +19,14 @@ export const FarmerSupportChatScreen = () => {
   const { unreadCount } = useNotification();
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [inputText, setInputText] = useState('');
+  const inputTextRef = useRef('');
+  const textInputRef = useRef<TextInput>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const isSendingRef = useRef(false);
   const [supportRequestId, setSupportRequestId] = useState<string | null>(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const toggleSelection = (id: string) => {
@@ -33,6 +37,20 @@ export const FarmerSupportChatScreen = () => {
 
   useEffect(() => {
     checkActiveSupportRequest();
+    
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -92,18 +110,51 @@ export const FarmerSupportChatScreen = () => {
     }
   };
 
+  const handleTextChange = (text: string) => {
+    setInputText(text);
+    inputTextRef.current = text;
+  };
+
   const sendMessage = async () => {
-    if (!inputText.trim()) return;
+    if (isSendingRef.current) return;
+    
+    const reactText = (inputTextRef.current || inputText || '').trim();
+    let currentInput = reactText;
+
+    if (Platform.OS === 'android' && textInputRef.current) {
+      const { TextInputCommiter } = NativeModules;
+      if (TextInputCommiter) {
+        try {
+          const reactTag = findNodeHandle(textInputRef.current);
+          if (reactTag) {
+            const nativeText = await TextInputCommiter.getAndCommitText(reactTag);
+            // ONLY adopt nativeText if it contains additional uncommitted IME text; NEVER truncate
+            if (nativeText && nativeText.trim().length > currentInput.length) {
+              currentInput = nativeText.trim();
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to get native text:", e);
+        }
+      }
+    }
+
+    currentInput = currentInput.trim();
+    if (!currentInput) {
+      if (Platform.OS === 'android') textInputRef.current?.focus(); // restore focus if empty
+      return;
+    }
     
     let currentReqId = supportRequestId;
     setSending(true);
+    isSendingRef.current = true;
 
     try {
       // If no active request exists, create one first
       if (!currentReqId) {
         const createRes = await api.post('/support', {
           subject: 'Account Blocked - Admin Support',
-          description: inputText.trim(),
+          description: currentInput,
         });
         
         if (createRes.data && createRes.data.data) {
@@ -114,9 +165,15 @@ export const FarmerSupportChatScreen = () => {
         }
       }
 
-      // Send the message
-      const sendRes = await api.post(`/support/${currentReqId}/messages`, {
-        message: inputText.trim(),
+      const messageToSend = currentInput;
+      if (!messageToSend) return;
+
+      // Send the message explicitly as JSON
+      const payload = { message: messageToSend };
+      const sendRes = await api.post(`/support/${currentReqId}/messages`, payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       if (sendRes.data && sendRes.data.data) {
@@ -128,13 +185,19 @@ export const FarmerSupportChatScreen = () => {
           return [...prev, newMsg];
         });
         setInputText('');
+        inputTextRef.current = '';
+        textInputRef.current?.clear();
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+        if (Platform.OS === 'android') {
+          setTimeout(() => textInputRef.current?.focus(), 150); // restore focus after send
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
       Alert.alert('Error', 'Could not send message.');
     } finally {
       setSending(false);
+      isSendingRef.current = false;
     }
   };
 
@@ -206,7 +269,7 @@ export const FarmerSupportChatScreen = () => {
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 25}
     >
       {selectedMessageIds.length > 0 ? (
         <View style={[styles.header, styles.headerSelected]}>
@@ -260,19 +323,20 @@ export const FarmerSupportChatScreen = () => {
         />
       )}
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? 30 : (isKeyboardVisible ? 12 : 45) }]}>
         <TextInput
+          ref={textInputRef}
           style={styles.input}
+          value={inputText}
           placeholder="Type your message..."
           placeholderTextColor="#9CA3AF"
-          value={inputText}
-          onChangeText={setInputText}
+          onChangeText={handleTextChange}
           multiline
         />
         <TouchableOpacity 
-          style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
+          style={[styles.sendButton, sending && styles.sendButtonDisabled]}
           onPress={sendMessage}
-          disabled={!inputText.trim() || sending}
+          disabled={sending}
         >
           {sending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
@@ -473,7 +537,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 12,
-    paddingBottom: Platform.OS === 'android' ? 45 : 30, // Increased padding to move chat section up
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
@@ -486,7 +549,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    maxHeight: 100,
+    maxHeight: 120,
     fontSize: 15,
     color: '#1F2937',
     borderWidth: 1,

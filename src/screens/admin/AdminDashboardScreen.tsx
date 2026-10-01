@@ -6,9 +6,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { getAdminDashboardSummary } from '../../services/adminService';
+import { useNotification } from '../../context/NotificationContext';
 
 export const AdminDashboardScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { adminSupportUnreadCount, adminSupportUnassignedCount } = useNotification();
   const [dashboardData, setDashboardData] = useState({
     totalFarmers: 0,
     totalCustomers: 0,
@@ -46,9 +48,23 @@ export const AdminDashboardScreen: React.FC = () => {
           <View style={styles.welcomeLeft}>
             <View>
               <Text style={styles.welcomeText}>Hello, Admin</Text>
-              <Text style={styles.welcomeSubtitle}>Here's what's happening today</Text>
+              <Text style={styles.welcomeSubtitle}>Here's what's happening</Text>
             </View>
           </View>
+          <TouchableOpacity
+            style={styles.supportInboxButton}
+            onPress={() => navigation.navigate('AdminSupportInbox')}
+          >
+            <Ionicons name="headset" size={14} color="#FFFFFF" />
+            <Text style={styles.supportInboxText}>Support</Text>
+            {(adminSupportUnreadCount > 0 || adminSupportUnassignedCount > 0) && (
+              <View style={styles.supportBadgeAbsolute}>
+                <Text style={styles.supportBadgeText}>
+                  {(adminSupportUnreadCount + adminSupportUnassignedCount) > 99 ? '99+' : (adminSupportUnreadCount + adminSupportUnassignedCount)}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <View style={styles.dateCard}>
             <Ionicons name="calendar-outline" size={14} color="#1B2430" style={styles.dateIcon} />
             <Text style={styles.dateText}>{currentDate}</Text>
@@ -237,25 +253,25 @@ export const AdminDashboardScreen: React.FC = () => {
         <View style={styles.quickActionsSection}>
           <Text style={styles.quickActionsTitle}>Quick Actions</Text>
           <View style={styles.quickActionsRow}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="person-add-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>Add Farmer</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AdminFarmers')}>
+              <Ionicons name="people-outline" size={24} color="#F5C16C" />
+              <Text style={styles.actionText}>All{'\n'}Users</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="add-circle-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>Add Product</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AdminProducts')}>
+              <Ionicons name="cube-outline" size={24} color="#F5C16C" />
+              <Text style={styles.actionText}>All{'\n'}Products</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AdminCategories')}>
               <Ionicons name="grid-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>Add Category</Text>
+              <Text style={styles.actionText}>Add{'\n'}Category</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AdminOrders')}>
               <Ionicons name="receipt-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>All Orders</Text>
+              <Text style={styles.actionText}>All{'\n'}Orders</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Analytics')}>
               <Ionicons name="bar-chart-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>Reports</Text>
+              <Text style={styles.actionText}>All{'\n'}Report</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -281,6 +297,8 @@ const styles = StyleSheet.create({
   welcomeLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
+    marginRight: 4,
   },
   welcomeText: {
     fontSize: 18,
@@ -292,12 +310,53 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 2,
   },
+  supportInboxButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 20,
+    elevation: 4,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    marginRight: 4,
+    position: 'relative', // Added for absolute badge
+  },
+  supportInboxText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginLeft: 4,
+  },
+  supportBadgeAbsolute: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444', // Red color for the dot/badge
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#F8F1E6', // Match background to look like a cutout
+    elevation: 5,
+  },
+  supportBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
   dateCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -306,10 +365,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   dateIcon: {
-    marginRight: 6,
+    marginRight: 4,
   },
   dateText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#1B2430',
   },
@@ -534,9 +593,10 @@ const styles = StyleSheet.create({
   actionButton: {
     backgroundColor: '#17212F',
     borderRadius: 12,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 2,
     alignItems: 'center',
-    width: '18%',
+    width: '19%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -545,7 +605,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 8.5,
     marginTop: 8,
     textAlign: 'center',
   },

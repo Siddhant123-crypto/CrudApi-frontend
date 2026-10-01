@@ -69,8 +69,12 @@ import AdminMessageHistoryScreen from '../screens/admin/AdminMessageHistoryScree
 import AdminMessageHistoryDetailScreen from '../screens/admin/AdminMessageHistoryDetailScreen';
 import AdminSendNotificationScreen from '../screens/admin/AdminSendNotificationScreen';
 import AdminSupportChatScreen from '../screens/admin/AdminSupportChatScreen';
+import AdminGroupChatScreen from '../screens/admin/AdminGroupChatScreen';
+import AdminSupportInboxScreen from '../screens/admin/AdminSupportInboxScreen';
 import FarmerShortsScreen from '../screens/FarmerShortsScreen';
 import FarmerWeatherDetailsScreen from '../screens/FarmerWeatherDetailsScreen';
+import GiftedChatTestScreen from '../screens/chat/GiftedChatTestScreen';
+
 export type AuthStackParamList = {
   Welcome: undefined;
   RoleSelection: undefined;
@@ -131,9 +135,12 @@ export type MainStackParamList = {
   AdminSendNotification: undefined;
   FarmerSupportChatScreen: undefined;
   AdminSupportChatScreen: { farmerId: string; farmerName?: string };
+  AdminGroupChat: undefined;
+  AdminSupportInbox: undefined;
   FarmerShorts: undefined;
   FarmCertificate: undefined;
   FarmerWeatherDetails: { weatherData?: any, initialLatitude?: number, initialLongitude?: number };
+  GiftedChatTest: undefined;
 };
 export type CustomerTabParamList = {
   Home: undefined;
@@ -189,7 +196,7 @@ const CustomerTabs = () => {
           shadowRadius: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 9,
+          fontSize: 12,
           fontWeight: '700',
         },
         tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => {
@@ -207,7 +214,7 @@ const CustomerTabs = () => {
           } else {
             iconName = 'help-circle-outline';
           }
-          return <Ionicons name={iconName} size={focused ? 20 : 18} color={color} />;
+          return <Ionicons name={iconName} size={focused ? 26 : 24} color={color} />;
         },
       })}>
       <CustomerTab.Screen
@@ -522,11 +529,14 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
     <Stack.Screen name="FarmerMessageCustomer" component={FarmerMessageCustomerScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="FarmerSupportChatScreen" component={FarmerSupportChatScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="AdminSupportChatScreen" component={AdminSupportChatScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminGroupChat" component={AdminGroupChatScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="AdminSupportInbox" component={AdminSupportInboxScreen} options={{headerShown: false}} />
     <Stack.Screen name="AdminMessage" component={AdminMessageScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="AdminMessageHistory" component={AdminMessageHistoryScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="AdminMessageHistoryDetail" component={AdminMessageHistoryDetailScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="AdminSendNotification" component={AdminSendNotificationScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="FarmerShorts" component={FarmerShortsScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="GiftedChatTest" component={GiftedChatTestScreen} options={{headerShown: true, title: 'Chat Test'}} />
   </Stack.Navigator>
 );
 const AppNavigator: React.FC = () => {

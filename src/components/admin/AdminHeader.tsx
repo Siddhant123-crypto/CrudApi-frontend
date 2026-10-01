@@ -9,7 +9,7 @@ interface AdminHeaderProps {
 }
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuPress, showBackButton = false }) => {
   const navigation = useNavigation<any>();
-  const { unreadCount, adminSupportUnreadCount } = useNotification();
+  const { unreadCount, adminSupportUnreadCount, blockedFarmerUnreadCount, hasNewAdminGroupMsg } = useNotification();
   return (
     <View style={styles.header}>
       <TouchableOpacity
@@ -30,13 +30,21 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuPress, showBackB
       <View style={styles.rightActions}>
         <TouchableOpacity 
           style={styles.iconButton} 
+          onPress={() => navigation.navigate('AdminGroupChat')}
+        >
+          <Ionicons name="chatbubbles" size={26} color="#F5C16C" />
+          {hasNewAdminGroupMsg && (
+            <View style={styles.redDot} />
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.iconButton} 
           onPress={() => navigation.navigate('AdminFarmers', { initialTab: 'Blocked' })}
         >
           <Ionicons name="chatbubbles-outline" size={26} color="#FFFFFF" />
-          {adminSupportUnreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{adminSupportUnreadCount > 99 ? '99+' : adminSupportUnreadCount}</Text>
-            </View>
+          {blockedFarmerUnreadCount > 0 && (
+            <View style={styles.redDot} />
           )}
         </TouchableOpacity>
 
@@ -70,7 +78,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
     letterSpacing: 0.5,
@@ -89,22 +97,33 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: 4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: 0,
+    right: 0,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: '#17212F',
-    paddingHorizontal: 2,
   },
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  redDot: {
+    position: 'absolute',
+    top: 6,
+    right: 8,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#EF4444', // Red dot
+    borderWidth: 1.5,
+    borderColor: '#17212F',
   },
   notificationBadge: {
     top: -2,

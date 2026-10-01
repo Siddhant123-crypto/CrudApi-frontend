@@ -36,7 +36,8 @@ export const AdminFarmVerificationScreen: React.FC = () => {
             farmer: f.farmerName || 'Unknown',
             farm: f.farmName || 'Unnamed Farm',
             date: f.verificationRequestedOn ? new Date(f.verificationRequestedOn).toLocaleDateString() : 'Recent',
-            status: mappedStatus
+            status: mappedStatus,
+            verifiedBy: f.verifiedBy
           };
         });
         setVerifications(mapped);
@@ -65,6 +66,11 @@ export const AdminFarmVerificationScreen: React.FC = () => {
           <Text style={styles.farmName}>{item.farm}</Text>
           <Text style={styles.farmerName}>{item.farmer}</Text>
           <Text style={styles.date}>{item.date}</Text>
+          {item.status === 'Verified' && item.verifiedBy && (
+            <Text style={styles.verifiedByText}>
+              ✓ Verified by: {item.verifiedBy}
+            </Text>
+          )}
         </View>
       </View>
       <View style={styles.cardRight}>
@@ -118,7 +124,7 @@ export const AdminFarmVerificationScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F1E6' },
   headerArea: { padding: 16, paddingBottom: 8 },
-  screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },
+  screenTitle: { fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 12 },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 12, height: 44,
@@ -142,6 +148,7 @@ const styles = StyleSheet.create({
   farmName: { fontSize: 14, fontWeight: 'bold', color: '#1B2430', marginBottom: 4 },
   farmerName: { fontSize: 12, color: '#6B7280', marginBottom: 2 },
   date: { fontSize: 10, color: '#9CA3AF' },
+  verifiedByText: { fontSize: 10, color: '#10B981', marginTop: 4, fontWeight: '600' },
   cardRight: { flexDirection: 'row', alignItems: 'center' },
   chevron: { marginLeft: 8 },
 });

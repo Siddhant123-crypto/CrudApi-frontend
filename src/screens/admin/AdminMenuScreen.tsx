@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +16,19 @@ const AdminMenuScreen: React.FC = () => {
     { title: 'Farm Verification', icon: 'shield-checkmark-outline', route: 'AdminFarmVerification' },
   ];
   const [messagesExpanded, setMessagesExpanded] = React.useState(false);
+  
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', onPress: logout, style: 'destructive' },
+      ],
+      { cancelable: true }
+    );
+  };
+
   return (
     <View style={styles.overlay}>
       <TouchableOpacity style={styles.overlayBackground} activeOpacity={1} onPress={() => navigation.goBack()} />
@@ -70,7 +83,7 @@ const AdminMenuScreen: React.FC = () => {
               )}
             </View>
           ))}
-        <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={logout}>
+        <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={handleLogout}>
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
               <Ionicons name="log-out-outline" size={20} color="#EF4444" />

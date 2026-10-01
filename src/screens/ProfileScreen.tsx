@@ -180,7 +180,8 @@ const ProfileScreen = () => {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: !isFarmer ? '#F8FAFC' : '#F9F9F9' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <View style={[styles.header, !isFarmer && { backgroundColor: '#1E3A8A' }]}>
         <View style={{ position: 'absolute', top: 50, left: 20, zIndex: 10 }}>
@@ -393,6 +394,12 @@ const ProfileScreen = () => {
         </View>
       ) : (
         <View style={styles.actionButtonsContainer}>
+          <CustomButton
+            title="Test Gifted Chat"
+            onPress={() => navigation.navigate('GiftedChatTest')}
+            variant="outline"
+            style={{ marginBottom: 12, borderColor: '#4CAF50' }}
+          />
           <CustomButton
             title="Logout"
             onPress={handleLogout}

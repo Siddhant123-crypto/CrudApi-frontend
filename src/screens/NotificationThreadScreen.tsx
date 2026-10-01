@@ -40,8 +40,16 @@ const NotificationThreadScreen = () => {
       console.log('Failed to mark thread as read:', error);
     }
   };
+  const isAdmin = user?.role === 'ADMIN';
+
   const handleNotificationPress = (notification: NotificationResponse) => {
-    navigation.navigate('NotificationDetail', { notification });
+    if (isAdmin && notification.type === 'ADMIN' && notification.senderType === 'FARMER' && notification.senderId) {
+      navigation.navigate('AdminSupportChatScreen', { farmerId: notification.senderId, farmerName: 'Farmer' });
+    } else if (!isAdmin && notification.type === 'ADMIN' && notification.title === 'Admin Support Reply') {
+      navigation.navigate('FarmerSupportChatScreen');
+    } else {
+      navigation.navigate('NotificationDetail', { notification });
+    }
   };
   const handleNotificationDelete = (notification: NotificationResponse) => {
     import('react-native').then(({ Alert }) => {
@@ -69,7 +77,6 @@ const NotificationThreadScreen = () => {
   };
   if (!group) return null;
   const isFarmer = user?.role === 'FARMER';
-  const isAdmin = user?.role === 'ADMIN';
   const headerBgColor = isAdmin ? '#17212F' : (isFarmer ? '#1E5631' : '#1E3A8A');
   const headerTextColor = '#FFFFFF';
   return (

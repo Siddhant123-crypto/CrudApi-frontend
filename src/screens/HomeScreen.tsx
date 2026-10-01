@@ -14,6 +14,8 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -40,7 +42,27 @@ interface ProductItem {
   reviewCount?: number;
   description?: string;
   harvestDate?: string;
+  farmerState?: string;
+  farmerVillage?: string;
 }
+
+const getStateAbbreviation = (stateName: string) => {
+  if (!stateName) return '';
+  const stateMap: { [key: string]: string } = {
+    'andhra pradesh': 'AP', 'arunachal pradesh': 'AR', 'assam': 'AS', 'bihar': 'BR',
+    'chhattisgarh': 'CG', 'goa': 'GA', 'gujarat': 'GJ', 'haryana': 'HR',
+    'himachal pradesh': 'HP', 'jharkhand': 'JH', 'karnataka': 'KA', 'kerala': 'KL',
+    'madhya pradesh': 'MP', 'maharashtra': 'MH', 'manipur': 'MN', 'meghalaya': 'ML',
+    'mizoram': 'MZ', 'nagaland': 'NL', 'odisha': 'OR', 'punjab': 'PB',
+    'rajasthan': 'RJ', 'sikkim': 'SK', 'tamil nadu': 'TN', 'telangana': 'TG',
+    'tripura': 'TR', 'uttar pradesh': 'UP', 'uttarakhand': 'UK', 'west bengal': 'WB',
+    'andaman and nicobar islands': 'AN', 'chandigarh': 'CH', 'delhi': 'DL',
+    'jammu and kashmir': 'JK', 'ladakh': 'LA', 'lakshadweep': 'LD', 'puducherry': 'PY'
+  };
+  const lowerState = stateName.toLowerCase().trim();
+  return stateMap[lowerState] || stateName.substring(0, 3).toUpperCase();
+};
+
 const CustomerDashboard = ({ navigation }: any) => {
   const { logout, user } = useAuth();
   const { unreadCount } = useNotification();
@@ -49,39 +71,44 @@ const CustomerDashboard = ({ navigation }: any) => {
   const [currentBanner, setCurrentBanner] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [allProducts, setAllProducts] = useState<ProductItem[]>([]);
+  const [searchResults, setSearchResults] = useState<ProductItem[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [isFilteredView, setIsFilteredView] = useState(false);
   const [locationText, setLocationText] = useState('Nashik, Maharashtra');
   const bannerScrollRef = useRef<ScrollView>(null);
+  const mainScrollRef = useRef<ScrollView>(null);
   const searchInputRef = useRef<TextInput>(null);
   const focusSearchInput = () => {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
   };
-  useEffect(() => {
-    const fetchUserLocation = async () => {
-      try {
-        if (user?.userId) {
-          const profile = await getUserById(user.userId);
-          if (profile) {
-            if (profile.status === 'INACTIVE' && profile.blockReason) {
-              Alert.alert(
-                'Account Blocked',
-                `Your account has been blocked by the admin.\n\nReason: ${profile.blockReason}`,
-                [{ text: 'OK', onPress: () => logout() }]
-              );
-              return;
-            }
-            if (profile.village) {
-              setLocationText(`${profile.village}, ${profile.state || 'Maharashtra'}`);
-            }
+  const fetchUserLocation = async () => {
+    try {
+      if (user?.userId) {
+        const profile = await getUserById(user.userId);
+        if (profile) {
+          if (profile.status === 'INACTIVE' && profile.blockReason) {
+            Alert.alert(
+              'Account Blocked',
+              `Your account has been blocked by the admin.\n\nReason: ${profile.blockReason}`,
+              [{ text: 'OK', onPress: () => logout() }]
+            );
+            return;
+          }
+          if (profile.village) {
+            const rawState = profile.state || 'Maharashtra';
+            const shortState = getStateAbbreviation(rawState);
+            setLocationText(`${profile.village}, ${shortState}`);
           }
         }
-      } catch (error) {
-        console.log('Error fetching user location for header:', error);
       }
-    };
+    } catch (error) {
+      console.log('Error fetching user location for header:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchUserLocation();
   }, [user]);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -123,7 +150,8 @@ const CustomerDashboard = ({ navigation }: any) => {
     useCallback(() => {
       fetchAllProducts();
       fetchCategories();
-    }, [])
+      fetchUserLocation();
+    }, [user])
   );
   const fetchAllProducts = async () => {
     try {
@@ -185,8 +213,11 @@ const CustomerDashboard = ({ navigation }: any) => {
            p.category?.toLowerCase().includes(term))
         );
       }
-      setAllProducts(results);
+      setSearchResults(results);
       setIsFilteredView(true);
+      setTimeout(() => {
+        mainScrollRef.current?.scrollToEnd({ animated: true });
+      }, 300);
     } catch (error) {
       console.log('Error searching products, trying local fallback:', error);
       try {
@@ -213,52 +244,56 @@ const CustomerDashboard = ({ navigation }: any) => {
     setShowFilterModal(false);
     setLoadingProducts(true);
     try {
-      let results: ProductItem[] = [];
-      let fetchDone = false;
+      // 1. Fetch all products as the base
+      const res = await api.get('/product/getAll');
+      let results: ProductItem[] = Array.isArray(res.data) ? res.data : [];
+
+      // 2. Filter by State
       if (filterState) {
-        fetchDone = true;
-        let farmersEndpoint = `/farmer/state/${filterState}`;
-        if (filterVillage) {
-          farmersEndpoint = `/farmer/nearby?state=${filterState}&village=${filterVillage}`;
-        }
-        const farmerRes = await api.get(farmersEndpoint);
-        const farmers = Array.isArray(farmerRes.data) ? farmerRes.data : [];
-        let locProducts: ProductItem[] = [];
-        for (const f of farmers) {
-          try {
-            const fpRes = await api.get(`/product/farmer/${f.farmerId || f.id}`);
-            const fp = Array.isArray(fpRes.data) ? fpRes.data : [];
-            locProducts = [...locProducts, ...fp];
-          } catch(e) {}
-        }
-        results = locProducts;
+        const lowerState = filterState.toLowerCase().trim();
+        results = results.filter(p => p.farmerState && p.farmerState.toLowerCase().includes(lowerState));
       }
-      if (filterCategory && minPrice && maxPrice) {
-        const cpRes = await api.get(`/product/filter?category=${filterCategory}&minPrice=${minPrice}&maxPrice=${maxPrice}`);
-        const cpProds = Array.isArray(cpRes.data) ? cpRes.data : [];
-        results = fetchDone ? results.filter(p => cpProds.some(c => c.productId === p.productId)) : cpProds;
-        fetchDone = true;
-      } else if (minPrice && maxPrice) {
-        const pRes = await api.get(`/product/price?minPrice=${minPrice}&maxPrice=${maxPrice}`);
-        const pProds = Array.isArray(pRes.data) ? pRes.data : [];
-        results = fetchDone ? results.filter(p => pProds.some(c => c.productId === p.productId)) : pProds;
-        fetchDone = true;
-      } else if (filterCategory) {
-        if (!fetchDone) {
-          const res = await api.get('/product/getAll');
-          const raw: ProductItem[] = Array.isArray(res.data) ? res.data : [];
-          results = raw;
+
+      // 3. Filter by Village
+      if (filterVillage) {
+        const lowerVillage = filterVillage.toLowerCase().trim();
+        results = results.filter(p => {
+           if (!p.farmerVillage) return false;
+           const v = p.farmerVillage.toLowerCase();
+           return v.includes(lowerVillage) || 
+                  (lowerVillage === 'sinner' && v.includes('sinnar')) ||
+                  (lowerVillage === 'sinnar' && v.includes('sinner'));
+        });
+      }
+
+      // 4. Category Filter
+      if (filterCategory) {
+        const lowerCat = filterCategory.toLowerCase().trim();
+        results = results.filter(p => p.category && p.category.toLowerCase().trim() === lowerCat);
+      }
+
+      // 5. Price Filters
+      if (minPrice) {
+        const min = parseFloat(minPrice);
+        if (!isNaN(min)) {
+          results = results.filter(p => p.price >= min);
         }
-        results = results.filter(p => p.category?.toLowerCase() === filterCategory.toLowerCase());
-        fetchDone = true;
       }
-      if (!fetchDone) {
-        fetchAllProducts();
-        return;
+      
+      if (maxPrice) {
+        const max = parseFloat(maxPrice);
+        if (!isNaN(max)) {
+          results = results.filter(p => p.price <= max);
+        }
       }
+
+      // 6. Final Status Filter
       const visible = results.filter(p => p.isDelete !== true && p.status !== 'DELETED');
-      setAllProducts(visible);
+      setSearchResults(visible);
       setIsFilteredView(true);
+      setTimeout(() => {
+        mainScrollRef.current?.scrollToEnd({ animated: true });
+      }, 300);
     } catch (error) {
       console.log('Error applying filters:', error);
       Alert.alert('Error', 'Failed to apply filters');
@@ -274,7 +309,8 @@ const CustomerDashboard = ({ navigation }: any) => {
     setMaxPrice('');
     setSearchText('');
     setShowFilterModal(false);
-    fetchAllProducts();
+    setSearchResults([]);
+    setIsFilteredView(false);
   };
   const openCategory = (category: string) => {
     navigation.navigate('CategoryDashboard', { category });
@@ -306,6 +342,7 @@ const CustomerDashboard = ({ navigation }: any) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView
+          ref={mainScrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
@@ -495,9 +532,9 @@ const CustomerDashboard = ({ navigation }: any) => {
                 <View style={styles.sectionTitleRow}>
                   <Text style={styles.sectionTitle}>🎬 Farmer Shorts</Text>
                 </View>
-                <TouchableOpacity style={styles.viewAllRow} onPress={() => navigation.navigate('FarmerShorts')}>
-                  <Text style={styles.viewAllText}>View All</Text>
-                  <Ionicons name="chevron-forward" size={15} color="#2563EB" />
+                <TouchableOpacity style={styles.viewAllVideoBtn} onPress={() => navigation.navigate('FarmerShorts')}>
+                  <Ionicons name="play-circle" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                  <Text style={styles.viewAllVideoBtnText}>Watch All</Text>
                 </TouchableOpacity>
               </View>
               <ScrollView
@@ -582,18 +619,17 @@ const CustomerDashboard = ({ navigation }: any) => {
                 </View>
               </View>
               <ScrollView
-                horizontal={false}
-                contentContainerStyle={styles.searchResultsGrid}
-                showsVerticalScrollIndicator={false}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.premiumProductScroll}
               >
-                <View style={styles.searchResultsGridInner}>
-                  {allProducts.map(product => (
-                    <TouchableOpacity
-                      key={product.productId}
-                      style={[styles.premiumProductCard, { width: '45%', marginHorizontal: '2.5%', marginBottom: 16 }]}
-                      onPress={() => openProduct(product.productId)}
-                      activeOpacity={0.9}
-                    >
+                {searchResults.map(product => (
+                  <TouchableOpacity
+                    key={product.productId}
+                    style={styles.premiumProductCard}
+                    onPress={() => openProduct(product.productId)}
+                    activeOpacity={0.9}
+                  >
                       {}
                       <View style={styles.premiumImageContainer}>
                         <Image
@@ -646,7 +682,6 @@ const CustomerDashboard = ({ navigation }: any) => {
                       </View>
                     </TouchableOpacity>
                   ))}
-                </View>
               </ScrollView>
             </View>
           ) : (
@@ -657,9 +692,9 @@ const CustomerDashboard = ({ navigation }: any) => {
                   <View style={styles.sectionTitleRow}>
                     <Text style={styles.sectionTitle}>Fresh Vegetables</Text>
                   </View>
-                  <TouchableOpacity onPress={() => openCategory('Vegetable')} style={styles.viewAllRow}>
-                    <Text style={styles.viewAllText}>View all</Text>
-                    <Ionicons name="chevron-forward" size={15} color="#2563EB" style={{ marginLeft: 2 }} />
+                  <TouchableOpacity onPress={() => openCategory('Vegetable')} style={styles.vegViewAllBtn}>
+                    <Text style={styles.vegViewAllText}>View All</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
                   </TouchableOpacity>
                 </View>
                 <ScrollView
@@ -764,7 +799,10 @@ const CustomerDashboard = ({ navigation }: any) => {
         transparent={true}
         onRequestClose={() => setShowFilterModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
@@ -831,7 +869,7 @@ const CustomerDashboard = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       </View>
     </SafeAreaView>
@@ -909,7 +947,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   deliverToText: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#BFDBFE',
     fontWeight: '600',
   },
@@ -919,10 +957,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   locationNameText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '700',
-    maxWidth: 150,
+    maxWidth: 200,
   },
   headerActions: {
     flexDirection: 'row',
@@ -967,7 +1005,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingHorizontal: 16,
-    height: 50,
+    height: 42,
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.05,
@@ -1132,9 +1170,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#162018',
+    color: '#1E3A8A',
   },
   viewAllRow: {
     flexDirection: 'row',
@@ -1144,6 +1182,24 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontSize: 14,
     fontWeight: '700',
+  },
+  viewAllVideoBtn: {
+    backgroundColor: '#E53935',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#E53935',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  viewAllVideoBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
   attractiveViewAllBtn: {
     backgroundColor: '#FFD02A',
@@ -1157,6 +1213,25 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
+  },
+  vegViewAllBtn: {
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#16A34A',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  vegViewAllText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+    marginRight: 4,
   },
   attractiveViewAllText: {
     color: '#27391F',
@@ -1469,10 +1544,17 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '80%',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 20,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -5 },
+    elevation: 20,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1481,36 +1563,38 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#112017',
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#1E3A8A',
   },
   filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#263329',
-    marginTop: 15,
-    marginBottom: 10,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1E3A8A',
+    marginTop: 16,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   filterInput: {
-    backgroundColor: '#F5F7F5',
-    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#233126',
-    marginBottom: 10,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#0F172A',
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E8F5D8',
+    borderColor: '#E2E8F0',
   },
   filterChip: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#F5F7F5',
+    backgroundColor: '#FFFFFF',
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#E8F5D8',
+    borderColor: '#CBD5E1',
   },
   filterChipActive: {
     backgroundColor: '#1E3A8A',
@@ -1527,40 +1611,46 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   modalFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
-    paddingBottom: 20,
+    marginTop: 16,
+    paddingBottom: 40,
   },
   resetButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2563EB',
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   resetButtonText: {
-    color: '#2563EB',
+    color: '#DC2626',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   applyButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#F59E0B',
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: '#1E3A8A',
     alignItems: 'center',
-    marginLeft: 10,
+    marginLeft: 8,
+    elevation: 4,
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   applyButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   premiumProductScroll: {
     paddingLeft: 20,

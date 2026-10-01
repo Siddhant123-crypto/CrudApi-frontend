@@ -102,6 +102,31 @@ const NewUserLoginScreen = ({
       } else {
         result = await newUserLogin(identifier.trim(), password);
         console.log('NORMAL LOGIN RESPONSE:', result);
+
+        if (result?.message === 'Account Not Found') {
+          const adminResult = await adminLogin(identifier.trim(), password);
+          console.log('ADMIN LOGIN FALLBACK RESPONSE:', adminResult);
+          
+          if (adminResult?.message?.includes('successful') || adminResult?.data?.role === 'ADMIN') {
+            const data = adminResult.data || {};
+            const userData: UserData = {
+              name: data.name || 'System Admin',
+              email: data.email || identifier.trim(),
+              role: 'ADMIN',
+              userId: data.adminId,
+            };
+            if (!data.token) {
+              Alert.alert('Login Error', 'Login successful but access token was not received.');
+              return;
+            }
+            await login(userData, data.token);
+            console.log('ADMIN LOGIN COMPLETED');
+            return;
+          } else if (adminResult?.message && adminResult.message !== 'Account not found' && adminResult.message !== 'Email not found') {
+            Alert.alert('Login Failed', adminResult.message);
+            return;
+          }
+        }
       }
       if (
         result?.message?.includes(

@@ -19,7 +19,7 @@ import { Market } from '../services/marketService';
 
 const { height } = Dimensions.get('window');
 const BOTTOM_INSET = Platform.OS === 'android' ? 48 : 0;
-const SHEET_HEIGHT = height * 0.62;
+const SHEET_HEIGHT = height * 0.48;
 const HANDLE_HEIGHT = 90; // visible handle area when collapsed
 const COLLAPSED_OFFSET = SHEET_HEIGHT - HANDLE_HEIGHT;
 
@@ -113,12 +113,11 @@ export const MarketDetailsScreen: React.FC = () => {
       <View style={styles.headerBlock}>
         <View style={styles.headerTopRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {market.marketName}
           </Text>
-          <View style={{ width: 24 }} />
         </View>
       </View>
 
@@ -192,58 +191,55 @@ export const MarketDetailsScreen: React.FC = () => {
             <Text style={styles.descriptionText}>{market.description}</Text>
           ) : null}
 
-          <View style={styles.divider} />
+          <View style={styles.cardContainer}>
+            <View style={styles.infoRowCompact}>
+               <Ionicons name="location" size={24} color="#1E5631" />
+               <View style={styles.infoTextWrapper}>
+                 <Text style={styles.infoLabel}>Address</Text>
+                 <Text style={styles.infoValue}>{getFullAddress()}</Text>
+               </View>
+            </View>
 
-          <View style={styles.infoSection}>
-            <Text style={styles.sectionTitle}>Contact Information</Text>
-            {market.marketContactName && (
-              <View style={styles.infoRow}>
-                <Ionicons name="person-outline" size={18} color="#64748B" />
-                <Text style={styles.infoText}>{market.marketContactName}</Text>
+            <View style={styles.infoRowCompact}>
+               <Ionicons name="time" size={24} color="#F59E0B" />
+               <View style={styles.infoTextWrapper}>
+                 <Text style={styles.infoLabel}>Operating Hours</Text>
+                 <Text style={styles.infoValue}>
+                   {market.openingTime ? market.openingTime : 'N/A'} - {market.closingTime ? market.closingTime : 'N/A'}
+                 </Text>
+               </View>
+            </View>
+
+            {(market.marketContactName || market.contactNumber) && (
+              <View style={styles.infoRowCompact}>
+                 <Ionicons name="person" size={24} color="#3B82F6" />
+                 <View style={styles.infoTextWrapper}>
+                   <Text style={styles.infoLabel}>Contact</Text>
+                   <Text style={styles.infoValue}>
+                     {market.marketContactName ? `${market.marketContactName}` : ''}
+                     {market.marketContactName && market.contactNumber ? ' • ' : ''}
+                     {market.contactNumber ? `${market.contactNumber}` : ''}
+                   </Text>
+                 </View>
               </View>
             )}
+          </View>
+          
+          <View style={styles.actionButtonsRow}>
+            {market.latitude && market.longitude && (
+              <TouchableOpacity style={[styles.actionBtn, styles.directionsBtn]} onPress={handleDirections}>
+                <Ionicons name="navigate" size={18} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Directions</Text>
+              </TouchableOpacity>
+            )}
+            
             {market.contactNumber && (
-              <View style={styles.infoRow}>
-                <Ionicons name="call-outline" size={18} color="#64748B" />
-                <Text style={styles.infoText}>{market.contactNumber}</Text>
-              </View>
+              <TouchableOpacity style={[styles.actionBtn, styles.callMarketBtn]} onPress={handleCall}>
+                <Ionicons name="call" size={18} color="#FFFFFF" />
+                <Text style={styles.actionBtnText}>Call</Text>
+              </TouchableOpacity>
             )}
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoSection}>
-            <Text style={styles.sectionTitle}>Address</Text>
-            <View style={styles.infoRow}>
-              <Ionicons name="location-outline" size={18} color="#64748B" />
-              <Text style={styles.infoText}>{getFullAddress()}</Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.operatingHoursContainer}>
-            <View style={styles.operatingHoursLeft}>
-              <Text style={styles.sectionTitle}>Operating Hours</Text>
-              <View style={styles.infoRow}>
-                <Ionicons name="time-outline" size={18} color="#64748B" />
-                <Text style={styles.infoText}>
-                  {market.openingTime ? market.openingTime : 'N/A'} - {market.closingTime ? market.closingTime : 'N/A'}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.smallDirectionsBtn} onPress={handleDirections}>
-              <Ionicons name="navigate" size={16} color="#FFFFFF" />
-              <Text style={styles.smallDirectionsText}>Directions</Text>
-            </TouchableOpacity>
-          </View>
-
-          {market.contactNumber ? (
-            <TouchableOpacity style={styles.callButton} onPress={handleCall}>
-              <Ionicons name="call" size={20} color="#FFFFFF" />
-              <Text style={styles.callButtonText}>Call Market</Text>
-            </TouchableOpacity>
-          ) : null}
 
           <View style={{ height: 30 }} />
         </ScrollView>
@@ -267,7 +263,7 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   headerBackButton: {
     padding: 4,
@@ -277,7 +273,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
+    marginLeft: 12,
   },
   mapContainer: {
     flex: 1,
@@ -386,71 +383,61 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 10,
+  cardContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 20,
+    gap: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
   },
-  infoSection: {
-    marginBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 8,
-  },
-  infoRow: {
+  infoRowCompact: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 6,
+    alignItems: 'center',
   },
-  infoText: {
-    fontSize: 13,
-    color: '#475569',
-    marginLeft: 10,
+  infoTextWrapper: {
+    marginLeft: 14,
     flex: 1,
-    lineHeight: 19,
   },
-  operatingHoursContainer: {
+  infoLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+  actionButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    gap: 12,
   },
-  operatingHoursLeft: {
+  actionBtn: {
     flex: 1,
-    paddingRight: 10,
-  },
-  smallDirectionsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    elevation: 3,
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-  },
-  smallDirectionsText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 'bold',
-    marginLeft: 6,
-  },
-  callButton: {
-    flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1E5631',
     paddingVertical: 14,
     borderRadius: 12,
-    elevation: 3,
+    elevation: 2,
   },
-  callButtonText: {
+  directionsBtn: {
+    backgroundColor: '#8B5CF6',
+  },
+  callMarketBtn: {
+    backgroundColor: '#1E5631',
+  },
+  actionBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: 'bold',

@@ -8,9 +8,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   RefreshControl,
-  Platform,
-  Modal,
-  TouchableWithoutFeedback
+  Platform
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -28,7 +26,6 @@ const NotificationsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const fetchNotifications = async () => {
     try {
       const data = await NotificationService.getNotifications();
@@ -67,6 +64,8 @@ const NotificationsScreen = () => {
   const handleNotificationPress = (notification: NotificationResponse) => {
     if (isAdmin && notification.type === 'ADMIN' && notification.senderType === 'FARMER' && notification.senderId) {
       navigation.navigate('AdminSupportChatScreen', { farmerId: notification.senderId, farmerName: 'Farmer' });
+    } else if (!isAdmin && notification.type === 'ADMIN' && notification.title === 'Admin Support Reply') {
+      navigation.navigate('FarmerSupportChatScreen');
     } else {
       navigation.navigate('NotificationDetail', { notification });
     }
@@ -163,47 +162,22 @@ const NotificationsScreen = () => {
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={24} color={headerTextColor} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: headerTextColor }]}>Notifications</Text>
+          <Text numberOfLines={1} style={[styles.headerTitle, { color: headerTextColor }]}>Notifications</Text>
         </View>
         <View style={styles.headerRightContainer}>
           {notifications.some(n => !n.isRead) && (
-            <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.headerRight}>
-              <Text style={[styles.markAllText, { color: headerTextColor }]}>Mark all read</Text>
+            <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllButton}>
+              <Text style={styles.markAllButtonText}>Mark read</Text>
             </TouchableOpacity>
           )}
           {isAdmin && (
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={() => navigation.navigate('AdminSendNotification')} style={[styles.historyIconBtn, { marginRight: 12 }]}>
-                <Ionicons name="chatbubbles-outline" size={24} color={headerTextColor} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setShowHistoryDropdown(true)} style={styles.historyIconBtn}>
-                <Ionicons name="time-outline" size={24} color={headerTextColor} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('AdminMessageHistory')} style={styles.historyIconBtn}>
+              <Ionicons name="time-outline" size={24} color={headerTextColor} />
+            </TouchableOpacity>
           )}
         </View>
       </View>
-      {/* Admin History Dropdown */}
-      {showHistoryDropdown && (
-        <Modal transparent visible={showHistoryDropdown} onRequestClose={() => setShowHistoryDropdown(false)}>
-          <TouchableWithoutFeedback onPress={() => setShowHistoryDropdown(false)}>
-            <View style={styles.modalOverlay}>
-              <View style={styles.dropdownMenu}>
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setShowHistoryDropdown(false);
-                    navigation.navigate('AdminMessageHistory');
-                  }}
-                >
-                  <Ionicons name="time-outline" size={20} color="#1E293B" style={{marginRight: 8}} />
-                  <Text style={styles.dropdownItemText}>Message History</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-      )}
+
       <View style={styles.mainContent}>
         {loading && !refreshing ? (
           <View style={styles.centerContainer}>
@@ -264,6 +238,8 @@ const styles = StyleSheet.create({
   headerLeftContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   backButton: {
     padding: 8,
@@ -273,15 +249,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    marginLeft: 16,
+    marginLeft: 12,
   },
-  headerRight: {
-    paddingVertical: 4,
+  markAllButton: {
+    backgroundColor: '#3B82F6', // Tailwind blue-500
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    marginRight: 10,
   },
-  markAllText: {
-    color: '#2D983A',
+  markAllButtonText: {
+    color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 12,
   },
   headerRightPlaceholder: {
     width: 80,
@@ -346,7 +326,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   historyIconBtn: {
-    marginLeft: 16,
+    marginLeft: 10,
     padding: 4,
   },
   modalOverlay: {

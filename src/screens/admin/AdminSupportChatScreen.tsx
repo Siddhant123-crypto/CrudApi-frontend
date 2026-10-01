@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Keyboard, NativeModules, findNodeHandle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { adminSupportService, SupportRequestResponse } from '../../services/adminSupportService';
 
 interface SupportMessage {
   supportMessageId: string;
@@ -20,11 +22,17 @@ export const AdminSupportChatScreen = () => {
 
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [inputText, setInputText] = useState('');
+  const inputTextRef = useRef('');
+  const textInputRef = useRef<TextInput>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const isSendingRef = useRef(false);
   const [supportRequestId, setSupportRequestId] = useState<string | null>(null);
+  const [supportRequest, setSupportRequest] = useState<SupportRequestResponse | null>(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const { user } = useAuth();
 
   const toggleSelection = (id: string) => {
     setSelectedMessageIds(prev => 
@@ -34,6 +42,20 @@ export const AdminSupportChatScreen = () => {
 
   useEffect(() => {
     checkActiveSupportRequest();
+    
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -51,38 +73,30 @@ export const AdminSupportChatScreen = () => {
   const checkActiveSupportRequest = async () => {
     try {
       setLoading(true);
+      
+      if (route.params?.supportRequestId) {
+        const reqId = route.params.supportRequestId;
+        const response = await api.get(`/admin/support/${reqId}`);
+        if (response.data && response.data.data) {
+          setSupportRequestId(reqId);
+          setSupportRequest(response.data.data);
+          fetchMessages(reqId, true);
+          return;
+        }
+      }
+      
       const response = await api.get(`/admin/support/farmer/${farmerId}/active`);
       if (response.data && response.data.data) {
         const activeReq = response.data.data;
         setSupportRequestId(activeReq.supportRequestId);
+        setSupportRequest(activeReq);
         fetchMessages(activeReq.supportRequestId, true);
         return; // Success, exit
       }
+      
+      setLoading(false);
     } catch (error) {
-      console.log('Specific active request fetch failed, trying fallback...');
-    }
-
-    // FALLBACK: If backend wasn't restarted, fetch all and filter manually
-    try {
-      const allRes = await api.get(`/admin/support`);
-      if (allRes.data && allRes.data.data) {
-        const allRequests = allRes.data.data;
-        const activeReq = allRequests.find((r: any) => 
-          (r.userName === farmerName || r.userId === farmerId) && 
-          (r.status === 'OPEN' || r.status === 'IN_PROGRESS')
-        );
-
-        if (activeReq) {
-          setSupportRequestId(activeReq.supportRequestId);
-          fetchMessages(activeReq.supportRequestId, true);
-        } else {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error('Error fetching fallback support requests:', error);
+      console.error('Error fetching support request:', error);
       Alert.alert('Error', 'Could not fetch support history.');
       setLoading(false);
     }
@@ -109,8 +123,40 @@ export const AdminSupportChatScreen = () => {
     }
   };
 
+  const handleTextChange = (text: string) => {
+    setInputText(text);
+    inputTextRef.current = text;
+  };
+
   const sendMessage = async () => {
-    if (!inputText.trim()) return;
+    if (isSendingRef.current) return;
+    
+    const reactText = (inputTextRef.current || inputText || '').trim();
+    let currentInput = reactText;
+
+    if (Platform.OS === 'android' && textInputRef.current) {
+      const { TextInputCommiter } = NativeModules;
+      if (TextInputCommiter) {
+        try {
+          const reactTag = findNodeHandle(textInputRef.current);
+          if (reactTag) {
+            const nativeText = await TextInputCommiter.getAndCommitText(reactTag);
+            // ONLY adopt nativeText if it contains additional uncommitted IME text; NEVER truncate
+            if (nativeText && nativeText.trim().length > currentInput.length) {
+              currentInput = nativeText.trim();
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to get native text:", e);
+        }
+      }
+    }
+
+    currentInput = currentInput.trim();
+    if (!currentInput) {
+      if (Platform.OS === 'android') textInputRef.current?.focus(); // restore focus if empty
+      return;
+    }
     
     let currentReqId = supportRequestId;
 
@@ -120,11 +166,14 @@ export const AdminSupportChatScreen = () => {
     }
 
     setSending(true);
+    isSendingRef.current = true;
 
     try {
-      const sendRes = await api.post(`/admin/support/${currentReqId}/messages`, {
-        message: inputText.trim(),
-      });
+      const messageToSend = currentInput;
+      if (!messageToSend) return;
+      
+      const payload = { message: messageToSend };
+      const sendRes = await api.post(`/admin/support/${currentReqId}/messages`, payload);
 
       if (sendRes.data && sendRes.data.data) {
         const newMsg = sendRes.data.data;
@@ -135,13 +184,19 @@ export const AdminSupportChatScreen = () => {
           return [...prev, newMsg];
         });
         setInputText('');
+        inputTextRef.current = '';
+        textInputRef.current?.clear();
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+        if (Platform.OS === 'android') {
+          setTimeout(() => textInputRef.current?.focus(), 150); // restore focus after send
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
       Alert.alert('Error', 'Could not send message.');
     } finally {
       setSending(false);
+      isSendingRef.current = false;
     }
   };
 
@@ -171,6 +226,83 @@ export const AdminSupportChatScreen = () => {
       console.error('Error deleting messages:', error);
     }
   };
+
+  const handleAssignToMe = async () => {
+    if (!supportRequestId) return;
+    try {
+      setLoading(true);
+      await adminSupportService.assignSupportRequest(supportRequestId);
+      Alert.alert('Success', 'Conversation assigned to you successfully.');
+      setSupportRequest(prev => prev ? { ...prev, assignedAdminId: user?.userId || '' } : prev);
+    } catch (error: any) {
+      console.error('Assignment error:', error);
+      Alert.alert('Assignment Failed', error?.response?.data?.message || 'Conversation may have been assigned to another admin.');
+      checkActiveSupportRequest();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResolve = () => {
+    if (!supportRequestId) return;
+    Alert.alert(
+      "Resolve Conversation",
+      "Are you sure you want to resolve this conversation?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Resolve", 
+          style: "default",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await adminSupportService.resolveSupportRequest(supportRequestId);
+              Alert.alert("Success", "Conversation resolved successfully.");
+              navigation.goBack();
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "Could not resolve the conversation.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleReopen = () => {
+    if (!supportRequestId) return;
+    Alert.alert(
+      "Reopen Conversation",
+      "Are you sure you want to reopen this conversation?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Reopen", 
+          style: "default",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await adminSupportService.reopenSupportRequest(supportRequestId);
+              // Force assign to current admin (use transfer as it doesn't fail if already assigned)
+              if (user?.userId) {
+                await adminSupportService.transferSupportRequest(supportRequestId, user.userId);
+              }
+              setSupportRequest(prev => prev ? { ...prev, status: 'IN_PROGRESS', assignedAdminId: user?.userId || '' } : prev);
+              Alert.alert("Success", "Conversation reopened and moved to your chats.");
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "Could not reopen the conversation.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
 
   const renderMessage = ({ item }: { item: SupportMessage }) => {
     const isMe = item.senderType === 'ADMIN';
@@ -213,7 +345,7 @@ export const AdminSupportChatScreen = () => {
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 25}
     >
       {selectedMessageIds.length > 0 ? (
         <View style={[styles.header, styles.headerSelected]}>
@@ -230,7 +362,36 @@ export const AdminSupportChatScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Support: {farmerName}</Text>
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <Text style={styles.headerTitle}>Support: {farmerName}</Text>
+            {supportRequest && supportRequest.status === 'RESOLVED' && (
+              <Text style={{ fontSize: 12, color: '#FCD34D' }}>(Resolved)</Text>
+            )}
+            {supportRequest && supportRequest.assignedAdminId === user?.userId && supportRequest.status !== 'RESOLVED' && (
+              <Text style={{ fontSize: 12, color: '#A7F3D0' }}>(Assigned to You)</Text>
+            )}
+            {supportRequest && supportRequest.assignedAdminId && supportRequest.assignedAdminId !== 'null' && supportRequest.assignedAdminId !== user?.userId && supportRequest.status !== 'RESOLVED' && (
+              <Text style={{ fontSize: 12, color: '#FCA5A5' }}>(Assigned to Other Admin)</Text>
+            )}
+            {supportRequest && (!supportRequest.assignedAdminId || supportRequest.assignedAdminId === 'null') && supportRequest.status !== 'RESOLVED' && (
+              <Text style={{ fontSize: 12, color: '#FCD34D' }}>(Unassigned)</Text>
+            )}
+          </View>
+          {supportRequest?.assignedAdminId === user?.userId && supportRequest?.status !== 'RESOLVED' && (
+            <TouchableOpacity style={styles.resolveButton} onPress={handleResolve}>
+              <Text style={styles.resolveButtonText}>Resolve</Text>
+            </TouchableOpacity>
+          )}
+          {supportRequest?.status === 'RESOLVED' && (
+            <TouchableOpacity style={[styles.resolveButton, { backgroundColor: '#3B82F6' }]} onPress={handleReopen}>
+              <Text style={styles.resolveButtonText}>Reopen</Text>
+            </TouchableOpacity>
+          )}
+          {supportRequest && (!supportRequest.assignedAdminId || supportRequest.assignedAdminId === 'null') && supportRequest.status !== 'RESOLVED' && (
+            <TouchableOpacity style={[styles.resolveButton, { backgroundColor: '#F59E0B' }]} onPress={handleAssignToMe}>
+              <Text style={styles.resolveButtonText}>Assign to Me</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -256,19 +417,20 @@ export const AdminSupportChatScreen = () => {
         />
       )}
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? 30 : (isKeyboardVisible ? 12 : 45) }]}>
         <TextInput
+          ref={textInputRef}
           style={styles.input}
+          value={inputText}
           placeholder="Type your message..."
           placeholderTextColor="#9CA3AF"
-          value={inputText}
-          onChangeText={setInputText}
+          onChangeText={handleTextChange}
           multiline
         />
         <TouchableOpacity 
-          style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
+          style={[styles.sendButton, sending && styles.sendButtonDisabled]}
           onPress={sendMessage}
-          disabled={!inputText.trim() || sending}
+          disabled={sending}
         >
           {sending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
@@ -305,6 +467,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  resolveButton: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  resolveButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   centerContainer: {
     flex: 1,
@@ -387,7 +560,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 12,
-    paddingBottom: Platform.OS === 'android' ? 45 : 30, // Increased padding to move chat section up
     backgroundColor: '#FFFFFF',
 
     borderTopWidth: 1,
@@ -401,7 +573,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    maxHeight: 100,
+    maxHeight: 120,
     fontSize: 15,
     color: '#1F2937',
     borderWidth: 1,

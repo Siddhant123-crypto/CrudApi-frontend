@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,18 @@ const CustomerMenuScreen: React.FC = () => {
     { title: 'Message Farmer', icon: 'chatbox-ellipses-outline', route: 'CustomerMessageFarmer' },
     { title: 'My Profile', icon: 'person-outline', route: 'Profile' },
   ];
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', onPress: logout, style: 'destructive' },
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
     <View style={styles.modalOverlay}>
@@ -54,7 +66,7 @@ const CustomerMenuScreen: React.FC = () => {
               </TouchableOpacity>
             ))}
             
-            <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={logout}>
+            <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={handleLogout}>
               <View style={styles.menuItemLeft}>
                 <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
                   <Ionicons name="log-out-outline" size={20} color="#EF4444" />

@@ -30,6 +30,7 @@ export const AdminSendNotificationScreen = () => {
   const [message, setMessage] = useState('');
   const [type, setType] = useState<NotificationType>('SYSTEM');
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   useEffect(() => {
     if (recipient === 'SPECIFIC') {
       fetchUsers();
@@ -79,15 +80,15 @@ export const AdminSendNotificationScreen = () => {
   };
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#1F2937" />
+      <View style={[styles.header, { backgroundColor: '#17212F', borderBottomColor: '#17212F' }]}>
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Send Notification</Text>
+        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>Send Notification</Text>
         <View style={{ width: 24 }} />
       </View>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: '#F9FAFB' }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
@@ -98,50 +99,70 @@ export const AdminSendNotificationScreen = () => {
         >
         <Text style={styles.label}>Send To (Role)</Text>
         <View style={styles.rowSelector}>
-          {RECEIVER_TYPES.map(rt => (
-            <TouchableOpacity
-              key={rt}
-              style={[styles.selectorBtn, receiverType === rt && styles.selectorBtnActive]}
-              onPress={() => {
-                setReceiverType(rt as any);
-                setSpecificUserId('');
-              }}
-            >
-              <Text style={[styles.selectorText, receiverType === rt && styles.selectorTextActive]}>
-                {rt}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {RECEIVER_TYPES.map(rt => {
+            const isActive = receiverType === rt;
+            const isCustomer = rt === 'CUSTOMER';
+            const activeBtnStyle = isCustomer ? styles.selectorBtnActiveCustomer : styles.selectorBtnActiveFarmer;
+            const activeTextStyle = isCustomer ? styles.selectorTextActiveCustomer : styles.selectorTextActiveFarmer;
+            return (
+              <TouchableOpacity
+                key={rt}
+                style={[styles.selectorBtn, isActive && activeBtnStyle]}
+                onPress={() => {
+                  setReceiverType(rt as any);
+                  setSpecificUserId('');
+                }}
+              >
+                <Text style={[styles.selectorText, isActive && activeTextStyle]}>
+                  {rt}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
         <Text style={styles.label}>Recipient</Text>
         <View style={styles.rowSelector}>
           <TouchableOpacity
-            style={[styles.selectorBtn, recipient === 'ALL' && styles.selectorBtnActive]}
+            style={[styles.selectorBtn, recipient === 'ALL' && (receiverType === 'CUSTOMER' ? styles.selectorBtnActiveCustomer : styles.selectorBtnActiveFarmer)]}
             onPress={() => setRecipient('ALL')}
           >
-            <Text style={[styles.selectorText, recipient === 'ALL' && styles.selectorTextActive]}>
+            <Text style={[styles.selectorText, recipient === 'ALL' && (receiverType === 'CUSTOMER' ? styles.selectorTextActiveCustomer : styles.selectorTextActiveFarmer)]}>
               All {receiverType}s
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.selectorBtn, recipient === 'SPECIFIC' && styles.selectorBtnActive]}
+            style={[styles.selectorBtn, recipient === 'SPECIFIC' && (receiverType === 'CUSTOMER' ? styles.selectorBtnActiveCustomer : styles.selectorBtnActiveFarmer)]}
             onPress={() => setRecipient('SPECIFIC')}
           >
-            <Text style={[styles.selectorText, recipient === 'SPECIFIC' && styles.selectorTextActive]}>
+            <Text style={[styles.selectorText, recipient === 'SPECIFIC' && (receiverType === 'CUSTOMER' ? styles.selectorTextActiveCustomer : styles.selectorTextActiveFarmer)]}>
               Specific {receiverType}
             </Text>
           </TouchableOpacity>
         </View>
         {recipient === 'SPECIFIC' && (
           <View style={styles.specificUserContainer}>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#6B7280" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={`Search ${receiverType.toLowerCase()}s...`}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
             {fetchingUsers ? (
-              <ActivityIndicator size="small" color="#2D983A" />
+              <ActivityIndicator size="small" color="#2D983A" style={{ marginTop: 16 }} />
             ) : usersList.length === 0 ? (
               <Text style={styles.infoText}>No {receiverType.toLowerCase()}s found.</Text>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll}>
-                {usersList.map((user) => {
-                  const uId = user.userId || user.farmerId || user.id;
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll} keyboardShouldPersistTaps="always">
+                {usersList.filter(user => {
+                  if (!searchQuery) return true;
+                  const nameStr = (user.name || user.email || 'Unknown').toLowerCase();
+                  return nameStr.includes(searchQuery.toLowerCase());
+                }).map((user) => {
+                  const uId = user.customerId || user.farmerId || user.userId || user.id;
                   const isSelected = specificUserId === uId;
                   return (
                     <TouchableOpacity
@@ -210,7 +231,7 @@ export const AdminSendNotificationScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#17212F',
     paddingTop: Platform.OS === 'android' ? 24 : 0,
   },
   header: {
@@ -259,16 +280,24 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     alignItems: 'center',
   },
-  selectorBtnActive: {
-    backgroundColor: '#E6F4EA',
-    borderColor: '#2D983A',
+  selectorBtnActiveCustomer: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
   },
   selectorText: {
     fontSize: 14,
     color: '#374151',
     fontWeight: '500',
   },
-  selectorTextActive: {
+  selectorTextActiveCustomer: {
+    color: '#3B82F6',
+    fontWeight: '700',
+  },
+  selectorBtnActiveFarmer: {
+    backgroundColor: '#E6F4EA',
+    borderColor: '#2D983A',
+  },
+  selectorTextActiveFarmer: {
     color: '#2D983A',
     fontWeight: '700',
   },
@@ -296,6 +325,23 @@ const styles = StyleSheet.create({
   typeTextActive: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#111827',
   },
   input: {
     backgroundColor: '#FFFFFF',

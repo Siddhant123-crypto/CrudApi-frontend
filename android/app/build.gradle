@@ -87,6 +87,12 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+    externalNativeBuild {
+        cmake {
+            buildStagingDirectory "C:/tmp/cxx/${rootProject.name}_${project.name}"
+        }
+    }
+
     namespace 'com.siddhant.farm2home'
     defaultConfig {
         applicationId 'com.siddhant.farm2home'

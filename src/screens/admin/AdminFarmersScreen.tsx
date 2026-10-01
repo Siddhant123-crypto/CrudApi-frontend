@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBadge } from '../../components/admin/StatusBadge';
@@ -37,19 +37,26 @@ export const AdminFarmersScreen: React.FC = () => {
   const [selectedFarmer, setSelectedFarmer] = useState<Farmer | null>(null);
 
   const parseDateFromDDMMYYYY = (dateStr: string) => {
-    const parts = dateStr.split('-');
+    // Replace slashes with hyphens, just in case
+    const normalizedStr = dateStr.replace(/\//g, '-');
+    const parts = normalizedStr.split('-');
     if (parts.length === 3) {
-      return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      // Create date as YYYY-MM-DD
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return new Date(`${year}-${month}-${day}T00:00:00`);
     }
     return new Date('invalid');
   };
 
   const isValidBlockDate = () => {
-    const regex = /^\d{2}-\d{2}-\d{4}$/;
-    if (!regex.test(blockUntilDate)) return false;
-    const targetDate = parseDateFromDDMMYYYY(blockUntilDate);
+    const regex = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/;
+    if (!regex.test(blockUntilDate.trim())) return false;
+    const targetDate = parseDateFromDDMMYYYY(blockUntilDate.trim());
     if (isNaN(targetDate.getTime())) return false;
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to midnight for fair comparison
     return targetDate.getTime() > today.getTime();
   };
 
@@ -89,8 +96,8 @@ export const AdminFarmersScreen: React.FC = () => {
   const fetchUnreadCounts = async () => {
     try {
       const countsRes = await api.get('/support/admin/unread-counts');
-      if (countsRes.data && countsRes.data.data) {
-        setUnreadCounts(countsRes.data.data);
+      if (countsRes.data && countsRes.data.data && countsRes.data.data.userCounts) {
+        setUnreadCounts(countsRes.data.data.userCounts);
       }
     } catch (e) {
       console.error('Failed to fetch support unread counts:', e);
@@ -321,10 +328,11 @@ export const AdminFarmersScreen: React.FC = () => {
       >
         <KeyboardAvoidingView 
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Block Farmer</Text>
               <TouchableOpacity onPress={() => setIsBlockModalVisible(false)}>
                 <Ionicons name="close" size={24} color="#6B7280" />
@@ -384,7 +392,8 @@ export const AdminFarmersScreen: React.FC = () => {
                 <Text style={styles.modalBlockBtnText}>Confirm Block</Text>
               </TouchableOpacity>
             </View>
-          </View>
+            </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
     </View>
@@ -396,24 +405,26 @@ const styles = StyleSheet.create({
   screenTitle: { fontSize: 18, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },
   userTypeToggle: {
     flexDirection: 'row',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 4,
     marginBottom: 16,
+    gap: 12,
   },
   toggleBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   activeToggleBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#17212F',
+    borderColor: '#17212F',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   toggleText: {
     fontSize: 14,
@@ -421,7 +432,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   activeToggleText: {
-    color: '#1B2430',
+    color: '#F5C16C',
   },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center',
@@ -480,7 +491,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
@@ -507,12 +518,12 @@ const styles = StyleSheet.create({
   reasonInput: {
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    padding: 16,
-    height: 100,
+    padding: 12,
+    height: 70,
     textAlignVertical: 'top',
     fontSize: 15,
     color: '#1F2937',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   inputLabel: {
     fontSize: 14,
@@ -523,10 +534,10 @@ const styles = StyleSheet.create({
   dateInput: {
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     fontSize: 15,
     color: '#1F2937',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalActions: {
     flexDirection: 'row',
