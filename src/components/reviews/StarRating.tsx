@@ -7,6 +7,7 @@ interface StarRatingProps {
   onRatingChange?: (rating: number) => void;
   size?: number;
   disabled?: boolean;
+  variant?: 'default' | 'customer' | 'farmer';
 }
 export const StarRating = ({
   rating,
@@ -14,7 +15,13 @@ export const StarRating = ({
   onRatingChange,
   size = 24,
   disabled = false,
+  variant = 'default',
 }: StarRatingProps) => {
+  const isCustomer = variant === 'customer';
+  const isFarmer = variant === 'farmer';
+  const filledColor = isCustomer || isFarmer ? '#F0A020' : '#F59E0B';
+  const emptyColor = isCustomer ? '#E6D5C0' : isFarmer ? '#DCE8DF' : '#D1D5DB';
+
   const stars = [];
   for (let i = 1; i <= maxStars; i++) {
     const isFilled = i <= rating;
@@ -27,9 +34,9 @@ export const StarRating = ({
         style={styles.starContainer}
       >
         <Ionicons
-          name={isFilled ? 'star' : 'star-outline'}
+          name={isFilled ? 'star' : (isCustomer ? 'star' : 'star-outline')}
           size={size}
-          color={isFilled ? '#F59E0B' : '#D1D5DB'}
+          color={isFilled ? filledColor : emptyColor}
         />
       </TouchableOpacity>
     );

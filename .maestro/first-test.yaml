@@ -1,0 +1,5 @@
+appId: com.siddhant.UserAppMobile
+
+---
+- launchApp
+- assertVisible: "Farm2Home"

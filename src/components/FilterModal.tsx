@@ -11,63 +11,69 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import CustomRangeSlider from './CustomRangeSlider';
+import { THEME } from '../constants/theme';
+import { PrimaryButton } from './ui/Buttons';
+
 interface FilterModalProps {
   visible: boolean;
   onClose: () => void;
   onApply: (minPrice: number, maxPrice: number) => void;
 }
+
 const { width } = Dimensions.get('window');
+
 const FILTER_CATEGORIES = [
-  'Brand',
-  'Size',
-  'Color',
-  'Fabric',
-  'Pattern',
   'Price',
-  'Sleeves',
-  'Fit',
   'Customer Ratings',
-  'Occasion',
+  'Category',
+  'Availability',
+  'Organic Certified',
 ];
+
 const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) => {
   const [activeCategory, setActiveCategory] = useState('Price');
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(2000);
+
   const priceRanges = [
-    'Rs. 249 and Below',
-    'Rs. 250 - Rs. 399',
-    'Rs. 400 - Rs. 499',
-    'Rs. 500 - Rs. 699',
-    'Rs. 700 - Rs. 999',
-    'Rs. 1000 and above',
+    '₹50 and Below',
+    '₹50 - ₹100',
+    '₹100 - ₹200',
+    '₹200 - ₹500',
+    '₹500 - ₹1000',
+    '₹1000 and above',
   ];
+
   const handleApply = () => {
     onApply(minPrice, maxPrice);
     onClose();
   };
+
   const handleClearAll = () => {
     setMinPrice(0);
     setMaxPrice(2000);
   };
+
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
-        {}
+        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#111" />
+          <TouchableOpacity onPress={onClose} style={styles.backButton} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={22} color={THEME.colors.textHeading} />
             <Text style={styles.headerTitle}>Filters</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleClearAll}>
-            <Text style={styles.clearText}>Clear All Filters</Text>
+          <TouchableOpacity onPress={handleClearAll} activeOpacity={0.7}>
+            <Text style={styles.clearText}>Clear All</Text>
           </TouchableOpacity>
         </View>
-        {}
+
+        {/* Body */}
         <View style={styles.body}>
-          {}
+          {/* Sidebar */}
           <View style={styles.sidebar}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {FILTER_CATEGORIES.map((cat) => (
+              {FILTER_CATEGORIES.map(cat => (
                 <TouchableOpacity
                   key={cat}
                   style={[
@@ -75,6 +81,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
                     activeCategory === cat && styles.sidebarItemActive,
                   ]}
                   onPress={() => setActiveCategory(cat)}
+                  activeOpacity={0.8}
                 >
                   <Text
                     style={[
@@ -88,15 +95,15 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
               ))}
             </ScrollView>
           </View>
-          {}
+
+          {/* Panel */}
           <View style={styles.panel}>
             {activeCategory === 'Price' ? (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.panelContent}>
-                {}
                 <View style={styles.sliderBox}>
                   <Text style={styles.sliderSubtitle}>Selected Price Range</Text>
                   <Text style={styles.sliderTitle}>
-                    Min - ₹{minPrice}{maxPrice >= 2000 ? '+' : ` to ₹${maxPrice}`}
+                    ₹{minPrice} - {maxPrice >= 2000 ? '₹2000+' : `₹${maxPrice}`}
                   </Text>
                   <View style={styles.sliderWrapper}>
                     <CustomRangeSlider
@@ -108,14 +115,14 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
                         setMinPrice(min);
                         setMaxPrice(max);
                       }}
-                      sliderWidth={width * 0.55}
+                      sliderWidth={width * 0.52}
                     />
                   </View>
                 </View>
-                {}
+
                 <View style={styles.checkboxContainer}>
                   {priceRanges.map((range, index) => (
-                    <TouchableOpacity key={index} style={styles.checkboxRow}>
+                    <TouchableOpacity key={index} style={styles.checkboxRow} activeOpacity={0.7}>
                       <View style={styles.checkbox} />
                       <Text style={styles.checkboxText}>{range}</Text>
                     </TouchableOpacity>
@@ -124,148 +131,153 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
               </ScrollView>
             ) : (
               <View style={styles.emptyPanel}>
-                <Text style={styles.emptyText}>Select Price to view filter options.</Text>
+                <Text style={styles.emptyText}>Select Price to configure filters.</Text>
               </View>
             )}
           </View>
         </View>
-        {}
+
+        {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-            <Text style={styles.applyButtonText}>See 50000+ products</Text>
-          </TouchableOpacity>
+          <PrimaryButton title="Apply Filters" onPress={handleApply} />
         </View>
       </SafeAreaView>
     </Modal>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: THEME.colors.cardBg,
+    borderTopLeftRadius: THEME.radius.bottomSheets,
+    borderTopRightRadius: THEME.radius.bottomSheets,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: THEME.colors.divider,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
-    marginLeft: 10,
+    fontFamily: THEME.fonts.serif,
+    fontSize: 20,
+    color: THEME.colors.textHeading,
   },
   clearText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#333',
+    fontFamily: THEME.fonts.bold,
+    fontSize: 13,
+    color: THEME.colors.accent,
   },
   body: {
     flex: 1,
     flexDirection: 'row',
   },
   sidebar: {
-    width: '35%',
-    backgroundColor: '#F5F5F5',
+    width: '36%',
+    backgroundColor: THEME.colors.inputBg,
+    borderRightWidth: 1,
+    borderRightColor: THEME.colors.divider,
   },
   sidebarItem: {
     paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderLeftWidth: 4,
+    paddingHorizontal: 14,
+    borderLeftWidth: 3,
     borderLeftColor: 'transparent',
   },
   sidebarItemActive: {
-    backgroundColor: '#FFFFFF',
-    borderLeftColor: '#2874F0',
+    backgroundColor: THEME.colors.selectedBg,
+    borderLeftColor: THEME.colors.accentDeep,
   },
   sidebarText: {
-    fontSize: 14,
-    color: '#444',
+    fontFamily: THEME.fonts.medium,
+    fontSize: 13,
+    color: THEME.colors.textSecondary,
   },
   sidebarTextActive: {
-    color: '#2874F0',
-    fontWeight: '700',
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.selectedText,
   },
   panel: {
-    width: '65%',
-    backgroundColor: '#FFFFFF',
+    width: '64%',
+    backgroundColor: THEME.colors.cardBg,
   },
   panelContent: {
     padding: 16,
   },
   sliderBox: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: THEME.colors.inputBg,
+    borderRadius: THEME.radius.inputs,
+    padding: 14,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: THEME.colors.cardBorder,
   },
   sliderSubtitle: {
+    fontFamily: THEME.fonts.medium,
     fontSize: 12,
-    color: '#555',
+    color: THEME.colors.textSecondary,
   },
   sliderTitle: {
+    fontFamily: THEME.fonts.bold,
     fontSize: 16,
-    fontWeight: '700',
-    color: '#222',
-    marginTop: 6,
-    marginBottom: 20,
+    color: THEME.colors.textHeading,
+    marginTop: 4,
+    marginBottom: 16,
   },
   sliderWrapper: {
     alignItems: 'center',
-    paddingBottom: 10,
+    paddingBottom: 6,
   },
   checkboxContainer: {
-    marginTop: 10,
+    marginTop: 6,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   checkbox: {
     width: 20,
     height: 20,
     borderWidth: 1.5,
-    borderColor: '#777',
-    borderRadius: 4,
-    marginRight: 12,
+    borderColor: THEME.colors.cardBorder,
+    borderRadius: 6,
+    marginRight: 10,
+    backgroundColor: THEME.colors.inputBg,
   },
   checkboxText: {
-    fontSize: 14,
-    color: '#333',
+    fontFamily: THEME.fonts.medium,
+    fontSize: 13.5,
+    color: THEME.colors.textBase,
   },
   emptyPanel: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 20,
   },
   emptyText: {
-    color: '#888',
-    fontSize: 14,
+    fontFamily: THEME.fonts.medium,
+    color: THEME.colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
   },
   footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  applyButton: {
-    backgroundColor: '#2874F0',
-    borderRadius: 8,
+    paddingHorizontal: 20,
     paddingVertical: 14,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    borderTopWidth: 1,
+    borderTopColor: THEME.colors.divider,
+    backgroundColor: THEME.colors.cardBg,
   },
 });
+
 export default FilterModal;

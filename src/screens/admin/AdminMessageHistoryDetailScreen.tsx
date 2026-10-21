@@ -3,77 +3,115 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
-  Platform,
-  StatusBar
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
+import { AdminHeader } from '../../components/admin/AdminHeader';
+import { AdminCard } from '../../components/admin/AdminCard';
+import { AdminBadge } from '../../components/admin/StatusBadge';
+import { AdminPrimaryButton, AdminOutlineButton } from '../../components/admin/AdminButtons';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import { formatNotificationDate } from '../../components/NotificationCard';
-const AdminMessageHistoryDetailScreen = () => {
+import { ClockIcon } from '../../components/admin/AdminIcons';
+
+export const AdminMessageHistoryDetailScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const notification = route.params?.notification;
-  const headerBgColor = '#17212F';
-  const headerTextColor = '#FFFFFF';
+
   if (!notification) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: headerBgColor }]}>
-        <View style={[styles.header, { backgroundColor: headerBgColor }]}>
-          <View style={styles.headerLeftContainer}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="chevron-back" size={24} color={headerTextColor} />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: headerTextColor }]}>Error</Text>
-          </View>
-        </View>
+      <AdminPageBackground>
+        <AdminHeader
+          variant="inner"
+          title="Message Details"
+          onBack={() => navigation.goBack()}
+        />
         <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>Message details not found.</Text>
+          <AdminCard style={styles.errorCard}>
+            <Text style={styles.errorText}>Message details not found.</Text>
+            <AdminOutlineButton
+              title="Go Back"
+              onPress={() => navigation.goBack()}
+              style={{ marginTop: 14 }}
+            />
+          </AdminCard>
         </View>
-      </SafeAreaView>
+      </AdminPageBackground>
     );
   }
-  let actualMessage = notification.message;
+
+  let actualMessage = notification.message || '';
   if (actualMessage.startsWith('From: ')) {
     const parts = actualMessage.split('\n\n');
     if (parts.length >= 2) {
       actualMessage = parts.slice(1).join('\n\n').trim();
     }
   }
-  const receiverName = notification.receiverName || 'All ' + (notification.receiverType === 'FARMER' ? 'Farmers' : notification.receiverType === 'CUSTOMER' ? 'Customers' : 'Users');
+
+  const receiverName =
+    notification.receiverName ||
+    'All ' +
+      (notification.receiverType === 'FARMER'
+        ? 'Farmers'
+        : notification.receiverType === 'CUSTOMER'
+        ? 'Customers'
+        : 'Users');
   const isBroadcast = !notification.receiverId;
-  const canChat = !isBroadcast && (notification.receiverType === 'CUSTOMER' || notification.receiverType === 'FARMER');
+  const canChat =
+    !isBroadcast &&
+    (notification.receiverType === 'CUSTOMER' || notification.receiverType === 'FARMER');
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: headerBgColor }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#17212F" />
-      <View style={[styles.header, { backgroundColor: headerBgColor }]}>
-        <View style={styles.headerLeftContainer}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color={headerTextColor} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: headerTextColor }]}>Sent Message Detail</Text>
-        </View>
-      </View>
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.card}>
-          <View style={styles.senderRow}>
-            <View style={styles.senderLeft}>
-              <Text style={styles.senderLabel}>Sent To:</Text>
-              <Text style={styles.senderName}>{receiverName}</Text>
+    <AdminPageBackground>
+      <AdminHeader
+        variant="inner"
+        title="Sent Message Detail"
+        subtitle={notification.receiverType || 'Direct Notification'}
+        onBack={() => navigation.goBack()}
+      />
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <AdminCard style={styles.card}>
+          {/* Header Row: Recipient & Date */}
+          <View style={styles.headerRow}>
+            <View style={styles.recipientInfo}>
+              <Text style={styles.fieldLabel}>SENT TO</Text>
+              <Text style={styles.recipientName}>{receiverName}</Text>
             </View>
-            <View style={styles.dateRight}>
-              <Ionicons name="time-outline" size={14} color="#9CA3AF" />
-              <Text style={styles.dateText}>{formatNotificationDate(notification.createdAt)}</Text>
-            </View>
+            <AdminBadge
+              label={notification.receiverType || (isBroadcast ? 'BROADCAST' : 'USER')}
+              variant={isBroadcast ? 'info' : 'neutral'}
+              size="small"
+            />
           </View>
+
+          <View style={styles.dateRow}>
+            <ClockIcon size={14} color="#8A93AB" />
+            <Text style={styles.dateText}>
+              {formatNotificationDate(notification.createdAt)}
+            </Text>
+          </View>
+
           <View style={styles.divider} />
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>{notification.title}</Text>
+
+          {/* Subject & Reply Button */}
+          <View style={styles.titleSection}>
+            <View style={styles.titleWrapper}>
+              <Text style={styles.fieldLabel}>SUBJECT</Text>
+              <Text style={styles.subjectText}>{notification.title}</Text>
+            </View>
             {canChat && (
-              <TouchableOpacity
-                style={styles.chatBtn}
+              <AdminPrimaryButton
+                title="Reply"
+                icon={<Ionicons name="chatbubble-ellipses" size={15} color="#FFFFFF" />}
                 onPress={() => {
                   navigation.navigate('AdminMessage', {
                     preSelectedUserId: notification.receiverId,
@@ -81,165 +119,118 @@ const AdminMessageHistoryDetailScreen = () => {
                     preSelectedRole: notification.receiverType,
                   });
                 }}
-              >
-                <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
+                style={styles.replyButton}
+              />
             )}
           </View>
+
+          <View style={styles.divider} />
+
+          {/* Message Content */}
           <View style={styles.messageBox}>
-            <Text style={styles.messageLabel}>Message:</Text>
-            <Text style={styles.message}>{actualMessage}</Text>
+            <Text style={styles.fieldLabel}>MESSAGE BODY</Text>
+            <Text style={styles.messageBodyText}>{actualMessage}</Text>
           </View>
-        </View>
+        </AdminCard>
       </ScrollView>
-    </SafeAreaView>
+    </AdminPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  safeArea: {
+  content: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 16 : 16,
-    paddingBottom: 24,
-    backgroundColor: '#17212F',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    marginBottom: 8,
-  },
-  headerLeftContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    padding: 24,
+  },
+  errorCard: {
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
   },
   errorText: {
-    fontSize: 16,
-    color: '#EF4444',
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  scrollContent: {
-    padding: 16,
+    fontFamily: AdminFonts.bold,
+    fontSize: 15,
+    color: ADMIN_THEME.colors.ink,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    padding: 18,
   },
-  titleRow: {
+  headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    width: '100%',
+    alignItems: 'flex-start',
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+  recipientInfo: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 10,
   },
-  chatBtn: {
-    backgroundColor: '#17212F',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#17212F',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+  fieldLabel: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 1.4,
+    color: '#4F5BD5',
+    marginBottom: 4,
   },
-  senderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 16,
+  recipientName: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 16,
+    color: ADMIN_THEME.colors.ink,
   },
-  senderLeft: {
+  dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  dateRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
   },
   dateText: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginLeft: 4,
+    fontFamily: AdminFonts.regular,
+    fontSize: 12,
+    color: ADMIN_THEME.colors.inkMuted,
   },
   divider: {
     height: 1,
-    width: '100%',
-    backgroundColor: '#E5E7EB',
-    marginBottom: 16,
+    backgroundColor: '#EEF0F7',
+    marginVertical: 14,
   },
-  senderLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginRight: 6,
+  titleSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
   },
-  senderName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
+  titleWrapper: {
+    flex: 1,
+  },
+  subjectText: {
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 14.5,
+    color: ADMIN_THEME.colors.ink,
+    marginTop: 2,
+  },
+  replyButton: {
+    minHeight: 36,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
   },
   messageBox: {
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#17212F',
-    width: '100%',
+    marginTop: 2,
   },
-  messageLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#4B5563',
-    marginBottom: 8,
-  },
-  message: {
-    fontSize: 16,
-    color: '#1F2937',
-    lineHeight: 24,
+  messageBodyText: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 14,
+    color: ADMIN_THEME.colors.ink,
+    lineHeight: 22,
+    marginTop: 4,
   },
 });
+
 export default AdminMessageHistoryDetailScreen;

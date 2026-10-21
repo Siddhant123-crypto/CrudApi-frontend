@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Platform,
   Linking,
   Alert,
@@ -17,16 +16,38 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Market } from '../services/marketService';
 
+import { FARMER_THEME } from '../constants/farmerTheme';
+import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
+import { FarmerHeader } from '../components/farmer/FarmerHeader';
+import { FarmerCard } from '../components/farmer/FarmerCard';
+import { FarmerBadge } from '../components/farmer/FarmerUI';
+import {
+  FarmerPrimaryButton,
+  FarmerGoldButton,
+  FarmerOutlineButton,
+} from '../components/farmer/FarmerButtons';
+import { PinIcon } from '../components/farmer/FarmerIcons';
+
+// Admin theme imports
+import { ADMIN_THEME, AdminFonts } from '../constants/adminTheme';
+import { AdminPageBackground } from '../components/admin/AdminPageBackground';
+import { AdminHeader } from '../components/admin/AdminHeader';
+import { AdminCard } from '../components/admin/AdminCard';
+import { AdminBadge } from '../components/admin/StatusBadge';
+import { AdminPrimaryButton, AdminGoldButton, AdminOutlineButton } from '../components/admin/AdminButtons';
+import { LocationIcon, ClockIcon, PhoneIcon } from '../components/admin/AdminIcons';
+
 const { height } = Dimensions.get('window');
-const BOTTOM_INSET = Platform.OS === 'android' ? 48 : 0;
-const SHEET_HEIGHT = height * 0.48;
-const HANDLE_HEIGHT = 90; // visible handle area when collapsed
+const BOTTOM_INSET = Platform.OS === 'android' ? 24 : 0;
+const SHEET_HEIGHT = height * 0.50;
+const HANDLE_HEIGHT = 80;
 const COLLAPSED_OFFSET = SHEET_HEIGHT - HANDLE_HEIGHT;
 
 export const MarketDetailsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const market: Market = route.params?.market;
+  const isAdmin = route.params?.variant === 'admin';
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -61,13 +82,31 @@ export const MarketDetailsScreen: React.FC = () => {
   };
 
   if (!market) {
+    if (isAdmin) {
+      return (
+        <AdminPageBackground style={styles.centerContainer}>
+          <AdminCard style={styles.adminErrorCard}>
+            <Text style={styles.adminErrorText}>Market details not found.</Text>
+            <AdminOutlineButton
+              title="Go Back"
+              onPress={() => navigation.goBack()}
+              style={{ marginTop: 16 }}
+            />
+          </AdminCard>
+        </AdminPageBackground>
+      );
+    }
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Market details not found.</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <FarmerPageBackground style={styles.centerContainer}>
+        <FarmerCard style={styles.errorCard}>
+          <Text style={styles.errorText}>Market details not found.</Text>
+          <FarmerOutlineButton
+            title="Go Back"
+            onPress={() => navigation.goBack()}
+            style={{ marginTop: 16 }}
+          />
+        </FarmerCard>
+      </FarmerPageBackground>
     );
   }
 
@@ -83,7 +122,7 @@ export const MarketDetailsScreen: React.FC = () => {
     if (market.latitude && market.longitude) {
       const url = Platform.select({
         ios: `maps:0,0?q=${market.latitude},${market.longitude}`,
-        android: `geo:0,0?q=${market.latitude},${market.longitude}(${market.marketName})`
+        android: `geo:0,0?q=${market.latitude},${market.longitude}(${market.marketName})`,
       });
       if (url) {
         Linking.openURL(url).catch(() => {
@@ -102,71 +141,232 @@ export const MarketDetailsScreen: React.FC = () => {
       market.taluka,
       market.district,
       market.state,
-      market.pincode
+      market.pincode,
     ].filter(Boolean);
     return parts.join(', ');
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.headerBlock}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
-            <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {market.marketName}
-          </Text>
-        </View>
-      </View>
+  // ADMIN VARIANT BRANCH
+  if (isAdmin) {
+    return (
+      <AdminPageBackground>
+        <AdminHeader
+          variant="inner"
+          title={market.marketName || 'Market Details'}
+          subtitle="APMC / Mandi Information"
+          onBack={() => navigation.goBack()}
+        />
 
-      {/* Map fills background */}
+        {/* Map */}
+        {market.latitude && market.longitude ? (
+          <View style={styles.mapContainer}>
+            <MapView
+              provider={PROVIDER_GOOGLE}
+              style={styles.map}
+              initialRegion={{
+                latitude: Number(market.latitude),
+                longitude: Number(market.longitude),
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }}
+              scrollEnabled={false}
+            >
+              <Marker
+                coordinate={{
+                  latitude: Number(market.latitude),
+                  longitude: Number(market.longitude),
+                }}
+                title={market.marketName}
+              >
+                <View style={styles.adminMarkerPin}>
+                  <Ionicons name="storefront" size={16} color="#FFFFFF" />
+                </View>
+              </Marker>
+            </MapView>
+          </View>
+        ) : (
+          <View style={[styles.mapContainer, styles.adminMapPlaceholder]}>
+            <Ionicons name="map-outline" size={40} color={ADMIN_THEME.colors.placeholder} />
+            <Text style={styles.adminMapPlaceholderText}>No map coordinates available</Text>
+          </View>
+        )}
+
+        {/* Animated Bottom Sheet (Admin Theme) */}
+        <Animated.View style={[styles.adminBottomSheet, { transform: [{ translateY }] }]}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={toggleSheet}
+            style={styles.adminSheetHandleContainer}
+          >
+            <View style={styles.adminSheetHandle} />
+            <View style={styles.sheetHeaderContent}>
+              <Text style={styles.adminMarketNameTitle} numberOfLines={1}>
+                {market.marketName}
+              </Text>
+              <Ionicons
+                name={isCollapsed ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={ADMIN_THEME.colors.inkMuted}
+              />
+            </View>
+          </TouchableOpacity>
+
+          <ScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetScrollContent}
+            showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
+            {market.distance !== undefined && (
+              <View style={styles.distanceBadgeRow}>
+                <AdminBadge
+                  label={`${market.distance.toFixed(1)} ${market.distanceUnit || 'km'} away`}
+                  variant="info"
+                />
+              </View>
+            )}
+
+            {market.description ? (
+              <Text style={styles.adminDescriptionText}>{market.description}</Text>
+            ) : null}
+
+            {/* Info Card with Indigo Icons */}
+            <AdminCard style={styles.adminInfoCard}>
+              <View style={styles.infoRowCompact}>
+                <View style={styles.adminIconTile}>
+                  <LocationIcon size={18} color="#4F5BD5" strokeWidth={2} />
+                </View>
+                <View style={styles.infoTextWrapper}>
+                  <Text style={styles.adminInfoLabel}>Address</Text>
+                  <Text style={styles.adminInfoValue}>{getFullAddress() || 'Not specified'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.infoRowCompact}>
+                <View style={styles.adminIconTile}>
+                  <ClockIcon size={18} color="#4F5BD5" strokeWidth={2} />
+                </View>
+                <View style={styles.infoTextWrapper}>
+                  <Text style={styles.adminInfoLabel}>Operating Hours</Text>
+                  <Text style={styles.adminInfoValue}>
+                    {market.openingTime ? market.openingTime : 'N/A'} -{' '}
+                    {market.closingTime ? market.closingTime : 'N/A'}
+                  </Text>
+                </View>
+              </View>
+
+              {(market.marketContactName || market.contactNumber) && (
+                <View style={styles.infoRowCompact}>
+                  <View style={styles.adminIconTile}>
+                    <PhoneIcon size={18} color="#4F5BD5" strokeWidth={2} />
+                  </View>
+                  <View style={styles.infoTextWrapper}>
+                    <Text style={styles.adminInfoLabel}>Contact Person</Text>
+                    <Text style={styles.adminInfoValue}>
+                      {market.marketContactName ? `${market.marketContactName}` : ''}
+                      {market.marketContactName && market.contactNumber ? ' • ' : ''}
+                      {market.contactNumber ? `${market.contactNumber}` : ''}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </AdminCard>
+
+            {/* Admin Actions */}
+            <View style={styles.actionButtonsRow}>
+              {market.latitude && market.longitude && (
+                <AdminPrimaryButton
+                  title="Directions"
+                  onPress={handleDirections}
+                  icon={<Ionicons name="navigate-outline" size={18} color="#FFFFFF" />}
+                  style={{ flex: 1 }}
+                />
+              )}
+
+              {market.contactNumber && (
+                <AdminGoldButton
+                  title="Call Market"
+                  onPress={handleCall}
+                  icon={<Ionicons name="call-outline" size={18} color="#0B1326" />}
+                  style={{ flex: 1 }}
+                />
+              )}
+            </View>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </Animated.View>
+      </AdminPageBackground>
+    );
+  }
+
+  // DEFAULT (FARMER) VARIANT - 100% UNTOUCHED
+  return (
+    <FarmerPageBackground>
+      {/* Emerald Inner Header */}
+      <FarmerHeader
+        variant="inner"
+        title={market.marketName || 'Market Details'}
+        onBackPress={() => navigation.goBack()}
+      />
+
+      {/* Map fills upper background */}
       {market.latitude && market.longitude ? (
         <View style={styles.mapContainer}>
           <MapView
             provider={PROVIDER_GOOGLE}
             style={styles.map}
             initialRegion={{
-              latitude: market.latitude,
-              longitude: market.longitude,
+              latitude: Number(market.latitude),
+              longitude: Number(market.longitude),
               latitudeDelta: 0.05,
               longitudeDelta: 0.05,
             }}
             scrollEnabled={false}
           >
             <Marker
-              coordinate={{ latitude: market.latitude, longitude: market.longitude }}
+              coordinate={{
+                latitude: Number(market.latitude),
+                longitude: Number(market.longitude),
+              }}
               title={market.marketName}
-            />
+            >
+              <View style={styles.markerPin}>
+                <Ionicons name="storefront" size={16} color="#FFFFFF" />
+              </View>
+            </Marker>
           </MapView>
         </View>
       ) : (
         <View style={[styles.mapContainer, styles.mapPlaceholder]}>
-          <Ionicons name="map-outline" size={40} color="#94A3B8" />
-          <Text style={styles.mapPlaceholderText}>No location available</Text>
+          <Ionicons name="map-outline" size={40} color={FARMER_THEME.colors.placeholder} />
+          <Text style={styles.mapPlaceholderText}>No map coordinates available</Text>
         </View>
       )}
 
       {/* Animated Bottom Sheet */}
       <Animated.View style={[styles.bottomSheet, { transform: [{ translateY }] }]}>
-        {/* Drag Handle */}
+        {/* Drag Handle Area */}
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={toggleSheet}
-          style={[
-            styles.sheetHandleContainer,
-            isScrolled && styles.sheetHandleScrolled,
-          ]}
+          style={styles.sheetHandleContainer}
         >
-          <View style={[styles.sheetHandle, isScrolled && styles.sheetHandleScrolledPill]} />
+          <View style={styles.sheetHandle} />
           <View style={styles.sheetHeaderContent}>
-            <Text style={styles.marketNameTitle} numberOfLines={1}>
+            <Text
+              style={styles.marketNameTitle}
+              numberOfLines={1}
+              maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+            >
               {market.marketName}
             </Text>
-            <Animated.View style={{ opacity: isScrolled ? 1 : 0.45 }}>
-              <Ionicons name={isCollapsed ? 'chevron-up' : 'chevron-down'} size={22} color={isScrolled ? '#1E5631' : '#64748B'} />
-            </Animated.View>
+            <Ionicons
+              name={isCollapsed ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={FARMER_THEME.colors.textSecondary}
+            />
           </View>
         </TouchableOpacity>
 
@@ -179,117 +379,181 @@ export const MarketDetailsScreen: React.FC = () => {
           scrollEventThrottle={16}
         >
           {market.distance !== undefined && (
-            <View style={styles.distanceBadge}>
-              <Ionicons name="navigate-circle" size={16} color="#1E5631" />
-              <Text style={styles.distanceText}>
-                {market.distance.toFixed(1)} {market.distanceUnit || 'km'} away
-              </Text>
+            <View style={styles.distanceBadgeRow}>
+              <FarmerBadge
+                label={`${market.distance.toFixed(1)} ${market.distanceUnit || 'km'} away`}
+                variant="success"
+              />
             </View>
           )}
 
           {market.description ? (
-            <Text style={styles.descriptionText}>{market.description}</Text>
+            <Text
+              style={styles.descriptionText}
+              maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+            >
+              {market.description}
+            </Text>
           ) : null}
 
-          <View style={styles.cardContainer}>
+          {/* Details Card */}
+          <FarmerCard style={styles.infoCard}>
             <View style={styles.infoRowCompact}>
-               <Ionicons name="location" size={24} color="#1E5631" />
-               <View style={styles.infoTextWrapper}>
-                 <Text style={styles.infoLabel}>Address</Text>
-                 <Text style={styles.infoValue}>{getFullAddress()}</Text>
-               </View>
+              <View style={[styles.infoIconTile, { backgroundColor: FARMER_THEME.colors.pastelGreen }]}>
+                <PinIcon size={18} color={FARMER_THEME.colors.primaryGreen} strokeWidth={2} />
+              </View>
+              <View style={styles.infoTextWrapper}>
+                <Text style={styles.infoLabel}>Address</Text>
+                <Text
+                  style={styles.infoValue}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  {getFullAddress() || 'Not specified'}
+                </Text>
+              </View>
             </View>
 
             <View style={styles.infoRowCompact}>
-               <Ionicons name="time" size={24} color="#F59E0B" />
-               <View style={styles.infoTextWrapper}>
-                 <Text style={styles.infoLabel}>Operating Hours</Text>
-                 <Text style={styles.infoValue}>
-                   {market.openingTime ? market.openingTime : 'N/A'} - {market.closingTime ? market.closingTime : 'N/A'}
-                 </Text>
-               </View>
+              <View style={[styles.infoIconTile, { backgroundColor: FARMER_THEME.colors.pastelYellow }]}>
+                <Ionicons name="time-outline" size={18} color={FARMER_THEME.colors.warning} />
+              </View>
+              <View style={styles.infoTextWrapper}>
+                <Text style={styles.infoLabel}>Operating Hours</Text>
+                <Text
+                  style={styles.infoValue}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  {market.openingTime ? market.openingTime : 'N/A'} -{' '}
+                  {market.closingTime ? market.closingTime : 'N/A'}
+                </Text>
+              </View>
             </View>
 
             {(market.marketContactName || market.contactNumber) && (
               <View style={styles.infoRowCompact}>
-                 <Ionicons name="person" size={24} color="#3B82F6" />
-                 <View style={styles.infoTextWrapper}>
-                   <Text style={styles.infoLabel}>Contact</Text>
-                   <Text style={styles.infoValue}>
-                     {market.marketContactName ? `${market.marketContactName}` : ''}
-                     {market.marketContactName && market.contactNumber ? ' • ' : ''}
-                     {market.contactNumber ? `${market.contactNumber}` : ''}
-                   </Text>
-                 </View>
+                <View style={[styles.infoIconTile, { backgroundColor: FARMER_THEME.colors.pastelTeal }]}>
+                  <Ionicons name="person-outline" size={18} color={FARMER_THEME.colors.tealGreen} />
+                </View>
+                <View style={styles.infoTextWrapper}>
+                  <Text style={styles.infoLabel}>Contact Person</Text>
+                  <Text
+                    style={styles.infoValue}
+                    maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                  >
+                    {market.marketContactName ? `${market.marketContactName}` : ''}
+                    {market.marketContactName && market.contactNumber ? ' • ' : ''}
+                    {market.contactNumber ? `${market.contactNumber}` : ''}
+                  </Text>
+                </View>
               </View>
             )}
-          </View>
-          
+          </FarmerCard>
+
+          {/* Action Buttons Row */}
           <View style={styles.actionButtonsRow}>
             {market.latitude && market.longitude && (
-              <TouchableOpacity style={[styles.actionBtn, styles.directionsBtn]} onPress={handleDirections}>
-                <Ionicons name="navigate" size={18} color="#FFFFFF" />
-                <Text style={styles.actionBtnText}>Directions</Text>
-              </TouchableOpacity>
+              <FarmerPrimaryButton
+                title="Directions"
+                onPress={handleDirections}
+                icon={<Ionicons name="navigate-outline" size={18} color="#FFFFFF" />}
+                style={{ flex: 1 }}
+              />
             )}
-            
+
             {market.contactNumber && (
-              <TouchableOpacity style={[styles.actionBtn, styles.callMarketBtn]} onPress={handleCall}>
-                <Ionicons name="call" size={18} color="#FFFFFF" />
-                <Text style={styles.actionBtnText}>Call</Text>
-              </TouchableOpacity>
+              <FarmerGoldButton
+                title="Call Market"
+                onPress={handleCall}
+                icon={<Ionicons name="call-outline" size={18} color={FARMER_THEME.colors.headings} />}
+                style={{ flex: 1 }}
+              />
             )}
           </View>
 
-          <View style={{ height: 30 }} />
+          <View style={{ height: 40 }} />
         </ScrollView>
       </Animated.View>
-    </SafeAreaView>
+    </FarmerPageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  centerContainer: {
     flex: 1,
-    backgroundColor: '#1E5631',
-  },
-  headerBlock: {
-    backgroundColor: '#1E5631',
-    paddingTop: Platform.OS === 'android' ? 40 : 20,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    zIndex: 10,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    padding: 24,
   },
-  headerBackButton: {
-    padding: 4,
+  errorCard: {
+    padding: 24,
+    width: '100%',
+    alignItems: 'center',
   },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'left',
-    marginLeft: 12,
+  errorText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 16,
+    color: FARMER_THEME.colors.headings,
+    textAlign: 'center',
+  },
+  adminErrorCard: {
+    padding: 24,
+    width: '100%',
+    alignItems: 'center',
+  },
+  adminErrorText: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 16,
+    color: ADMIN_THEME.colors.ink,
+    textAlign: 'center',
   },
   mapContainer: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E8F0EA',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  markerPin: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: FARMER_THEME.colors.primaryGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    ...FARMER_THEME.shadows.tile,
+  },
+  adminMarkerPin: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#4F5BD5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+    ...ADMIN_THEME.shadows.fab,
   },
   mapPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
   },
+  adminMapPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: ADMIN_THEME.colors.pearl,
+  },
   mapPlaceholderText: {
-    color: '#64748B',
+    fontFamily: FARMER_THEME.fonts.medium,
+    color: FARMER_THEME.colors.textSecondary,
+    fontSize: 13,
+  },
+  adminMapPlaceholderText: {
+    fontFamily: AdminFonts.medium,
+    color: ADMIN_THEME.colors.inkMuted,
     fontSize: 13,
   },
   bottomSheet: {
@@ -298,46 +562,57 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: SHEET_HEIGHT,
-    backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 12,
+    backgroundColor: FARMER_THEME.colors.pageBgBottom,
+    borderTopLeftRadius: FARMER_THEME.radius.bottomSheets,
+    borderTopRightRadius: FARMER_THEME.radius.bottomSheets,
+    ...FARMER_THEME.shadows.stickyBar,
+  },
+  adminBottomSheet: {
+    position: 'absolute',
+    bottom: BOTTOM_INSET,
+    left: 0,
+    right: 0,
+    height: SHEET_HEIGHT,
+    backgroundColor: ADMIN_THEME.colors.pearl,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    ...ADMIN_THEME.shadows.stickyBar,
   },
   sheetHandleContainer: {
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingTop: 10,
+    paddingBottom: 12,
     paddingHorizontal: 20,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: FARMER_THEME.radius.bottomSheets,
+    borderTopRightRadius: FARMER_THEME.radius.bottomSheets,
+    backgroundColor: FARMER_THEME.colors.cardBg,
+    borderBottomWidth: 1,
+    borderBottomColor: FARMER_THEME.colors.divider,
+  },
+  adminSheetHandleContainer: {
+    paddingTop: 10,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  sheetHandleScrolled: {
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#1E5631',
-    backgroundColor: '#F0FDF4',
-    shadowColor: '#1E5631',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 4,
-    elevation: 4,
+    borderBottomColor: ADMIN_THEME.colors.cardBorder,
   },
   sheetHandle: {
-    width: 48,
+    width: 44,
     height: 5,
-    backgroundColor: '#1E5631',
+    backgroundColor: FARMER_THEME.colors.cardBorder,
     borderRadius: 3,
     alignSelf: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  sheetHandleScrolledPill: {
-    backgroundColor: '#1E5631',
-    width: 56,
+  adminSheetHandle: {
+    width: 44,
+    height: 5,
+    backgroundColor: '#D7DCED',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   sheetHeaderContent: {
     flexDirection: 'row',
@@ -345,124 +620,101 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   marketNameTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontFamily: FARMER_THEME.fonts.serif,
+    fontSize: 18,
+    color: FARMER_THEME.colors.headings,
     flex: 1,
-    marginRight: 8,
+    marginRight: 10,
+  },
+  adminMarketNameTitle: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 18,
+    color: ADMIN_THEME.colors.ink,
+    flex: 1,
+    marginRight: 10,
   },
   sheetScroll: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   sheetScrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 14,
+    gap: 12,
   },
-  distanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
+  distanceBadgeRow: {
     alignSelf: 'flex-start',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
-  },
-  distanceText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#16A34A',
-    marginLeft: 5,
   },
   descriptionText: {
+    fontFamily: FARMER_THEME.fonts.regular,
     fontSize: 13,
-    color: '#64748B',
-    lineHeight: 20,
-    marginBottom: 12,
+    color: FARMER_THEME.colors.bodyText,
+    lineHeight: 19,
   },
-  cardContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  adminDescriptionText: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.inkMuted,
+    lineHeight: 19,
+  },
+  infoCard: {
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 20,
-    gap: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    gap: 14,
+  },
+  adminInfoCard: {
+    padding: 16,
+    gap: 14,
   },
   infoRowCompact: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  infoIconTile: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminIconTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#E8EBFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   infoTextWrapper: {
-    marginLeft: 14,
+    marginLeft: 12,
     flex: 1,
   },
   infoLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
+    fontFamily: FARMER_THEME.fonts.regular,
+    fontSize: 11,
+    color: FARMER_THEME.colors.textSecondary,
+    marginBottom: 2,
+  },
+  adminInfoLabel: {
+    fontFamily: AdminFonts.medium,
+    fontSize: 11,
+    color: ADMIN_THEME.colors.inkMuted,
     marginBottom: 2,
   },
   infoValue: {
-    fontSize: 14,
-    color: '#0F172A',
-    fontWeight: '700',
-    lineHeight: 20,
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 13.5,
+    color: FARMER_THEME.colors.headings,
+    lineHeight: 18,
+  },
+  adminInfoValue: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 13.5,
+    color: ADMIN_THEME.colors.ink,
+    lineHeight: 18,
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 12,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    elevation: 2,
-  },
-  directionsBtn: {
-    backgroundColor: '#8B5CF6',
-  },
-  callMarketBtn: {
-    backgroundColor: '#1E5631',
-  },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#64748B',
-    marginBottom: 16,
-  },
-  backBtn: {
-    backgroundColor: '#1E5631',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  backBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    marginTop: 4,
   },
 });
 

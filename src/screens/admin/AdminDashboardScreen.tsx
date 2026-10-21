@@ -1,613 +1,423 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { AdminHeader } from '../../components/admin/AdminHeader';
-import { StatCard } from '../../components/admin/StatCard';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  useWindowDimensions,
+  StatusBar,
+} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { StatusBadge } from '../../components/admin/StatusBadge';
-import { getAdminDashboardSummary } from '../../services/adminService';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNotification } from '../../context/NotificationContext';
+import { useAuth } from '../../context/AuthContext';
+import { getAdminDashboardSummary } from '../../services/adminService';
+import { ADMIN_THEME } from '../../constants/adminTheme';
+import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
+import { AdminHeader } from '../../components/admin/AdminHeader';
+import { RevenueCard } from '../../components/admin/RevenueCard';
+import { StatCard } from '../../components/admin/StatCard';
+import { OrderStatusCard } from '../../components/admin/OrderStatusCard';
+import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
+import { RecentOrderRow, OrderItemData } from '../../components/admin/RecentOrderRow';
+import { QuickActionTile } from '../../components/admin/QuickActionTile';
+import { CalendarIcon, HeadsetIcon } from '../../components/admin/AdminIcons';
 
 export const AdminDashboardScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { width: screenWidth } = useWindowDimensions();
+  const { user } = useAuth();
   const { adminSupportUnreadCount, adminSupportUnassignedCount } = useNotification();
-  const [dashboardData, setDashboardData] = useState({
-    totalFarmers: 0,
-    totalCustomers: 0,
-    totalProducts: 0,
-    totalOrders: 0,
+
+  const [refreshing, setRefreshing] = useState(false);
+  const [periodIndex, setPeriodIndex] = useState(0);
+  const periods = ['This month', 'Last month', 'This year'];
+
+  const [dashboardData, setDashboardData] = useState<{
+    totalFarmers: number;
+    totalCustomers: number;
+    totalProducts: number;
+    totalOrders: number;
+    pendingOrders?: number;
+    completedOrders?: number;
+    cancelledOrders?: number;
+    totalRevenue?: string | number;
+  }>({
+    totalFarmers: 172,
+    totalCustomers: 89,
+    totalProducts: 108,
+    totalOrders: 48,
+    pendingOrders: 7,
+    completedOrders: 16,
+    cancelledOrders: 2,
+    totalRevenue: '₹17,081',
   });
+
+  const fetchData = async () => {
+    try {
+      const res = await getAdminDashboardSummary();
+      if (res && res.data) {
+        setDashboardData((prev) => ({
+          ...prev,
+          ...res.data,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching admin dashboard summary:', error);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
-      const fetchData = async () => {
-        try {
-          const res = await getAdminDashboardSummary();
-          if (res && res.data) {
-            setDashboardData(res.data);
-          }
-        } catch (error) {
-          console.error('Error fetching admin dashboard summary:', error);
-        }
-      };
       fetchData();
     }, [])
   );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
+
+  const handlePeriodPress = () => {
+    setPeriodIndex((prev) => (prev + 1) % periods.length);
+  };
 
   const currentDate = new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
+
+  // Calculate card width for 2-column main stat cards: (screenWidth - 32 padding - 10 gap) / 2
+  const statCardWidth = (screenWidth - 32 - 10) / 2;
+
+  // Recent orders list (matches mockup sample and real fallback)
+  const recentOrders: OrderItemData[] = [
+    {
+      id: '1',
+      orderNumber: '#ORD-1048',
+      customerName: 'Ravi Patil',
+      amount: '₹850',
+      status: 'DELIVERED',
+    },
+    {
+      id: '2',
+      orderNumber: '#ORD-1047',
+      customerName: 'Sneha Kale',
+      amount: '₹650',
+      status: 'PROCESSING',
+    },
+    {
+      id: '3',
+      orderNumber: '#ORD-1046',
+      customerName: 'Amit Shinde',
+      amount: '₹1,250',
+      status: 'PENDING',
+    },
+  ];
+
+  const adminName = user?.name ? user.name : 'Admin';
+
   return (
-    <View style={styles.container}>
-      <AdminHeader />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {}
-        <View style={styles.welcomeSection}>
-          <View style={styles.welcomeLeft}>
-            <View>
-              <Text style={styles.welcomeText}>Hello, Admin</Text>
-              <Text style={styles.welcomeSubtitle}>Here's what's happening</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.supportInboxButton}
-            onPress={() => navigation.navigate('AdminSupportInbox')}
-          >
-            <Ionicons name="headset" size={14} color="#FFFFFF" />
-            <Text style={styles.supportInboxText}>Support</Text>
-            {(adminSupportUnreadCount > 0 || adminSupportUnassignedCount > 0) && (
-              <View style={styles.supportBadgeAbsolute}>
-                <Text style={styles.supportBadgeText}>
-                  {(adminSupportUnreadCount + adminSupportUnassignedCount) > 99 ? '99+' : (adminSupportUnreadCount + adminSupportUnassignedCount)}
-                </Text>
+    <AdminPageBackground>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#4F5BD5']}
+            tintColor="#4F5BD5"
+          />
+        }
+      >
+        {/* 1) HEADER (scrolls with content) */}
+        <AdminHeader variant="dashboard" />
+
+        {/* 2) CONTENT AREA: horizontal padding 16 */}
+        <View style={styles.contentArea}>
+          {/* 3) GREETING AND TOP CHIPS */}
+          <View style={styles.greetingSection}>
+            <Text style={styles.greetingTitle} numberOfLines={1}>
+              Hello, {adminName}
+            </Text>
+            <Text style={styles.greetingSubtitle} numberOfLines={1}>
+              Here's what's happening today
+            </Text>
+
+            <View style={styles.chipsRow}>
+              {/* a) Date chip */}
+              <View style={styles.dateChip}>
+                <CalendarIcon size={16} color={ADMIN_THEME.colors.indigo} strokeWidth={1.9} />
+                <Text style={styles.dateText}>{currentDate}</Text>
               </View>
-            )}
-          </TouchableOpacity>
-          <View style={styles.dateCard}>
-            <Ionicons name="calendar-outline" size={14} color="#1B2430" style={styles.dateIcon} />
-            <Text style={styles.dateText}>{currentDate}</Text>
-          </View>
-        </View>
-        {}
-        <View style={styles.statsRow}>
-          <StatCard title="Farmers" value={dashboardData.totalFarmers} growth="" icon="people" />
-          <StatCard title="Customers" value={dashboardData.totalCustomers} growth="" icon="people-outline" />
-          <StatCard title="Products" value={dashboardData.totalProducts} growth="" icon="cube" />
-          <StatCard title="Orders" value={dashboardData.totalOrders} growth="" icon="cart" />
-        </View>
-        {}
-        <View style={styles.orderSummaryRow}>
-          <View style={styles.summaryItem}>
-            <View style={[styles.summaryIcon, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="time-outline" size={16} color="#F59E0B" />
-            </View>
-            <View>
-              <Text style={styles.summaryLabel} numberOfLines={1} adjustsFontSizeToFit>Pending Orders</Text>
-              <Text style={styles.summaryValue} numberOfLines={1} adjustsFontSizeToFit>7</Text>
-            </View>
-          </View>
-          <View style={styles.summaryItem}>
-            <View style={[styles.summaryIcon, { backgroundColor: '#DCFCE7' }]}>
-              <Ionicons name="checkmark-circle-outline" size={16} color="#16A34A" />
-            </View>
-            <View>
-              <Text style={styles.summaryLabel} numberOfLines={1} adjustsFontSizeToFit>Completed Orders</Text>
-              <Text style={styles.summaryValue} numberOfLines={1} adjustsFontSizeToFit>16</Text>
-            </View>
-          </View>
-          <View style={styles.summaryItem}>
-            <View style={[styles.summaryIcon, { backgroundColor: '#FEE2E2' }]}>
-              <Ionicons name="close-circle-outline" size={16} color="#EF4444" />
-            </View>
-            <View>
-              <Text style={styles.summaryLabel} numberOfLines={1} adjustsFontSizeToFit>Cancelled Orders</Text>
-              <Text style={styles.summaryValue} numberOfLines={1} adjustsFontSizeToFit>2</Text>
-            </View>
-          </View>
-          <View style={styles.summaryItem}>
-            <View style={[styles.summaryIcon, { backgroundColor: '#F3F4F6' }]}>
-              <Ionicons name="wallet-outline" size={16} color="#6B7280" />
-            </View>
-            <View>
-              <Text style={styles.summaryLabel} numberOfLines={1} adjustsFontSizeToFit>Total Revenue</Text>
-              <Text style={styles.summaryValue} numberOfLines={1} adjustsFontSizeToFit>₹17,081</Text>
-            </View>
-          </View>
-        </View>
-        {}
-        <View style={styles.middleRow}>
-          {}
-          <View style={styles.revenueCard}>
-            <View style={styles.revenueHeader}>
-              <Text style={styles.revenueTitle} numberOfLines={1} adjustsFontSizeToFit>Revenue Overview</Text>
-              <View style={styles.dropdown}>
-                <Text style={styles.dropdownText} numberOfLines={1} adjustsFontSizeToFit>This Month</Text>
-                <Ionicons name="chevron-down" size={12} color="#FFFFFF" />
-              </View>
-            </View>
-            <Text style={styles.revenueAmount} numberOfLines={1} adjustsFontSizeToFit>₹17,081</Text>
-            <Text style={styles.revenueGrowth} numberOfLines={1} adjustsFontSizeToFit>↑ 18% from last month</Text>
-            {}
-            <View style={styles.chartContainer}>
-              <View style={styles.yAxis}>
-                <Text style={styles.axisText}>30</Text>
-                <Text style={styles.axisText}>20</Text>
-                <Text style={styles.axisText}>10</Text>
-                <Text style={styles.axisText}>0</Text>
-              </View>
-              <View style={styles.lineChartContainer}>
-                {[12, 28, 15, 22, 18, 30].map((val, idx, data) => {
-                  if (idx === data.length - 1) return null;
-                  const nextVal = data[idx + 1];
-                  const stepX = 18;
-                  const maxHeight = 80;
-                  const x1 = idx * stepX;
-                  const y1 = maxHeight - (val / 30) * maxHeight;
-                  const x2 = (idx + 1) * stepX;
-                  const y2 = maxHeight - (nextVal / 30) * maxHeight;
-                  const dx = x2 - x1;
-                  const dy = y2 - y1;
-                  const length = Math.sqrt(dx * dx + dy * dy);
-                  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                  const cx = (x1 + x2) / 2;
-                  const cy = (y1 + y2) / 2;
-                  return (
-                    <View key={`line-${idx}`} style={{
-                      position: 'absolute',
-                      left: cx - length / 2,
-                      top: cy - 1,
-                      width: length,
-                      height: 2,
-                      backgroundColor: '#F5C16C',
-                      transform: [{ rotate: `${angle}deg` }]
-                    }} />
-                  );
-                })}
-                {[12, 28, 15, 22, 18, 30].map((val, idx) => {
-                  const stepX = 18;
-                  const maxHeight = 80;
-                  const x1 = idx * stepX;
-                  const y1 = maxHeight - (val / 30) * maxHeight;
-                  return (
-                    <View key={`dot-${idx}`} style={{
-                      position: 'absolute',
-                      left: x1 - 3,
-                      top: y1 - 3,
-                      width: 6,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: '#17212F',
-                      borderWidth: 1.5,
-                      borderColor: '#F5C16C',
-                    }} />
-                  );
-                })}
-              </View>
-            </View>
-          </View>
-          {}
-          <View style={styles.recentOrdersCard}>
-            <View style={styles.recentOrdersHeader}>
-              <Text style={styles.recentOrdersTitle} numberOfLines={1} adjustsFontSizeToFit>Recent Orders</Text>
-              <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('AdminOrders')}>
-                <Text style={styles.viewAllText} numberOfLines={1} adjustsFontSizeToFit>View All</Text>
+
+              {/* b) Support button */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.supportButtonShadow}
+                onPress={() => navigation.navigate('AdminSupportInbox')}
+              >
+                <LinearGradient
+                  colors={ADMIN_THEME.colors.goldButtonGradient}
+                  start={{ x: 0.2, y: 0 }}
+                  end={{ x: 0.8, y: 1 }}
+                  style={styles.supportButtonGradient}
+                >
+                  <HeadsetIcon size={16} color={ADMIN_THEME.colors.ink} strokeWidth={2} />
+                  <Text style={styles.supportText}>Support</Text>
+                  {(adminSupportUnreadCount > 0 || adminSupportUnassignedCount > 0) && (
+                    <View style={styles.supportBadge}>
+                      <Text style={styles.supportBadgeText}>
+                        {adminSupportUnreadCount + adminSupportUnassignedCount > 99
+                          ? '99+'
+                          : adminSupportUnreadCount + adminSupportUnassignedCount}
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
             </View>
-            <View style={styles.orderList}>
-              {}
-              <View style={styles.orderItem}>
-                <View style={styles.orderLeft}>
-                  <View style={styles.orderIconBg}>
-                    <Ionicons name="bag-handle-outline" size={16} color="#FFFFFF" />
-                  </View>
-                  <View style={{ flexShrink: 1, marginRight: 8 }}>
-                    <Text style={styles.orderId} numberOfLines={1}>#ORD-123</Text>
-                    <Text style={styles.orderCustomer} numberOfLines={1}>Rahul Patil</Text>
-                  </View>
-                </View>
-                <View style={styles.orderRight}>
-                  <Text style={styles.orderAmount} numberOfLines={1} adjustsFontSizeToFit>₹850</Text>
-                  <StatusBadge status="Delivered" />
-                </View>
-              </View>
-              <View style={styles.orderDivider} />
-              {}
-              <View style={styles.orderItem}>
-                <View style={styles.orderLeft}>
-                  <View style={styles.orderIconBg}>
-                    <Ionicons name="bag-handle-outline" size={16} color="#FFFFFF" />
-                  </View>
-                  <View style={{ flexShrink: 1, marginRight: 8 }}>
-                    <Text style={styles.orderId} numberOfLines={1}>#ORD-122</Text>
-                    <Text style={styles.orderCustomer} numberOfLines={1}>Sneha Sharma</Text>
-                  </View>
-                </View>
-                <View style={styles.orderRight}>
-                  <Text style={styles.orderAmount} numberOfLines={1} adjustsFontSizeToFit>₹650</Text>
-                  <StatusBadge status="Processing" />
-                </View>
-              </View>
-              <View style={styles.orderDivider} />
-              {}
-              <View style={styles.orderItem}>
-                <View style={styles.orderLeft}>
-                  <View style={styles.orderIconBg}>
-                    <Ionicons name="bag-handle-outline" size={16} color="#FFFFFF" />
-                  </View>
-                  <View style={{ flexShrink: 1, marginRight: 8 }}>
-                    <Text style={styles.orderId} numberOfLines={1}>#ORD-121</Text>
-                    <Text style={styles.orderCustomer} numberOfLines={1}>Amit Kumar</Text>
-                  </View>
-                </View>
-                <View style={styles.orderRight}>
-                  <Text style={styles.orderAmount} numberOfLines={1} adjustsFontSizeToFit>₹1,250</Text>
-                  <StatusBadge status="Pending" />
-                </View>
-              </View>
-            </View>
           </View>
-        </View>
-        {}
-        <View style={styles.quickActionsSection}>
-          <Text style={styles.quickActionsTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsRow}>
-            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AdminFarmers')}>
-              <Ionicons name="people-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>All{'\n'}Users</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AdminProducts')}>
-              <Ionicons name="cube-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>All{'\n'}Products</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AdminCategories')}>
-              <Ionicons name="grid-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>Add{'\n'}Category</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AdminOrders')}>
-              <Ionicons name="receipt-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>All{'\n'}Orders</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Analytics')}>
-              <Ionicons name="bar-chart-outline" size={24} color="#F5C16C" />
-              <Text style={styles.actionText}>All{'\n'}Report</Text>
-            </TouchableOpacity>
+
+          {/* 4) REVENUE CARD (hero) */}
+          <RevenueCard
+            revenue={
+              typeof dashboardData.totalRevenue === 'number'
+                ? `₹${dashboardData.totalRevenue.toLocaleString('en-IN')}`
+                : dashboardData.totalRevenue || '₹17,081'
+            }
+            period={periods[periodIndex]}
+            onPeriodPress={handlePeriodPress}
+            growthText="↑ 18% from last month"
+            isGrowthPositive={true}
+          />
+
+          {/* 5) MAIN STAT CARDS (2 x 2 grid) */}
+          <View style={styles.mainStatsGrid}>
+            <StatCard
+              title="Farmers"
+              value={dashboardData.totalFarmers || 172}
+              type="farmers"
+              cardWidth={statCardWidth}
+              onPress={() => navigation.navigate('AdminFarmers')}
+            />
+            <StatCard
+              title="Customers"
+              value={dashboardData.totalCustomers || 89}
+              type="customers"
+              cardWidth={statCardWidth}
+              onPress={() => navigation.navigate('AdminCustomers')}
+            />
+            <StatCard
+              title="Products"
+              value={dashboardData.totalProducts || 108}
+              type="products"
+              cardWidth={statCardWidth}
+              onPress={() => navigation.navigate('AdminProducts')}
+            />
+            <StatCard
+              title="Orders"
+              value={dashboardData.totalOrders || 48}
+              type="orders"
+              cardWidth={statCardWidth}
+              onPress={() => navigation.navigate('AdminOrders')}
+            />
           </View>
+
+          {/* 6) ORDER STATUS CARDS (3 equal cards) */}
+          <View style={styles.orderStatusRow}>
+            <OrderStatusCard
+              type="pending"
+              count={dashboardData.pendingOrders ?? 7}
+              label="Pending"
+              onPress={() => navigation.navigate('AdminOrders', { status: 'Pending' })}
+            />
+            <OrderStatusCard
+              type="completed"
+              count={dashboardData.completedOrders ?? 16}
+              label="Completed"
+              onPress={() => navigation.navigate('AdminOrders', { status: 'Completed' })}
+            />
+            <OrderStatusCard
+              type="cancelled"
+              count={dashboardData.cancelledOrders ?? 2}
+              label="Cancelled"
+              onPress={() => navigation.navigate('AdminOrders', { status: 'Cancelled' })}
+            />
+          </View>
+
+          {/* 7) SECTION HEADER: Recent orders */}
+          <AdminSectionHeader
+            title="Recent orders"
+            actionText="View all"
+            onActionPress={() => navigation.navigate('AdminOrders')}
+          />
+
+          {/* 8) RECENT ORDERS CARD */}
+          <View style={styles.recentOrdersCard}>
+            {recentOrders.map((order, index) => (
+              <RecentOrderRow
+                key={order.id}
+                order={order}
+                isLast={index === recentOrders.length - 1}
+                onPress={() => navigation.navigate('AdminOrders')}
+              />
+            ))}
+          </View>
+
+          {/* 9) SECTION HEADER: Quick actions */}
+          <AdminSectionHeader title="Quick actions" />
+
+          {/* QUICK ACTIONS HORIZONTAL SCROLLVIEW */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.quickActionsScroll}
+            contentContainerStyle={styles.quickActionsContent}
+          >
+            <QuickActionTile
+              label="All users"
+              type="users"
+              onPress={() => navigation.navigate('AdminFarmers')}
+            />
+            <QuickActionTile
+              label="All products"
+              type="products"
+              onPress={() => navigation.navigate('AdminProducts')}
+            />
+            <QuickActionTile
+              label="Add category"
+              type="category"
+              onPress={() => navigation.navigate('AdminCategories')}
+            />
+            <QuickActionTile
+              label="All orders"
+              type="orders"
+              onPress={() => navigation.navigate('AdminOrders')}
+            />
+          </ScrollView>
         </View>
       </ScrollView>
-    </View>
+    </AdminPageBackground>
   );
 };
+
+export default AdminDashboardScreen;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F1E6',
-  },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 120, // Section spec: nothing hides behind the floating bottom nav
   },
-  welcomeSection: {
+  contentArea: {
+    paddingHorizontal: 16,
+  },
+  greetingSection: {
+    marginTop: 16,
+  },
+  greetingTitle: {
+    fontFamily: ADMIN_THEME.fonts.serif,
+    fontSize: 18.5,
+    lineHeight: 25,
+    color: ADMIN_THEME.colors.ink,
+  },
+  greetingSubtitle: {
+    marginTop: 3,
+    fontFamily: ADMIN_THEME.fonts.regular,
+    fontSize: 12.5,
+    color: ADMIN_THEME.colors.textSecondary,
+  },
+  chipsRow: {
+    marginTop: 10,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
   },
-  welcomeLeft: {
+  dateChip: {
+    height: 35,
+    paddingHorizontal: 12,
+    borderRadius: ADMIN_THEME.radius.chip,
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 1,
-    marginRight: 4,
+    gap: 6,
+    backgroundColor: ADMIN_THEME.colors.card,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
+    ...ADMIN_THEME.shadows.dateChip,
   },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1B2430',
+  dateText: {
+    fontFamily: ADMIN_THEME.fonts.semiBold,
+    fontSize: 12,
+    color: ADMIN_THEME.colors.ink,
   },
-  welcomeSubtitle: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 2,
+  supportButtonShadow: {
+    borderRadius: ADMIN_THEME.radius.chip,
+    ...ADMIN_THEME.shadows.supportButton,
   },
-  supportInboxButton: {
+  supportButtonGradient: {
+    height: 35,
+    paddingHorizontal: 14,
+    borderRadius: ADMIN_THEME.radius.chip,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 20,
-    elevation: 4,
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    marginRight: 4,
-    position: 'relative', // Added for absolute badge
+    gap: 6,
+    position: 'relative',
   },
-  supportInboxText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginLeft: 4,
+  supportText: {
+    fontFamily: ADMIN_THEME.fonts.bold,
+    fontSize: 12,
+    color: ADMIN_THEME.colors.ink,
   },
-  supportBadgeAbsolute: {
+  supportBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#EF4444', // Red color for the dot/badge
-    borderRadius: 10,
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
     paddingHorizontal: 4,
     minWidth: 16,
     height: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#F8F1E6', // Match background to look like a cutout
-    elevation: 5,
+    borderColor: '#FFFFFF',
   },
   supportBadgeText: {
     color: '#FFFFFF',
     fontSize: 9,
-    fontWeight: 'bold',
+    fontFamily: ADMIN_THEME.fonts.bold,
   },
-  dateCard: {
+  mainStatsGrid: {
+    marginTop: 14,
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  dateIcon: {
-    marginRight: 4,
-  },
-  dateText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#1B2430',
-  },
-  statsRow: {
+  orderStatusRow: {
+    marginTop: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  orderSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  summaryItem: {
-    alignItems: 'center',
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  summaryIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  summaryLabel: {
-    fontSize: 10,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1B2430',
-    textAlign: 'center',
-  },
-  middleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  revenueCard: {
-    flex: 0.9,
-    backgroundColor: '#17212F',
-    borderRadius: 16,
-    padding: 16,
-    marginRight: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  revenueHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  revenueTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-  dropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1F2B3A',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    flexShrink: 1,
-    marginLeft: 4,
-  },
-  dropdownText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    marginRight: 4,
-    flexShrink: 1,
-  },
-  revenueAmount: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  revenueGrowth: {
-    color: '#F5C16C',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  chartContainer: {
-    flexDirection: 'row',
-    height: 100,
-    overflow: 'hidden',
-  },
-  yAxis: {
-    justifyContent: 'space-between',
-    marginRight: 6,
-    paddingBottom: 4,
-  },
-  axisText: {
-    color: '#6B7280',
-    fontSize: 9,
-  },
-  lineChartContainer: {
-    flex: 1,
-    height: 80,
-    position: 'relative',
-    marginLeft: 4,
-    marginTop: 4,
-    overflow: 'hidden',
+    gap: 8,
   },
   recentOrdersCard: {
-    flex: 1.1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    marginLeft: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 14,
+    borderRadius: ADMIN_THEME.radius.recentOrdersCard,
+    backgroundColor: ADMIN_THEME.colors.card,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
+    ...ADMIN_THEME.shadows.card,
   },
-  recentOrdersHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  quickActionsScroll: {
+    marginHorizontal: -16,
   },
-  recentOrdersTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1B2430',
-    flexShrink: 1,
-  },
-  viewAllButton: {
-    backgroundColor: '#F5C16C',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  viewAllText: {
-    fontSize: 11,
-    color: '#17212F',
-    fontWeight: '700',
-  },
-  orderList: {
-    flex: 1,
-  },
-  orderItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  orderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  orderIconBg: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#17212F',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  orderId: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#1B2430',
-  },
-  orderCustomer: {
-    fontSize: 11,
-    color: '#6B7280',
-  },
-  orderRight: {
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-  orderAmount: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#1B2430',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  orderDivider: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginVertical: 12,
-  },
-  quickActionsSection: {
-    marginBottom: 20,
-  },
-  quickActionsTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1B2430',
-    marginBottom: 12,
-  },
-  quickActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    backgroundColor: '#17212F',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 2,
-    alignItems: 'center',
-    width: '19%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  actionText: {
-    color: '#FFFFFF',
-    fontSize: 8.5,
-    marginTop: 8,
-    textAlign: 'center',
+  quickActionsContent: {
+    paddingHorizontal: 16,
+    gap: 10,
+    paddingBottom: 10,
   },
 });
-export default AdminDashboardScreen;

@@ -13,12 +13,18 @@ import {
   SafeAreaView,
   Platform,
   StatusBar,
+  KeyboardAvoidingView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StarRating } from './StarRating';
 import { createReview, updateReview } from '../../services/reviewService';
 import { Review } from '../../types';
+import { THEME } from '../../constants/theme';
+import { PageBackground } from '../ui/PageBackground';
+import { ThemedHeader } from '../ui/ThemedHeader';
+import { PrimaryButton } from '../ui/Buttons';
+
 interface ReviewFormProps {
   visible: boolean;
   orderId: string;
@@ -27,6 +33,7 @@ interface ReviewFormProps {
   existingReview?: Review | null;
   onClose: () => void;
   onSubmitSuccess: (newReview: Review) => void;
+  variant?: 'default' | 'customer';
 }
 export const ReviewForm = ({
   visible,
@@ -36,7 +43,9 @@ export const ReviewForm = ({
   existingReview,
   onClose,
   onSubmitSuccess,
+  variant = 'customer',
 }: ReviewFormProps) => {
+  const isCustomer = variant === 'customer';
   const [rating, setRating] = useState<number>(0);
   const [reviewText, setReviewText] = useState<string>('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -142,10 +151,128 @@ export const ReviewForm = ({
       setSubmitting(false);
     }
   };
+
+  if (isCustomer) {
+    return (
+      <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
+        <PageBackground style={{ flex: 1 }}>
+          <ThemedHeader
+            variant="inner"
+            title={existingReview ? 'Edit Review' : 'Write Review'}
+            onBackPress={onClose}
+          />
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            {success ? (
+              <View style={styles.successContainer}>
+                <Ionicons name="checkmark-circle" size={80} color="#2E7D4F" />
+                <Text style={styles.successTitleThemed}>Review Submitted</Text>
+                <Text style={styles.successSubThemed}>Thank you for sharing your Farm2Home experience.</Text>
+              </View>
+            ) : (
+              <ScrollView contentContainerStyle={styles.customerScrollContent} keyboardShouldPersistTaps="handled">
+                <Text style={styles.customerProductName}>{productName}</Text>
+
+                <View style={styles.customerRatingCard}>
+                  <Text style={styles.customerRatingLabel}>Rate this product</Text>
+                  <StarRating rating={rating} onRatingChange={setRating} size={38} variant="customer" />
+                  {rating > 0 ? (
+                    <Text style={styles.customerRatingText}>
+                      {rating === 5 ? 'Excellent!' : rating === 4 ? 'Good' : rating === 3 ? 'Average' : rating === 2 ? 'Poor' : 'Very Poor'}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <Text style={styles.customerSectionLabel}>Share your experience</Text>
+                <TextInput
+                  style={styles.customerReviewInput}
+                  placeholder="Write your review here... (optional)"
+                  placeholderTextColor="#8A6F5C"
+                  multiline
+                  numberOfLines={6}
+                  value={reviewText}
+                  onChangeText={setReviewText}
+                  textAlignVertical="top"
+                  editable={!submitting}
+                />
+
+                <Text style={styles.customerSectionLabel}>Photos and videos are optional</Text>
+                <View style={styles.mediaButtonsRow}>
+                  <TouchableOpacity
+                    style={[styles.customerMediaButton, photoUri && styles.customerMediaButtonActive]}
+                    onPress={handleSelectPhoto}
+                    disabled={submitting}
+                  >
+                    <Ionicons name="camera-outline" size={24} color={photoUri ? '#B8470F' : '#8A6F5C'} />
+                    <Text style={[styles.customerMediaButtonText, photoUri && styles.customerMediaButtonTextActive]}>
+                      {photoUri ? 'Change Photo' : 'Add Photo'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.customerMediaButton, videoUri && styles.customerMediaButtonActive]}
+                    onPress={handleSelectVideo}
+                    disabled={submitting}
+                  >
+                    <Ionicons name="videocam-outline" size={24} color={videoUri ? '#B8470F' : '#8A6F5C'} />
+                    <Text style={[styles.customerMediaButtonText, videoUri && styles.customerMediaButtonTextActive]}>
+                      {videoUri ? 'Change Video' : 'Add Video'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {photoUri || videoUri ? (
+                  <View style={styles.customerPreviewContainer}>
+                    {photoUri ? (
+                      <View style={styles.previewWrapper}>
+                        <Image source={{ uri: photoUri }} style={styles.customerPreviewThumbnail} />
+                        <TouchableOpacity
+                          style={styles.removeMediaBtn}
+                          onPress={() => setPhotoUri(null)}
+                          disabled={submitting}
+                        >
+                          <Ionicons name="close-circle" size={20} color="#DC2626" />
+                        </TouchableOpacity>
+                        <Text style={styles.customerPreviewTypeText}>Photo Selected</Text>
+                      </View>
+                    ) : null}
+                    {videoUri ? (
+                      <View style={styles.previewWrapper}>
+                        <View style={styles.customerVideoPreviewThumbnail}>
+                          <Ionicons name="play" size={24} color="#FFFFFF" />
+                        </View>
+                        <TouchableOpacity
+                          style={styles.removeMediaBtn}
+                          onPress={() => setVideoUri(null)}
+                          disabled={submitting}
+                        >
+                          <Ionicons name="close-circle" size={20} color="#DC2626" />
+                        </TouchableOpacity>
+                        <Text style={styles.customerPreviewTypeText}>Video Selected</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                <PrimaryButton
+                  title={existingReview ? 'Update Review' : 'Submit Review'}
+                  loading={submitting}
+                  disabled={submitting || rating === 0}
+                  onPress={handleSubmit}
+                  style={{ marginTop: 24, marginBottom: 50 }}
+                />
+              </ScrollView>
+            )}
+          </KeyboardAvoidingView>
+        </PageBackground>
+      </Modal>
+    );
+  }
+
+  // Fallback default view
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <SafeAreaView style={styles.container}>
-        {success ? (
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <SafeAreaView style={styles.container}>
+          {success ? (
           <View style={styles.successContainer}>
             <Ionicons name="checkmark-circle" size={80} color="#10B981" />
             <Text style={styles.successTitle}>Review Submitted</Text>
@@ -153,7 +280,6 @@ export const ReviewForm = ({
           </View>
         ) : (
           <View style={styles.content}>
-            {}
             <View style={styles.header}>
               <TouchableOpacity onPress={onClose} disabled={submitting} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -162,7 +288,6 @@ export const ReviewForm = ({
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
               <Text style={styles.productName}>{productName}</Text>
-              {}
               <View style={styles.ratingCard}>
                 <Text style={styles.ratingLabel}>Rate this product</Text>
                 <StarRating rating={rating} onRatingChange={setRating} size={40} />
@@ -172,7 +297,6 @@ export const ReviewForm = ({
                   </Text>
                 ) : null}
               </View>
-              {}
               <Text style={styles.sectionLabel}>Share your experience</Text>
               <TextInput
                 style={styles.reviewInput}
@@ -185,7 +309,6 @@ export const ReviewForm = ({
                 textAlignVertical="top"
                 editable={!submitting}
               />
-              {}
               <Text style={styles.sectionLabel}>Photos and videos are optional</Text>
               <View style={styles.mediaButtonsRow}>
                 <TouchableOpacity
@@ -209,7 +332,6 @@ export const ReviewForm = ({
                   </Text>
                 </TouchableOpacity>
               </View>
-              {}
               {photoUri || videoUri ? (
                 <View style={styles.previewContainer}>
                   {photoUri ? (
@@ -243,7 +365,6 @@ export const ReviewForm = ({
                 </View>
               ) : null}
             </ScrollView>
-            {}
             <View style={styles.footer}>
               <TouchableOpacity
                 style={[styles.submitBtn, rating === 0 && styles.submitBtnDisabled]}
@@ -263,6 +384,7 @@ export const ReviewForm = ({
           </View>
         )}
       </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -430,6 +552,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
+    paddingBottom: 80,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
@@ -471,5 +594,130 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  customerScrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  customerProductName: {
+    fontFamily: THEME.fonts.serif,
+    fontSize: 22,
+    color: '#3B1A0E',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  customerRatingCard: {
+    backgroundColor: '#FFFDF8',
+    borderRadius: 24,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
+    marginBottom: 20,
+    shadowColor: 'rgba(90,40,15,0.08)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  customerRatingLabel: {
+    fontFamily: THEME.fonts.bold,
+    fontSize: 15,
+    color: '#3B1A0E',
+    marginBottom: 12,
+  },
+  customerRatingText: {
+    fontFamily: THEME.fonts.bold,
+    fontSize: 15,
+    color: '#B8470F',
+    marginTop: 10,
+  },
+  customerSectionLabel: {
+    fontFamily: THEME.fonts.bold,
+    fontSize: 14,
+    color: '#3B1A0E',
+    marginBottom: 10,
+    marginTop: 8,
+  },
+  customerReviewInput: {
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
+    borderRadius: 16,
+    padding: 16,
+    fontFamily: THEME.fonts.regular,
+    fontSize: 15,
+    color: '#3B1A0E',
+    minHeight: 120,
+    marginBottom: 20,
+  },
+  customerMediaButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
+    borderRadius: 16,
+    paddingVertical: 14,
+    marginHorizontal: 4,
+  },
+  customerMediaButtonActive: {
+    borderColor: '#B8470F',
+    backgroundColor: '#FFF1E3',
+  },
+  customerMediaButtonText: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: 13.5,
+    color: '#8A6F5C',
+    marginLeft: 8,
+  },
+  customerMediaButtonTextActive: {
+    fontFamily: THEME.fonts.bold,
+    color: '#B8470F',
+  },
+  customerPreviewContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: '#FFFDF8',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
+    marginBottom: 16,
+  },
+  customerPreviewThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 14,
+  },
+  customerVideoPreviewThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 14,
+    backgroundColor: '#3B1A0E',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customerPreviewTypeText: {
+    fontFamily: THEME.fonts.medium,
+    fontSize: 12,
+    color: '#8A6F5C',
+    marginTop: 6,
+  },
+  successTitleThemed: {
+    fontFamily: THEME.fonts.serif,
+    fontSize: 24,
+    color: '#3B1A0E',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  successSubThemed: {
+    fontFamily: THEME.fonts.regular,
+    fontSize: 15,
+    color: '#7A6350',
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

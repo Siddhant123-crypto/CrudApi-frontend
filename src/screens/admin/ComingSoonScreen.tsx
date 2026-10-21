@@ -1,76 +1,59 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { AdminHeader } from '../../components/admin/AdminHeader';
+import { StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { ADMIN_THEME } from '../../constants/adminTheme';
+import {
+  AdminPageBackground,
+  AdminHeader,
+  AdminEmptyState,
+  BarChartIcon,
+} from '../../components/admin';
+
 interface ComingSoonScreenProps {
   route?: {
     params?: {
       title?: string;
       icon?: keyof typeof Ionicons.glyphMap;
-    }
-  }
+    };
+  };
 }
+
 export const ComingSoonScreen: React.FC<ComingSoonScreenProps> = ({ route }) => {
-  const { title = 'Module', icon = 'construct-outline' } = route?.params || {};
+  const { title = 'Analytics & Reports', icon = 'bar-chart-outline' } = route?.params || {};
+
+  const isChart = String(icon).includes('bar-chart') || String(title).toLowerCase().includes('report') || String(title).toLowerCase().includes('analytic');
+
   return (
-    <View style={styles.container}>
-      <AdminHeader showBackButton />
+    <AdminPageBackground>
+      <AdminHeader variant="inner" title={title} showBackButton={true} />
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={64} color="#F5C16C" />
-        </View>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>Coming Soon</Text>
-        <Text style={styles.description}>
-          This module is currently under development. Stay tuned!
-        </Text>
+        <AdminEmptyState
+          icon={
+            isChart ? (
+              <BarChartIcon size={48} color={ADMIN_THEME.colors.indigo} strokeWidth={1.8} />
+            ) : (
+              <Ionicons
+                name={icon as any}
+                size={52}
+                color={ADMIN_THEME.colors.indigo}
+              />
+            )
+          }
+          title={title}
+          subtitle="This module is currently under active development. Stay tuned for advanced analytics and reporting features!"
+        />
       </View>
-    </View>
+    </AdminPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F1E6',
-  },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
-  },
-  iconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#17212F',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1B2430',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#F5C16C',
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  description: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 22,
+    padding: 24,
   },
 });
+
 export default ComingSoonScreen;

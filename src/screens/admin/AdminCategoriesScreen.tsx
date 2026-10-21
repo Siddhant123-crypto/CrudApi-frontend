@@ -1,9 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { AdminHeader } from '../../components/admin/AdminHeader';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { StatusBadge } from '../../components/admin/StatusBadge';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import {
+  AdminPageBackground,
+  AdminHeader,
+  AdminBadge,
+  AdminEmptyState,
+  AdminListSkeleton,
+  AdminPrimaryButton,
+  AdminDangerButton,
+  AdminOutlineButton,
+  AdminInput,
+  CameraIcon,
+  PlusIcon,
+  EditIcon,
+  TrashIcon,
+  GridIcon,
+} from '../../components/admin';
 
 export const AdminCategoriesScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,7 +42,7 @@ export const AdminCategoriesScreen: React.FC = () => {
   const [newCatDesc, setNewCatDesc] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [categoryToToggle, setCategoryToToggle] = useState<{ id: string, willBeActive: boolean } | null>(null);
+  const [categoryToToggle, setCategoryToToggle] = useState<{ id: string; willBeActive: boolean } | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editCatId, setEditCatId] = useState('');
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -47,7 +75,7 @@ export const AdminCategoriesScreen: React.FC = () => {
       const { default: api } = await import('../../services/api');
       const res = await api.post('/admin/categories', {
         name: newCatName.trim(),
-        description: newCatDesc.trim() || 'No description'
+        description: newCatDesc.trim() || 'No description',
       });
       if (res.data && res.data.data) {
         setCategories([...categories, res.data.data]);
@@ -75,13 +103,18 @@ export const AdminCategoriesScreen: React.FC = () => {
     try {
       setSaving(true);
       const { default: api } = await import('../../services/api');
-      // Replace with actual edit endpoint if it differs
       const res = await api.put(`/admin/categories/${editCatId}`, {
         name: newCatName.trim(),
-        description: newCatDesc.trim()
+        description: newCatDesc.trim(),
       });
       if (res.data) {
-        setCategories(prev => prev.map(c => c.categoryId === editCatId ? { ...c, name: newCatName.trim(), description: newCatDesc.trim() } : c));
+        setCategories(prev =>
+          prev.map(c =>
+            c.categoryId === editCatId
+              ? { ...c, name: newCatName.trim(), description: newCatDesc.trim() }
+              : c
+          )
+        );
         setIsEditModalVisible(false);
         setNewCatName('');
         setNewCatDesc('');
@@ -93,6 +126,8 @@ export const AdminCategoriesScreen: React.FC = () => {
       setSaving(false);
     }
   };
+
+
 
   const handleDeleteClick = (item: any) => {
     setDeleteCatId(item.categoryId);
@@ -129,7 +164,9 @@ export const AdminCategoriesScreen: React.FC = () => {
       const { default: api } = await import('../../services/api');
       const action = isActive ? 'deactivate' : 'activate';
       await api.put(`/admin/categories/${categoryId}/${action}`);
-      setCategories(prev => prev.map(c => c.categoryId === categoryId ? { ...c, isActive: !isActive } : c));
+      setCategories(prev =>
+        prev.map(c => (c.categoryId === categoryId ? { ...c, isActive: !isActive } : c))
+      );
     } catch (e) {
       console.log('Failed to toggle category status', e);
       Alert.alert('Failed to update category status.');
@@ -151,42 +188,90 @@ export const AdminCategoriesScreen: React.FC = () => {
 
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity
+      activeOpacity={0.7}
       style={styles.categoryCard}
       onPress={() => navigation.navigate('AdminCategoryProducts', { category: item.name })}
     >
-      <View style={[styles.cardLeft, { opacity: item.isActive ? 1 : 0.4 }]}>
-        <View style={styles.iconContainer}>
-          <Ionicons name={getIconForCategory(item.name) as any} size={28} color="#F5C16C" />
+      {/* 48x48 pastel icon tile */}
+      <View style={[styles.cardLeft, { opacity: item.isActive ? 1 : 0.65 }]}>
+        <View style={styles.iconTile}>
+          <Ionicons
+            name={getIconForCategory(item.name) as any}
+            size={24}
+            color={ADMIN_THEME.colors.indigo}
+          />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.categoryName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
+        <View style={styles.textContainer}>
+          <Text style={styles.categoryName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.description} numberOfLines={1}>
+            {item.description || 'No description'}
+          </Text>
         </View>
       </View>
+
       <View style={styles.cardRight}>
-        <View style={{ opacity: item.isActive ? 1 : 0.4 }}>
-          <StatusBadge status={item.isActive ? 'Active' : 'Inactive'} />
+        {/* Vibrant Gradient Status Pill */}
+        <View
+          style={[
+            styles.statusPillWrapper,
+            item.isActive ? styles.statusActiveShadow : styles.statusInactiveShadow,
+          ]}
+        >
+          <LinearGradient
+            colors={item.isActive ? ['#10B981', '#059669'] : ['#6B7280', '#4B5563']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.statusPillGradient}
+          >
+            <View style={styles.statusDotWhite} />
+            <Text style={styles.statusTextWhite}>
+              {item.isActive ? 'ACTIVE' : 'INACTIVE'}
+            </Text>
+          </LinearGradient>
         </View>
-        <View style={{ flexDirection: 'row', marginTop: 8, gap: 6 }}>
-          <TouchableOpacity 
-            style={{ padding: 6, backgroundColor: '#E5E7EB', borderRadius: 6, alignItems: 'center' }}
+
+        <View style={styles.actionsRow}>
+          {/* Edit */}
+          <TouchableOpacity
+            activeOpacity={0.75}
+            style={styles.editActionBtn}
             onPress={() => handleEditClick(item)}
           >
-            <Ionicons name="pencil" size={14} color="#374151" />
+            <EditIcon size={14} color="#4338CA" strokeWidth={2.2} />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={{ padding: 6, backgroundColor: '#FEE2E2', borderRadius: 6, alignItems: 'center' }}
+
+          {/* Delete */}
+          <TouchableOpacity
+            activeOpacity={0.75}
+            style={styles.deleteActionBtn}
             onPress={() => handleDeleteClick(item)}
           >
-            <Ionicons name="trash" size={14} color="#EF4444" />
+            <TrashIcon size={14} color="#DC2626" strokeWidth={2.2} />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={{ padding: 6, backgroundColor: item.isActive ? '#FEE2E2' : '#D1FAE5', borderRadius: 6, alignItems: 'center' }}
+
+          {/* Status Toggle */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.toggleWrapper}
             onPress={() => handleToggleCategory(item.categoryId, item.isActive)}
           >
-            <Text style={{ fontSize: 9, fontWeight: 'bold', color: item.isActive ? '#EF4444' : '#10B981' }}>
-              {item.isActive ? 'Inactive' : 'Active'}
-            </Text>
+            <LinearGradient
+              colors={item.isActive ? ['#EF4444', '#DC2626'] : ['#10B981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.toggleGradient}
+            >
+              <Ionicons
+                name={item.isActive ? 'pause-circle' : 'checkmark-circle'}
+                size={12}
+                color="#FFFFFF"
+              />
+              <Text style={styles.toggleTextWhite}>
+                {item.isActive ? 'Inactive' : 'Active'}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -194,175 +279,626 @@ export const AdminCategoriesScreen: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <AdminHeader showBackButton />
-      <View style={styles.headerArea}>
-        <Text style={styles.screenTitle}>Categories</Text>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search categories..."
-            placeholderTextColor="#6B7280"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-      </View>
-      <FlatList
-        data={filteredCategories}
-        keyExtractor={item => item.categoryId || item.name}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
+    <AdminPageBackground>
+      {/* 1) TAB ADMIN HEADER WITH NAVY "+" RIGHT ACTION */}
+      <AdminHeader
+        variant="tab"
+        title="Categories"
+        titleSize={28}
+        showBackButton={true}
+        showSearch={true}
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search categories..."
+        rightAction={
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.headerAddButton}
+            onPress={() => {
+              setNewCatName('');
+              setNewCatDesc('');
+              setIsModalVisible(true);
+            }}
+          >
+            <PlusIcon size={20} color="#FFFFFF" strokeWidth={2.4} />
+          </TouchableOpacity>
+        }
       />
-      <TouchableOpacity style={styles.fab} onPress={() => setIsModalVisible(true)}>
-        <Ionicons name="add" size={24} color="#17212F" />
-        <Text style={styles.fabText}>Add Category</Text>
-      </TouchableOpacity>
 
-      <Modal visible={isModalVisible} transparent animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
-            <View style={{ backgroundColor: '#fff', padding: 20, borderRadius: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add New Category</Text>
-              <TextInput 
-                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 }}
-                placeholder="Category Name (e.g. Spices)"
+      {/* 2) CATEGORIES LIST */}
+      {loading ? (
+        <AdminListSkeleton rows={6} />
+      ) : filteredCategories.length > 0 ? (
+        <FlatList
+          data={filteredCategories}
+          keyExtractor={item => item.categoryId || item.name}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <AdminEmptyState
+          icon={<GridIcon size={36} color={ADMIN_THEME.colors.indigo} />}
+          title="No categories found"
+          subtitle="Try adjusting your search query or add a new category."
+        />
+      )}
+
+      {/* 3) ADD CATEGORY MODAL */}
+      <Modal visible={isModalVisible} transparent animationType="fade">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Add New Category</Text>
+
+              <AdminInput
+                label="Category Name"
+                placeholder="e.g. Spices, Fresh Fruits"
                 value={newCatName}
                 onChangeText={setNewCatName}
               />
-              <TextInput 
-                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20 }}
-                placeholder="Description (optional)"
+
+              <AdminInput
+                label="Description"
+                placeholder="Category description (optional)"
                 value={newCatDesc}
                 onChangeText={setNewCatDesc}
+                multiline={true}
+                numberOfLines={3}
               />
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                <TouchableOpacity onPress={() => setIsModalVisible(false)} style={{ padding: 12, marginRight: 12 }}>
-                  <Text style={{ color: '#666', fontWeight: 'bold' }}>Cancel</Text>
+
+              <View style={styles.modalButtonsRow}>
+                {/* Cancel Button - Red Highlighted */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.cancelBtn}
+                  onPress={() => setIsModalVisible(false)}
+                >
+                  <LinearGradient
+                    colors={['#EF4444', '#DC2626']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.btnGradient}
+                  >
+                    <Ionicons name="close-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.btnTextWhite}>Cancel</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleAddCategory} disabled={saving} style={{ backgroundColor: '#17212F', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{saving ? 'Adding...' : 'Add'}</Text>
+
+                {/* Add Button - Navy Highlighted */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.confirmBtn}
+                  onPress={handleAddCategory}
+                  disabled={saving}
+                >
+                  <LinearGradient
+                    colors={['#1F2F6B', '#0B1326']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.btnGradient}
+                  >
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="add-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.btnTextWhite}>Add</Text>
+                      </>
+                    )}
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
-      {/* Edit Modal */}
-      <Modal visible={isEditModalVisible} transparent animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
-            <View style={{ backgroundColor: '#fff', padding: 20, borderRadius: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Edit Category</Text>
-              <TextInput 
-                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 }}
+
+      {/* 4) EDIT CATEGORY MODAL */}
+      <Modal visible={isEditModalVisible} transparent animationType="fade">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Edit Category</Text>
+
+              <AdminInput
+                label="Category Name"
                 placeholder="Category Name"
                 value={newCatName}
                 onChangeText={setNewCatName}
               />
-              <TextInput 
-                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 20 }}
+
+              <AdminInput
+                label="Description"
                 placeholder="Description"
                 value={newCatDesc}
                 onChangeText={setNewCatDesc}
+                multiline={true}
+                numberOfLines={3}
               />
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                <TouchableOpacity onPress={() => setIsEditModalVisible(false)} style={{ padding: 12, marginRight: 12 }}>
-                  <Text style={{ color: '#666', fontWeight: 'bold' }}>Cancel</Text>
+
+              <View style={styles.modalButtonsRow}>
+                {/* Cancel Button - Red Highlighted */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.cancelBtn}
+                  onPress={() => setIsEditModalVisible(false)}
+                >
+                  <LinearGradient
+                    colors={['#EF4444', '#DC2626']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.btnGradient}
+                  >
+                    <Ionicons name="close-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.btnTextWhite}>Cancel</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleEditCategory} disabled={saving} style={{ backgroundColor: '#17212F', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{saving ? 'Saving...' : 'Save'}</Text>
+
+                {/* Save Button - Navy Highlighted */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.confirmBtn}
+                  onPress={handleEditCategory}
+                  disabled={saving}
+                >
+                  <LinearGradient
+                    colors={['#1F2F6B', '#0B1326']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.btnGradient}
+                  >
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.btnTextWhite}>Save</Text>
+                      </>
+                    )}
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
+      {/* 5) DELETE CONFIRMATION MODAL */}
       <Modal visible={isDeleteModalVisible} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 20, alignItems: 'center' }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
-               <Ionicons name="trash" size={32} color="#EF4444" />
+        <View style={styles.dialogOverlay}>
+          <View style={styles.dialogCard}>
+            <View style={styles.dialogIconDanger}>
+              <TrashIcon size={28} color={ADMIN_THEME.colors.danger} />
             </View>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 12, textAlign: 'center' }}>Delete Category?</Text>
-            <Text style={{ fontSize: 15, color: '#6B7280', marginBottom: 30, textAlign: 'center', lineHeight: 22 }}>
+            <Text style={styles.dialogTitle}>Delete Category?</Text>
+            <Text style={styles.dialogSubtitle}>
               Are you sure you want to delete this category? This action cannot be undone.
             </Text>
-            <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between', gap: 12 }}>
-              <TouchableOpacity 
-                onPress={() => setIsDeleteModalVisible(false)} 
-                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center' }}>
-                <Text style={{ color: '#4B5563', fontWeight: 'bold', fontSize: 16 }}>Cancel</Text>
+            <View style={styles.modalButtonsRow}>
+              {/* Cancel Button - Green Highlighted */}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.greenDialogBtn}
+                onPress={() => setIsDeleteModalVisible(false)}
+              >
+                <LinearGradient
+                  colors={['#10B981', '#059669']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.btnGradient}
+                >
+                  <Ionicons name="close-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.btnTextWhite}>Cancel</Text>
+                </LinearGradient>
               </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={confirmDelete} 
-                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#EF4444', alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Yes, Delete</Text>
+
+              {/* Delete Button - Crimson Red Highlighted */}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.cancelBtn}
+                onPress={confirmDelete}
+              >
+                <LinearGradient
+                  colors={['#EF4444', '#DC2626']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.btnGradient}
+                >
+                  <Ionicons name="trash-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.btnTextWhite}>Delete</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Confirmation Modal */}
+      {/* 6) STATUS TOGGLE CONFIRMATION MODAL */}
       <Modal visible={confirmModalVisible} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: categoryToToggle?.willBeActive ? '#E6F4EA' : '#FEE2E2', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
-               <Ionicons name={categoryToToggle?.willBeActive ? "checkmark-circle" : "warning"} size={40} color={categoryToToggle?.willBeActive ? "#1E8E3E" : "#EF4444"} />
+        <View style={styles.dialogOverlay}>
+          <View style={styles.dialogCard}>
+            <View
+              style={[
+                styles.dialogIconCircle,
+                {
+                  backgroundColor: categoryToToggle?.willBeActive
+                    ? '#E6F4EA'
+                    : '#FEE2E2',
+                },
+              ]}
+            >
+              <Ionicons
+                name={categoryToToggle?.willBeActive ? 'checkmark-circle' : 'warning'}
+                size={34}
+                color={
+                  categoryToToggle?.willBeActive
+                    ? ADMIN_THEME.colors.success
+                    : ADMIN_THEME.colors.danger
+                }
+              />
             </View>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 12, textAlign: 'center' }}>Are you sure?</Text>
-            <Text style={{ fontSize: 15, color: '#6B7280', marginBottom: 30, textAlign: 'center', lineHeight: 22 }}>
-              Are you sure you want to <Text style={{ fontWeight: 'bold', color: categoryToToggle?.willBeActive ? '#1E8E3E' : '#EF4444' }}>{categoryToToggle?.willBeActive ? 'activate' : 'deactivate'}</Text> this category?
+            <Text style={styles.dialogTitle}>Are you sure?</Text>
+            <Text style={styles.dialogSubtitle}>
+              Are you sure you want to{' '}
+              <Text
+                style={{
+                  fontFamily: AdminFonts.bold,
+                  color: categoryToToggle?.willBeActive
+                    ? ADMIN_THEME.colors.success
+                    : ADMIN_THEME.colors.danger,
+                }}
+              >
+                {categoryToToggle?.willBeActive ? 'activate' : 'deactivate'}
+              </Text>{' '}
+              this category?
             </Text>
-            <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between', gap: 12 }}>
-              <TouchableOpacity 
-                onPress={() => { setConfirmModalVisible(false); setCategoryToToggle(null); }} 
-                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center' }}>
-                <Text style={{ color: '#4B5563', fontWeight: 'bold', fontSize: 16 }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={confirmToggle} 
-                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: categoryToToggle?.willBeActive ? '#1E8E3E' : '#EF4444', alignItems: 'center', shadowColor: categoryToToggle?.willBeActive ? '#1E8E3E' : '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Yes, {categoryToToggle?.willBeActive ? 'Activate' : 'Deactivate'}</Text>
-              </TouchableOpacity>
+            <View style={styles.modalButtonsRow}>
+              <AdminOutlineButton
+                title="Cancel"
+                onPress={() => {
+                  setConfirmModalVisible(false);
+                  setCategoryToToggle(null);
+                }}
+                style={styles.modalButtonHalf}
+              />
+              <AdminPrimaryButton
+                title={`Yes, ${categoryToToggle?.willBeActive ? 'Activate' : 'Deactivate'}`}
+                onPress={confirmToggle}
+                style={styles.modalButtonHalf}
+              />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </AdminPageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F1E6' },
-  headerArea: { padding: 16, paddingBottom: 16 },
-  screenTitle: { fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },
-  searchContainer: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 12, height: 44,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
-  },searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: '#1B2430' },
-  listContent: { paddingHorizontal: 16, paddingBottom: 100 },
-  categoryCard: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-  },cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
-  iconContainer: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#17212F', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-  categoryName: { fontSize: 14, fontWeight: 'bold', color: '#1B2430', marginBottom: 4 },
-  description: { fontSize: 10, color: '#6B7280' },
-  cardRight: { alignItems: 'flex-end' },
-  fab: {position: 'absolute', bottom: 80, right: 16, left: 16,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#F5C16C', borderRadius: 12, paddingVertical: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
+  headerAddButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
   },
-  fabText: { fontSize: 14, fontWeight: 'bold', color: '#17212F', marginLeft: 8 },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 130, // Clearance for tab bar
+  },
+  categoryCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: ADMIN_THEME.colors.cardBg,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
+    shadowColor: ADMIN_THEME.shadows.card.shadowColor,
+    shadowOffset: ADMIN_THEME.shadows.card.shadowOffset,
+    shadowOpacity: ADMIN_THEME.shadows.card.shadowOpacity,
+    shadowRadius: ADMIN_THEME.shadows.card.shadowRadius,
+    elevation: ADMIN_THEME.shadows.card.elevation,
+  },
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  iconTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#EEF0FB',
+    borderWidth: 1,
+    borderColor: '#DFE3F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  imageTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#EEF0FB',
+    borderWidth: 1,
+    borderColor: '#DFE3F7',
+    overflow: 'hidden',
+    marginRight: 12,
+  },
+  categoryCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  textContainer: {
+    flex: 1,
+  },
+  categoryName: {
+    fontSize: 14.5,
+    fontFamily: AdminFonts.bold,
+    color: ADMIN_THEME.colors.textPrimary,
+    marginBottom: 2,
+  },
+  description: {
+    fontSize: 12,
+    fontFamily: AdminFonts.regular,
+    color: '#5B6580',
+  },
+  cardRight: {
+    alignItems: 'flex-end',
+  },
+  statusPillWrapper: {
+    borderRadius: 999,
+  },
+  statusActiveShadow: {
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.28,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  statusInactiveShadow: {
+    shadowColor: '#6B7280',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 1.5,
+  },
+  statusPillGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 9.5,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+    gap: 5,
+  },
+  statusDotWhite: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+  },
+  statusTextWhite: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 10,
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
+  editActionBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#EEF0FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.2,
+    borderColor: '#C7D2FE',
+    shadowColor: '#4F5BD5',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.16,
+    shadowRadius: 2,
+    elevation: 1.5,
+  },
+  deleteActionBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.2,
+    borderColor: '#FECACA',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.16,
+    shadowRadius: 2,
+    elevation: 1.5,
+  },
+  toggleWrapper: {
+    borderRadius: 999,
+  },
+  toggleGradient: {
+    height: 30,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 2.5,
+    elevation: 2,
+  },
+  toggleTextWhite: {
+    fontSize: 11,
+    fontFamily: AdminFonts.bold,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 19, 38, 0.72)',
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 22,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: AdminFonts.bold,
+    color: ADMIN_THEME.colors.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 14,
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  confirmBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#1F2F6B',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.28,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  greenDialogBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.28,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  btnGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  btnTextWhite: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 14,
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  modalButtonHalf: {
+    flex: 1,
+  },
+  dialogOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 19, 38, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dialogCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  dialogIconDanger: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dialogIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dialogTitle: {
+    fontSize: 19,
+    fontFamily: AdminFonts.bold,
+    color: ADMIN_THEME.colors.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  dialogSubtitle: {
+    fontSize: 13.5,
+    fontFamily: AdminFonts.regular,
+    color: ADMIN_THEME.colors.textSecondary,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });
+
 export default AdminCategoriesScreen;

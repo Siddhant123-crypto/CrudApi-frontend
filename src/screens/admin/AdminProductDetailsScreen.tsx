@@ -1,9 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import api, { BASE_URL } from '../../services/api';
-import { StatusBadge } from '../../components/admin/StatusBadge';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import {
+  AdminPageBackground,
+  AdminHeader,
+  AdminCard,
+  AdminBadge,
+  AdminEmptyState,
+  ChatIcon,
+  LeafIcon,
+  UserIcon,
+  TagIcon,
+  CubeIcon,
+  CalendarIcon,
+  ClockIcon,
+} from '../../components/admin';
+import { formatAddedTime } from '../../utils/dateUtils';
+
 export const AdminProductDetailsScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -12,6 +36,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
   const [product, setProduct] = useState<any>(null);
   const [buyersCount, setBuyersCount] = useState<number>(0);
   const [ordersCount, setOrdersCount] = useState<number>(0);
+
   useEffect(() => {
     if (productId) {
       fetchData();
@@ -19,12 +44,13 @@ export const AdminProductDetailsScreen: React.FC = () => {
       setLoading(false);
     }
   }, [productId]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       const [productRes, ordersRes] = await Promise.all([
         api.get(`/admin/products/${productId}`),
-        api.get(`/admin/orders`)
+        api.get('/admin/orders'),
       ]);
       if (productRes.data?.data) {
         setProduct(productRes.data.data);
@@ -49,6 +75,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
       setLoading(false);
     }
   };
+
   const getProductImage = () => {
     if (product?.productPhoto) {
       if (product.productPhoto.startsWith('http')) {
@@ -56,8 +83,9 @@ export const AdminProductDetailsScreen: React.FC = () => {
       }
       return `${BASE_URL}/product/image/${product.productPhoto}`;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(product?.productName || 'Product')}&background=F5C16C&color=17212F&size=150&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(product?.productName || 'Product')}&background=F1F3FA&color=4F5BD5&size=200`;
   };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -65,107 +93,183 @@ export const AdminProductDetailsScreen: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(amount || 0);
   };
+
   if (loading) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#F5C16C" />
-      </View>
+      <AdminPageBackground>
+        <AdminHeader variant="inner" title="Product Details" showBackButton={true} />
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={ADMIN_THEME.colors.indigo} />
+        </View>
+      </AdminPageBackground>
     );
   }
+
   if (!product) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Product Details</Text>
-        </View>
-        <Text style={styles.emptyText}>Product not found.</Text>
-      </View>
+      <AdminPageBackground>
+        <AdminHeader variant="inner" title="Product Details" showBackButton={true} />
+        <AdminEmptyState
+          icon={<CubeIcon size={40} color={ADMIN_THEME.colors.indigo} />}
+          title="Product not found"
+          subtitle="The requested product could not be located."
+        />
+      </AdminPageBackground>
     );
   }
+
+  const statusMapped =
+    product.status === 'APPROVED'
+      ? 'Active'
+      : product.status === 'REJECTED'
+      ? 'Blocked'
+      : product.status === 'PENDING'
+      ? 'Pending'
+      : product.status || 'Active';
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Product Details</Text>
-      </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {}
-        <View style={styles.profileSection}>
-          <View style={styles.imageContainer}>
+    <AdminPageBackground>
+      {/* 1) INNER ADMIN HEADER */}
+      <AdminHeader variant="inner" title="Product Details" showBackButton={true} />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* 2) LARGE IMAGE SHOWCASE CARD (radial/pastel tile #FFFFFF -> #F1F3FA -> #E3E7F2) */}
+        <AdminCard style={styles.showcaseCard}>
+          <LinearGradient
+            colors={['#FFFFFF', '#F1F3FA', '#E3E7F2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.largeImageTile}
+          >
             {product.productPhoto ? (
-               <Image source={{ uri: getProductImage() }} style={styles.productImage} />
+              <Image source={{ uri: getProductImage() }} style={styles.productHeroImage} />
             ) : (
-               <View style={styles.imagePlaceholder}>
-                 <Ionicons name="leaf" size={48} color="#F5C16C" />
-               </View>
+              <LeafIcon size={52} color={ADMIN_THEME.colors.indigo} />
             )}
+          </LinearGradient>
+
+          <Text style={styles.productTitle}>{product.productName}</Text>
+          <Text style={styles.categoryBadge}>{product.category || 'General'}</Text>
+
+          <View style={styles.badgeRow}>
+            <AdminBadge status={statusMapped} size="medium" />
           </View>
-          <Text style={styles.productName}>{product.productName}</Text>
-          <Text style={styles.categoryName}>{product.category || 'General'}</Text>
-          <View style={styles.statusBadgeContainer}>
-            <StatusBadge status={product.status === 'APPROVED' ? 'Active' : (product.status === 'REJECTED' ? 'Blocked' : (product.status === 'PENDING' ? 'Pending' : product.status))} />
+
+          {/* Price in Fraunces 600 28 */}
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceHeading}>
+              {formatCurrency(product.price)}
+            </Text>
+            <Text style={styles.priceUnit}> / {product.unit || 'kg'}</Text>
           </View>
-        </View>
-        {}
-        <View style={styles.section3D}>
+        </AdminCard>
+
+        {/* 3) FULL INFORMATION IN ADMINCARD */}
+        <AdminCard style={styles.infoCard}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Full Information</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AdminMessage', { 
-              preSelectedUserId: product.farmerUserId, 
-              preSelectedUserName: product.farmerName,
-              preSelectedRole: 'FARMER'
-            })}>
-              <Ionicons name="chatbubbles" size={26} color="#7C3AED" />
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.chatButton}
+              onPress={() =>
+                navigation.navigate('AdminMessage', {
+                  preSelectedUserId: product.farmerUserId,
+                  preSelectedUserName: product.farmerName,
+                  preSelectedRole: 'FARMER',
+                })
+              }
+            >
+              <ChatIcon size={20} color={ADMIN_THEME.colors.indigo} />
             </TouchableOpacity>
           </View>
+
+          {/* Farmer Name */}
           <View style={styles.infoRow}>
-            <Ionicons name="person-circle-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.iconCircle}>
+              <UserIcon size={18} color={ADMIN_THEME.colors.indigo} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Farmer Name</Text>
               <Text style={styles.infoValue}>{product.farmerName || 'N/A'}</Text>
             </View>
           </View>
+
+          {/* Price Details */}
           <View style={styles.infoRow}>
-            <Ionicons name="pricetag-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.iconCircle}>
+              <TagIcon size={18} color={ADMIN_THEME.colors.indigo} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Price Details</Text>
-              <Text style={styles.infoValue}>{formatCurrency(product.price)} / {product.unit || 'kg'}</Text>
+              <Text style={styles.infoValue}>
+                {formatCurrency(product.price)} / {product.unit || 'kg'}
+              </Text>
             </View>
           </View>
+
+          {/* Available Stock */}
           <View style={styles.infoRow}>
-            <Ionicons name="cube-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.iconCircle}>
+              <CubeIcon size={18} color={ADMIN_THEME.colors.indigo} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Available Stock</Text>
-              <Text style={styles.infoValue}>{product.quantity || 0} {product.unit || 'kg'}</Text>
+              <Text style={styles.infoValue}>
+                {product.quantity || 0} {product.unit || 'kg'}
+              </Text>
             </View>
           </View>
+
+          {/* Harvest Date */}
           <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.iconCircle}>
+              <CalendarIcon size={18} color={ADMIN_THEME.colors.indigo} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Harvest Date</Text>
-              <Text style={styles.infoValue}>{product.harvestDate ? new Date(product.harvestDate).toLocaleDateString() : 'N/A'}</Text>
+              <Text style={styles.infoValue}>
+                {product.harvestDate
+                  ? new Date(product.harvestDate).toLocaleDateString()
+                  : 'N/A'}
+              </Text>
             </View>
           </View>
+
+          {/* Added Time */}
+          {formatAddedTime(product.createdOn, product.addedTime) ? (
+            <View style={styles.infoRow}>
+              <View style={styles.iconCircle}>
+                <ClockIcon size={18} color={ADMIN_THEME.colors.indigo} />
+              </View>
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Added</Text>
+                <Text style={styles.infoValue}>
+                  {formatAddedTime(product.createdOn, product.addedTime)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Description */}
           <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
-            <Ionicons name="document-text-outline" size={22} color="#F5C16C" style={[styles.infoIcon, { marginTop: 2 }]} />
+            <View style={[styles.iconCircle, { marginTop: 2 }]}>
+              <LeafIcon size={18} color={ADMIN_THEME.colors.indigo} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Description</Text>
-              <Text style={[styles.infoValue, { fontSize: 15, lineHeight: 22, fontWeight: '500' }]}>
+              <Text style={styles.descriptionValue}>
                 {product.description || 'No description provided for this product.'}
               </Text>
             </View>
           </View>
-        </View>
-        {}
-        <View style={styles.section3D}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Product Activity</Text>
-          </View>
+        </AdminCard>
+
+        {/* 4) PRODUCT ACTIVITY STATS */}
+        <AdminCard style={styles.activityCard}>
+          <Text style={styles.sectionTitle}>Product Activity</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{buyersCount}</Text>
@@ -176,7 +280,9 @@ export const AdminProductDetailsScreen: React.FC = () => {
               <Text style={styles.statLabel}>Total Orders</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{product.averageRating?.toFixed(1) || '0.0'}</Text>
+              <Text style={styles.statValue}>
+                {product.averageRating?.toFixed(1) || '0.0'}
+              </Text>
               <Text style={styles.statLabel}>Avg Rating</Text>
             </View>
             <View style={styles.statBox}>
@@ -184,93 +290,180 @@ export const AdminProductDetailsScreen: React.FC = () => {
               <Text style={styles.statLabel}>Reviews</Text>
             </View>
           </View>
-        </View>
+        </AdminCard>
       </ScrollView>
-    </View>
+    </AdminPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
-  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' },
-  header: {
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 40,
+  },
+  showcaseCard: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+  },
+  largeImageTile: {
+    width: 140,
+    height: 140,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#E3E7F2',
+    marginBottom: 14,
+  },
+  productHeroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  productTitle: {
+    fontSize: 20,
+    fontFamily: AdminFonts.bold,
+    color: ADMIN_THEME.colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  categoryBadge: {
+    fontSize: 12,
+    fontFamily: AdminFonts.semiBold,
+    color: ADMIN_THEME.colors.indigo,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  badgeRow: {
+    marginBottom: 14,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  priceHeading: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 28,
+    color: ADMIN_THEME.colors.textPrimary,
+  },
+  priceUnit: {
+    fontFamily: AdminFonts.medium,
+    fontSize: 15,
+    color: ADMIN_THEME.colors.textMuted,
+  },
+  infoCard: {
+    padding: 16,
+    marginBottom: 14,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: ADMIN_THEME.colors.divider,
+    paddingBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontFamily: AdminFonts.bold,
+    color: ADMIN_THEME.colors.textPrimary,
+  },
+  chatButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: ADMIN_THEME.colors.indigoPastel,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 16,
-    backgroundColor: '#17212F',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
-    marginBottom: 16,
-    zIndex: 10,
+    marginBottom: 10,
+    backgroundColor: '#F8F9FD',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EDF0F8',
   },
-  backButton: { marginRight: 16, padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5 },
-  scrollContent: { paddingBottom: 40 },
-  profileSection: {
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ADMIN_THEME.colors.indigoPastel,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    marginRight: 12,
   },
-  imageContainer: {
-    width: 90, height: 90, borderRadius: 16,
-    backgroundColor: '#F5C16C',
-    justifyContent: 'center', alignItems: 'center',
-    overflow: 'hidden',
-    marginBottom: 12,
-    borderWidth: 3, borderColor: '#17212F',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8,
+  infoTextContainer: {
+    flex: 1,
   },
-  productImage: { width: '100%', height: '100%' },
-  imagePlaceholder: { width: '100%', height: '100%', backgroundColor: '#17212F', justifyContent: 'center', alignItems: 'center' },
-  productName: { fontSize: 18, fontWeight: 'bold', color: '#1B2430', marginBottom: 4, textAlign: 'center', paddingHorizontal: 10 },
-  categoryName: { fontSize: 12, color: '#4B5563', marginBottom: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
-  statusBadgeContainer: { flexDirection: 'row', justifyContent: 'center' },
-  section3D: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+  infoLabel: {
+    fontSize: 11,
+    fontFamily: AdminFonts.medium,
+    color: ADMIN_THEME.colors.textMuted,
+    marginBottom: 2,
   },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#17212F' },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#F9FAFB', padding: 10, borderRadius: 10 },
-  infoIcon: { marginRight: 12 },
-  infoTextContainer: { flex: 1 },
-  infoLabel: { fontSize: 11, color: '#6B7280', marginBottom: 2, fontWeight: '600' },
-  infoValue: { fontSize: 14, color: '#111827', fontWeight: 'bold' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  infoValue: {
+    fontSize: 14,
+    fontFamily: AdminFonts.semiBold,
+    color: ADMIN_THEME.colors.textPrimary,
+  },
+  descriptionValue: {
+    fontSize: 13.5,
+    fontFamily: AdminFonts.regular,
+    color: ADMIN_THEME.colors.textSecondary,
+    lineHeight: 20,
+  },
+  activityCard: {
+    padding: 16,
+    marginBottom: 14,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
   statBox: {
-    width: '47%', backgroundColor: '#17212F',
-    padding: 12, borderRadius: 12, marginBottom: 12,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 6,
+    width: '48%',
+    backgroundColor: '#0E1726',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  statValue: { fontSize: 18, fontWeight: '900', color: '#F5C16C', marginBottom: 4 },
-  statLabel: { fontSize: 11, color: '#E5E7EB', fontWeight: '600', textAlign: 'center' },
-  emptyText: { textAlign: 'center', color: '#6B7280', marginTop: 40, fontSize: 18, fontWeight: '500' },
+  statValue: {
+    fontSize: 20,
+    fontFamily: AdminFonts.heading,
+    color: ADMIN_THEME.colors.gold,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontFamily: AdminFonts.medium,
+    color: '#D4DCF0',
+    textAlign: 'center',
+  },
 });
+
 export default AdminProductDetailsScreen;

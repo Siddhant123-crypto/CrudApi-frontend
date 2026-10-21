@@ -1,10 +1,29 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
-import { AdminHeader } from '../../components/admin/AdminHeader';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { StatusBadge } from '../../components/admin/StatusBadge';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  RefreshControl,
+} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getAllAdminOrders } from '../../services/orderService';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import {
+  AdminPageBackground,
+  AdminHeader,
+  AdminChip,
+  AdminBadge,
+  AdminEmptyState,
+  AdminListSkeleton,
+  ShoppingBagIcon,
+  SearchIcon,
+  CalendarIcon,
+} from '../../components/admin';
 
 export const AdminOrdersScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('All');
@@ -34,124 +53,271 @@ export const AdminOrdersScreen: React.FC = () => {
     }
   };
 
-  const filteredOrders = orders.filter(o => {
-    // 1. Search filter
-    const shortId = `#ORD-${o.orderId.substring(0, 5).toUpperCase()}`;
-    if (searchQuery && !shortId.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+  const filteredOrders = orders
+    .filter(o => {
+      // 1. Search filter
+      const shortId = `#ORD-${o.orderId.substring(0, 5).toUpperCase()}`;
+      if (searchQuery && !shortId.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
-    // 2. Tab filter
-    if (activeTab === 'All') {
-      return true;
-    } else if (activeTab === 'Processing') {
-      return ['CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY'].includes(o.orderStatus);
-    } else if (activeTab === 'Delivered') {
-      return o.orderStatus === 'DELIVERED';
-    } else if (activeTab === 'Cancelled') {
-      return o.orderStatus === 'CANCELLED';
-    }
-    
-    return false;
-  }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+      // 2. Tab filter
+      if (activeTab === 'All') {
+        return true;
+      } else if (activeTab === 'Processing') {
+        return ['CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY'].includes(o.orderStatus);
+      } else if (activeTab === 'Delivered') {
+        return o.orderStatus === 'DELIVERED';
+      } else if (activeTab === 'Cancelled') {
+        return o.orderStatus === 'CANCELLED';
+      }
+
+      return false;
+    })
+    .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+
+  const formatOrderDate = (dateVal: any) => {
+    if (!dateVal) return '';
+    const dateObj = new Date(dateVal);
+    if (isNaN(dateObj.getTime())) return String(dateVal);
+    const dayMonth = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const time = dateObj.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `${dayMonth}, ${time}`;
+  };
 
   const renderItem = ({ item }: { item: any }) => {
     const shortId = `#ORD-${item.orderId.substring(0, 5).toUpperCase()}`;
-    const dateObj = new Date(item.orderDate);
-    const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ', ' + 
-                    dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    
+    const dateStr = formatOrderDate(item.orderDate);
+
     return (
-      <TouchableOpacity style={styles.orderCard} onPress={() => navigation.navigate('AdminOrderDetails', { orderId: item.orderId })}>
-        <View style={styles.cardHeader}>
-          <View style={styles.headerLeft}>
-            <View style={styles.iconBg}>
-              <Ionicons name="bag-handle-outline" size={16} color="#FFFFFF" />
-            </View>
-            <Text style={styles.orderId}>{shortId}</Text>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={styles.orderCard}
+        onPress={() => navigation.navigate('AdminOrderDetails', { orderId: item.orderId })}
+      >
+        {/* Row 1: Tile (46x46 gradient) + Middle (orderId, customer) + Right (amount) */}
+        <View style={styles.cardRow1}>
+          <LinearGradient
+            colors={['#1F2F6B', '#0B1326']}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={styles.orderTile}
+          >
+            <ShoppingBagIcon size={22} color={ADMIN_THEME.colors.gold} strokeWidth={1.8} />
+          </LinearGradient>
+
+          <View style={styles.middleCol}>
+            <Text style={styles.orderId} numberOfLines={1}>
+              {shortId}
+            </Text>
+            <Text style={styles.customerName} numberOfLines={1}>
+              {item.customerName || 'Customer'}
+            </Text>
           </View>
+
           <Text style={styles.amount}>₹{item.totalAmount}</Text>
         </View>
-        <View style={styles.cardContent}>
-          <Text style={styles.customer}>{item.customerName}</Text>
-          <View style={styles.contentRight}>
-            <Text style={styles.date}>{dateStr}</Text>
-            <StatusBadge status={item.orderStatus} />
+
+        {/* Divider */}
+        <View style={styles.cardDivider} />
+
+        {/* Row 2: Left (calendar icon + date) + Right (status pill) */}
+        <View style={styles.cardRow2}>
+          <View style={styles.dateRow}>
+            <CalendarIcon size={14} color="#8A93AB" strokeWidth={1.9} />
+            <Text style={styles.dateText}>{dateStr}</Text>
           </View>
+
+          <AdminBadge status={item.orderStatus} size="small" />
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <AdminHeader showBackButton />
-      <View style={styles.headerArea}>
-        <Text style={styles.screenTitle}>Orders</Text>
+    <AdminPageBackground>
+      {/* 1) HEADER (shows "Orders" title in Fraunces 600 22, back button preserved, no separate big heading) */}
+      <AdminHeader
+        variant="tab"
+        title="Orders"
+        subtitle="Manage customer orders"
+        showBackButton={true}
+      />
+
+      <View style={styles.contentWrapper}>
+        {/* 2) SEARCH BAR */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <SearchIcon size={20} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search orders..."
-            placeholderTextColor="#6B7280"
+            placeholderTextColor="#8A93AB"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
         </View>
-      </View>
-      <FlatList
-        data={tabs}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0, minHeight: 40 }}
-        contentContainerStyle={styles.tabsContainer}
-        keyExtractor={item => item}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === item && styles.activeTabButton]}
-            onPress={() => setActiveTab(item)}
+
+        {/* 3) FILTER CHIPS */}
+        <View style={styles.chipsBleed}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsContainer}
           >
-            <Text style={[styles.tabText, activeTab === item && styles.activeTabText]}>{item}</Text>
-          </TouchableOpacity>
+            {tabs.map(tab => (
+              <AdminChip
+                key={tab}
+                label={tab}
+                active={activeTab === tab}
+                onPress={() => setActiveTab(tab)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* 4) ORDERS LIST / SKELETON / EMPTY STATE */}
+        {loading && orders.length === 0 ? (
+          <AdminListSkeleton rows={5} />
+        ) : filteredOrders.length > 0 ? (
+          <FlatList
+            data={filteredOrders}
+            keyExtractor={item => item.orderId}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={fetchOrders}
+                colors={[ADMIN_THEME.colors.indigo]}
+                tintColor={ADMIN_THEME.colors.indigo}
+              />
+            }
+          />
+        ) : (
+          <AdminEmptyState
+            icon={<ShoppingBagIcon size={44} color={ADMIN_THEME.colors.indigo} strokeWidth={1.8} />}
+            title="No orders found"
+            subtitle="Looks like you don't have any orders matching your criteria."
+          />
         )}
-      />
-      <FlatList
-        data={filteredOrders}
-        keyExtractor={item => item.orderId}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+      </View>
+    </AdminPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F1E6' },
-  headerArea: { padding: 16, paddingBottom: 8 },
-  screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#1B2430', marginBottom: 16 },
+  contentWrapper: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
   searchContainer: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 12, height: 44,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+    marginTop: 18,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E3E7F2',
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: 'rgba(15,25,60,1)',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 26,
+    elevation: 3,
   },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: '#1B2430' },
-  tabsContainer: { paddingHorizontal: 16, marginBottom: 16, maxHeight: 32 },
-  tabButton: { paddingVertical: 6, paddingHorizontal: 16, borderRadius: 16, marginRight: 8, backgroundColor: '#FFFFFF', height: 32, justifyContent: 'center' },
-  activeTabButton: { backgroundColor: '#17212F' },
-  tabText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  activeTabText: { color: '#F5C16C' },
-  listContent: { paddingHorizontal: 16, paddingBottom: 100 },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#0B1326',
+    fontFamily: AdminFonts.medium,
+    padding: 0,
+  },
+  chipsBleed: {
+    marginHorizontal: -20,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  listContent: {
+    paddingBottom: 130, // Clearance for bottom floating navigation
+    paddingTop: 4,
+    gap: 12,
+  },
   orderCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E3E7F2',
+    shadowColor: 'rgba(15,25,60,1)',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 26,
+    elevation: 4,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  headerLeft: { flexDirection: 'row', alignItems: 'center' },
-  iconBg: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#17212F', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  orderId: { fontSize: 16, fontWeight: 'bold', color: '#1B2430' },
-  amount: { fontSize: 16, fontWeight: 'bold', color: '#17212F' },
-  cardContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  customer: { fontSize: 14, color: '#6B7280' },
-  contentRight: { alignItems: 'flex-end' },
-  date: { fontSize: 10, color: '#9CA3AF', marginBottom: 4 },
+  cardRow1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  orderTile: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  middleCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  orderId: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 14.5,
+    color: '#0B1326',
+  },
+  customerName: {
+    marginTop: 2,
+    fontFamily: AdminFonts.regular,
+    fontSize: 12.5,
+    color: '#5B6580',
+  },
+  amount: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 15.5,
+    color: '#0B1326',
+  },
+  cardDivider: {
+    marginTop: 12,
+    height: 1,
+    backgroundColor: '#EEF0F7',
+  },
+  cardRow2: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dateText: {
+    fontSize: 12,
+    color: '#8A93AB',
+    fontFamily: AdminFonts.medium,
+  },
 });
+
 export default AdminOrdersScreen;

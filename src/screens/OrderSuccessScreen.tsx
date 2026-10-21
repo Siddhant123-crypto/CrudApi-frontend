@@ -3,14 +3,22 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   BackHandler,
+  ScrollView,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
+import {PageBackground} from '../components/ui/PageBackground';
+import {Card} from '../components/ui/Card';
+import {PrimaryButton, OutlineButton} from '../components/ui/Buttons';
+import {THEME} from '../constants/theme';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+
 const OrderSuccessScreen = ({route, navigation}: any) => {
+  const insets = useSafeAreaInsets();
   const {orderNumber, totalAmount} = route.params || {};
   const {user} = useAuth();
+
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
@@ -21,132 +29,169 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
     );
     return () => backHandler.remove();
   }, [navigation]);
+
+  const handleViewOrders = () => {
+    navigation.navigate(
+      user?.role === 'FARMER' ? 'FarmerMain' : 'CustomerMain',
+      { screen: 'Orders' }
+    );
+  };
+
+  const handleContinueShopping = () => {
+    navigation.navigate(
+      user?.role === 'FARMER' ? 'FarmerMain' : 'CustomerMain',
+      { screen: user?.role === 'FARMER' ? 'Dashboard' : 'Home' }
+    );
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="checkmark-circle" size={100} color="#16A34A" />
-        </View>
-        <Text style={styles.title}>Order Placed Successfully!</Text>
-        <Text style={styles.subtitle}>
-          Your fresh products will be prepared by the farmer soon.
-        </Text>
-        <View style={styles.detailsCard}>
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Order Number:</Text>
-            <Text style={styles.value}>{orderNumber ? orderNumber.substring(0, 12) : 'N/A'}</Text>
+    <PageBackground style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top + 30, 60),
+            paddingBottom: Math.max(insets.bottom + 20, 40),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          {/* Large soft green success circle */}
+          <View style={styles.iconCircle}>
+            <Ionicons name="checkmark" size={54} color={THEME.colors.success} />
           </View>
-          <View style={styles.divider} />
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Total Amount:</Text>
-            <Text style={styles.value}>₹{totalAmount?.toFixed(2) || '0.00'}</Text>
-          </View>
+
+          <Text style={styles.title}>Order Placed!</Text>
+          <Text style={styles.subtitle}>
+            Pay with cash when your order is delivered.
+          </Text>
+
+          {/* Order Summary Card */}
+          <Card style={styles.detailsCard}>
+            <View style={styles.detailRow}>
+              <Text style={styles.label}>Order Number</Text>
+              <Text style={styles.value}>
+                {orderNumber ? orderNumber.substring(0, 16) : 'N/A'}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.detailRow}>
+              <Text style={styles.label}>Payment Method</Text>
+              <Text style={styles.value}>Cash on Delivery</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.detailRow}>
+              <Text style={styles.label}>Total Amount</Text>
+              <Text style={styles.amountValue}>
+                ₹{totalAmount?.toFixed(2) || '0.00'}
+              </Text>
+            </View>
+          </Card>
         </View>
-      </View>
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={() => navigation.navigate(user?.role === 'FARMER' ? 'FarmerMain' : 'CustomerMain', { screen: 'Orders' })}>
-          <Text style={styles.primaryBtnText}>View My Orders</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.secondaryBtn}
-          onPress={() => navigation.navigate(user?.role === 'FARMER' ? 'FarmerMain' : 'CustomerMain', { screen: user?.role === 'FARMER' ? 'Dashboard' : 'Home' })}>
-          <Text style={styles.secondaryBtnText}>Continue Shopping</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+
+        {/* Action Buttons */}
+        <View style={styles.bottomActions}>
+          <PrimaryButton
+            title="View My Orders"
+            onPress={handleViewOrders}
+          />
+          <OutlineButton
+            title="Continue Shopping"
+            onPress={handleContinueShopping}
+            style={{ marginTop: 12 }}
+          />
+        </View>
+      </ScrollView>
+    </PageBackground>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
   },
   content: {
-    flex: 1,
+    alignItems: 'center',
+    paddingTop: 20,
+  },
+  iconCircle: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: THEME.colors.successBg,
+    borderWidth: 2,
+    borderColor: '#C8E9D2',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 30,
-  },
-  iconContainer: {
-    marginBottom: 30,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 80,
-    padding: 10,
+    marginBottom: 24,
+    shadowColor: THEME.colors.success,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 4,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 10,
+    fontSize: 26,
+    fontFamily: THEME.fonts.serif,
+    color: THEME.colors.textHeading,
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    color: '#6B7280',
+    fontSize: 14.5,
+    fontFamily: THEME.fonts.medium,
+    color: THEME.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
     lineHeight: 22,
+    paddingHorizontal: 16,
   },
   detailsCard: {
     width: '100%',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    backgroundColor: THEME.colors.cardBg,
+    borderRadius: THEME.radius.cards,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 8,
+    backgroundColor: THEME.colors.divider,
   },
   label: {
-    fontSize: 15,
-    color: '#4B5563',
-    fontWeight: '500',
+    fontSize: 13.5,
+    fontFamily: THEME.fonts.medium,
+    color: THEME.colors.textSecondary,
   },
   value: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.textHeading,
   },
-  bottomBar: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    paddingTop: 20,
+  amountValue: {
+    fontSize: 18,
+    fontFamily: THEME.fonts.serif,
+    color: THEME.colors.accentDeep,
   },
-  primaryBtn: {
-    backgroundColor: '#F59E0B',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  primaryBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  secondaryBtn: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#2563EB',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    color: '#2563EB',
-    fontSize: 16,
-    fontWeight: '700',
+  bottomActions: {
+    width: '100%',
+    paddingTop: 24,
   },
 });
+
 export default OrderSuccessScreen;
+

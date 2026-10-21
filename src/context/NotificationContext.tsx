@@ -10,6 +10,7 @@ interface NotificationContextType {
   adminSupportUserCounts: Record<string, number>;
   blockedFarmerUnreadCount: number;
   hasNewAdminGroupMsg: boolean;
+  farmerNewOrdersCount: number;
   refreshUnreadCount: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -24,8 +25,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [adminSupportUserCounts, setAdminSupportUserCounts] = useState<Record<string, number>>({});
   const [blockedFarmerUnreadCount, setBlockedFarmerUnreadCount] = useState(0);
   const [hasNewAdminGroupMsg, setHasNewAdminGroupMsg] = useState(false);
+  const [farmerNewOrdersCount, setFarmerNewOrdersCount] = useState(0);
   const { user } = useAuth();
-  
+
   const refreshUnreadCount = async () => {
     if (!user) {
       setUnreadCount(0);
@@ -34,13 +36,27 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setAdminSupportUserCounts({});
       setBlockedFarmerUnreadCount(0);
       setHasNewAdminGroupMsg(false);
+      setFarmerNewOrdersCount(0);
       return;
     }
+
     try {
       const count = await NotificationService.getUnreadCount();
       setUnreadCount(count);
     } catch (error) {
       console.log('Failed to fetch unread count (could be blocked user)', error);
+    }
+
+    if (user?.role === 'FARMER') {
+      try {
+        const { default: api } = await import('../services/api');
+        const countRes = await api.get('/order/farmer/new-orders-count');
+        if (countRes.data !== undefined) {
+          setFarmerNewOrdersCount(countRes.data);
+        }
+      } catch (e) {
+        console.log('Failed to fetch farmer new orders count', e);
+      }
     }
 
     if (user?.role === 'ADMIN') {
@@ -54,17 +70,20 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
           setAdminSupportUserCounts(countsData.userCounts || {});
           setBlockedFarmerUnreadCount(countsData.blockedFarmerCount || 0);
         }
-        
+
         // Fetch Admin Group messages to check for new messages
         const groupRes = await api.get('/admin/group/messages');
-        const messages = groupRes.data;
-        if (messages && messages.length > 0) {
+        let messages = groupRes.data;
+        if (messages && !Array.isArray(messages)) {
+          messages = messages.data || messages.response || [];
+        }
+        if (Array.isArray(messages) && messages.length > 0) {
           const latestMsg = messages[messages.length - 1];
           const latestMsgId = latestMsg.id;
           const senderId = latestMsg.senderAdminId;
-          const lastReadMsgId = await AsyncStorage.getItem('lastReadAdminGroupMsgId');
+          const lastReadMsgId = await AsyncStorage.getItem(`lastReadAdminGroupMsgId_${user.email}`);
           // If the latest message is different from the last read message, and it's not our own message
-          if (latestMsgId && latestMsgId !== lastReadMsgId && senderId !== user.userId) {
+          if (latestMsgId && latestMsgId !== lastReadMsgId && senderId?.toLowerCase() !== user.userId?.toLowerCase()) {
             setHasNewAdminGroupMsg(true);
           } else {
             setHasNewAdminGroupMsg(false);
@@ -77,12 +96,12 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   };
   useEffect(() => {
     refreshUnreadCount();
-    
+
     // Set up polling for notifications
     const intervalId = setInterval(() => {
       refreshUnreadCount();
     }, 10000);
-    
+
     return () => clearInterval(intervalId);
   }, [user]);
   const markAsRead = async (id: string) => {
@@ -106,16 +125,19 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const decrementUnread = () => {
     setUnreadCount((prev) => Math.max(0, prev - 1));
   };
-  
+
   const markAdminGroupAsRead = async () => {
     try {
       const { default: api } = await import('../services/api');
       const groupRes = await api.get('/admin/group/messages');
-      const messages = groupRes.data;
-      if (messages && messages.length > 0) {
+      let messages = groupRes.data;
+      if (messages && !Array.isArray(messages)) {
+        messages = messages.data || messages.response || [];
+      }
+      if (Array.isArray(messages) && messages.length > 0) {
         const latestMsgId = messages[messages.length - 1].id;
-        if (latestMsgId) {
-          await AsyncStorage.setItem('lastReadAdminGroupMsgId', latestMsgId);
+        if (latestMsgId && user?.email) {
+          await AsyncStorage.setItem(`lastReadAdminGroupMsgId_${user.email}`, latestMsgId);
           setHasNewAdminGroupMsg(false);
         }
       }
@@ -123,7 +145,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error marking admin group as read:', e);
     }
   };
-  
+
   return (
     <NotificationContext.Provider
       value={{
@@ -133,6 +155,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         adminSupportUserCounts,
         blockedFarmerUnreadCount,
         hasNewAdminGroupMsg,
+        farmerNewOrdersCount,
         refreshUnreadCount,
         markAsRead,
         markAllAsRead,

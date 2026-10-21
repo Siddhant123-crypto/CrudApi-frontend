@@ -1,61 +1,74 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  TextInput,
   Alert,
-  ActivityIndicator,
   Image,
   Platform,
-  KeyboardAvoidingView,
-  Modal
+  Modal,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { saveFarmDetails, updateFarmDetails } from '../services/farmDetailsService';
 import { uploadGalleryFile } from '../services/farmGalleryService';
 import { BASE_URL } from '../services/api';
-const VideoCard = ({ style, blurred }: { style: any; blurred?: boolean }) => (
-  <View style={[style, { backgroundColor: '#0F3320', justifyContent: 'center', alignItems: 'center', opacity: blurred ? 0.6 : 1 }]}>
-    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center', marginBottom: 4 }}>
-      <Ionicons name="play" size={16} color="#FFFFFF" style={{ marginLeft: 2 }} />
-    </View>
-    <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>VIDEO</Text>
-  </View>
-);
+
+import { FARMER_THEME } from '../constants/farmerTheme';
+import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
+import { FarmerHeader } from '../components/farmer/FarmerHeader';
+import { FarmerCard } from '../components/farmer/FarmerCard';
+import { FarmerInput } from '../components/farmer/FarmerInput';
+import { FarmerDeepButton } from '../components/farmer/FarmerButtons';
+import { FarmerStickyBar } from '../components/farmer/FarmerUI';
+import { CameraIcon, CheckmarkIcon, ChevronDownIcon } from '../components/farmer/FarmerIcons';
+
 const EditFarmDetailsScreen = ({ route, navigation }: any) => {
   const { user } = useAuth();
   const existingData = route.params?.farmDetails || {};
   const [farmName, setFarmName] = useState(existingData.farmName || '');
   const [tagline, setTagline] = useState(existingData.tagline || '');
   const [location, setLocation] = useState(existingData.location || '');
-  const [farmingSince, setFarmingSince] = useState(existingData.farmingSince ? String(existingData.farmingSince) : '');
+  const [farmingSince, setFarmingSince] = useState(
+    existingData.farmingSince ? String(existingData.farmingSince) : ''
+  );
   const [farmingType, setFarmingType] = useState(existingData.farmingType || '');
-  const [farmArea, setFarmArea] = useState(existingData.farmArea ? String(existingData.farmArea) : '');
+  const [farmArea, setFarmArea] = useState(
+    existingData.farmArea ? String(existingData.farmArea) : ''
+  );
   const [farmAreaUnit, setFarmAreaUnit] = useState(existingData.farmAreaUnit || 'ACRE');
-  const [cropsGrownCount, setCropsGrownCount] = useState(existingData.cropsGrownCount ? String(existingData.cropsGrownCount) : '');
-  const [yearsExperience, setYearsExperience] = useState(existingData.yearsExperience ? String(existingData.yearsExperience) : '');
-  const [farmerName, setFarmerName] = useState(existingData.farmerName || user?.name || '');
+  const [cropsGrownCount, setCropsGrownCount] = useState(
+    existingData.cropsGrownCount ? String(existingData.cropsGrownCount) : ''
+  );
+  const [yearsExperience, setYearsExperience] = useState(
+    existingData.yearsExperience ? String(existingData.yearsExperience) : ''
+  );
+  const [farmerName, setFarmerName] = useState(
+    existingData.farmerName || user?.name || ''
+  );
   const [mainCrops, setMainCrops] = useState(existingData.mainCrops || '');
-  const [irrigationSource, setIrrigationSource] = useState(existingData.irrigationSource || '');
+  const [irrigationSource, setIrrigationSource] = useState(
+    existingData.irrigationSource || ''
+  );
   const [soilType, setSoilType] = useState(existingData.soilType || '');
   const [aboutFarm, setAboutFarm] = useState(existingData.aboutFarm || '');
   const [farmerPhotoUri, setFarmerPhotoUri] = useState<string | null>(null);
   const [farmVideoUri, setFarmVideoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
+
   const UNITS = ['ACRE', 'GUNTHA', 'BIGHA', 'HECTOR'];
+
   const getExistingPhotoUrl = () => {
     if (existingData.farmerPhotoPath) {
       return `${BASE_URL}/${existingData.farmerPhotoPath}`;
     }
     return null;
   };
+
   const handlePickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -70,6 +83,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
       console.log('Error picking image:', error);
     }
   };
+
   const handlePickVideo = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -84,6 +98,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
       console.log('Error picking video:', error);
     }
   };
+
   const handleSave = async () => {
     if (!farmName.trim() || !location.trim()) {
       Alert.alert('Error', 'Farm Name and Location are required.');
@@ -93,23 +108,25 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
       Alert.alert('Error', 'Farmer session missing.');
       return;
     }
+
     const payload = {
       farmerId: user.farmerId,
       farmName,
       tagline,
       location,
-      farmingSince: farmingSince ? parseInt(farmingSince) : null,
+      farmingSince: farmingSince ? parseInt(farmingSince, 10) : null,
       farmingType,
       farmArea: farmArea ? parseFloat(farmArea) : null,
       farmAreaUnit,
-      cropsGrownCount: cropsGrownCount ? parseInt(cropsGrownCount) : null,
-      yearsExperience: yearsExperience ? parseInt(yearsExperience) : null,
+      cropsGrownCount: cropsGrownCount ? parseInt(cropsGrownCount, 10) : null,
+      yearsExperience: yearsExperience ? parseInt(yearsExperience, 10) : null,
       farmerName,
       mainCrops,
       irrigationSource,
       soilType,
-      aboutFarm
+      aboutFarm,
     };
+
     setSaving(true);
     try {
       if (existingData.id) {
@@ -126,31 +143,35 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
           farmVideoUri || undefined
         );
       }
+
       const galleryUploads: Promise<any>[] = [];
       if (farmerPhotoUri) {
         const ext = farmerPhotoUri.split('.').pop()?.toLowerCase() || 'jpg';
         const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
         galleryUploads.push(
-          uploadGalleryFile(user.farmerId, farmerPhotoUri, mime, `farm_photo.${ext}`)
-            .catch(e => console.log('Gallery photo upload error:', e))
+          uploadGalleryFile(user.farmerId, farmerPhotoUri, mime, `farm_photo.${ext}`).catch(
+            (e) => console.log('Gallery photo upload error:', e)
+          )
         );
       }
       if (farmVideoUri) {
         const ext = farmVideoUri.split('.').pop()?.toLowerCase() || 'mp4';
         const mime = `video/${ext}`;
         galleryUploads.push(
-          uploadGalleryFile(user.farmerId, farmVideoUri, mime, `farm_video.${ext}`)
-            .catch(e => console.log('Gallery video upload error:', e))
+          uploadGalleryFile(user.farmerId, farmVideoUri, mime, `farm_video.${ext}`).catch(
+            (e) => console.log('Gallery video upload error:', e)
+          )
         );
       }
       if (galleryUploads.length > 0) {
         await Promise.all(galleryUploads);
       }
+
       Alert.alert('Success', 'Farm details saved successfully!', [
         {
           text: 'OK',
-          onPress: () => navigation.goBack()
-        }
+          onPress: () => navigation.goBack(),
+        },
       ]);
     } catch (error: any) {
       console.log('Save Error:', error);
@@ -159,388 +180,493 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
       setSaving(false);
     }
   };
+
   const currentPhoto = farmerPhotoUri || getExistingPhotoUrl();
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'android' ? 0 : 0}
+    <FarmerPageBackground>
+      {/* Header */}
+      <FarmerHeader
+        variant="inner"
+        title="Edit Farm Details"
+        onBackPress={() => navigation.goBack()}
+      />
+
+      <KeyboardAwareScrollView
+        style={styles.keyboardContainer}
+        contentContainerStyle={styles.scrollContent}
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={Platform.OS === 'ios' ? 30 : 90}
+        extraHeight={130}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        bounces={false}
       >
-        <View style={styles.headerBlock}>
-          <View style={styles.headerTopRow}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Edit Farm Details</Text>
-          </View>
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Media</Text>
+          {/* Media Section */}
+          <FarmerCard style={styles.formCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text
+                style={styles.sectionHeading}
+                maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+              >
+                MEDIA & PHOTOS
+              </Text>
+              <View style={styles.sectionDivider} />
+            </View>
+
             <View style={styles.mediaRow}>
-              <TouchableOpacity style={styles.mediaUploadBox} onPress={handlePickImage}>
+              <TouchableOpacity
+                style={styles.mediaBox}
+                onPress={handlePickImage}
+                activeOpacity={0.8}
+              >
                 {currentPhoto ? (
                   <Image source={{ uri: currentPhoto }} style={styles.mediaPreview} />
                 ) : (
-                  <Ionicons name="camera-outline" size={32} color="#176B2C" />
+                  <View style={styles.mediaPlaceholder}>
+                    <View style={styles.mediaIconCircle}>
+                      <CameraIcon size={22} color={FARMER_THEME.colors.primaryGreen} strokeWidth={2} />
+                    </View>
+                    <Text
+                      style={styles.mediaBoxLabel}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      Farmer Photo
+                    </Text>
+                  </View>
                 )}
-                <View style={styles.mediaLabelWrap}>
-                  <Text style={styles.mediaLabel}>Farmer Photo</Text>
-                </View>
+                {currentPhoto && (
+                  <View style={styles.mediaOverlayPill}>
+                    <Text
+                      style={styles.mediaOverlayText}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      Change Photo
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.mediaUploadBox} onPress={handlePickVideo}>
+
+              <TouchableOpacity
+                style={styles.mediaBox}
+                onPress={handlePickVideo}
+                activeOpacity={0.8}
+              >
                 {farmVideoUri ? (
                   <View style={styles.videoSuccessBox}>
-                    <Ionicons name="videocam-outline" size={32} color="#FFFFFF" />
-                    <Text style={styles.videoSuccessText}>Selected</Text>
+                    <Ionicons name="videocam" size={26} color="#FFFFFF" />
+                    <Text
+                      style={styles.videoSuccessText}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      Video Selected
+                    </Text>
                   </View>
                 ) : (
-                  <>
-                    <Ionicons name="videocam-outline" size={32} color="#176B2C" />
-                    <View style={styles.mediaLabelWrap}>
-                      <Text style={styles.mediaLabel}>Farm Video</Text>
+                  <View style={styles.mediaPlaceholder}>
+                    <View style={styles.mediaIconCircle}>
+                      <Ionicons
+                        name="videocam-outline"
+                        size={24}
+                        color={FARMER_THEME.colors.primaryGreen}
+                      />
                     </View>
-                  </>
+                    <Text
+                      style={styles.mediaBoxLabel}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      Farm Video
+                    </Text>
+                  </View>
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-          {}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>General Information</Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Farm Name *</Text>
-              <TextInput style={styles.input} value={farmName} onChangeText={setFarmName} placeholder="E.g. Green Valley Farm" />
+          </FarmerCard>
+
+          {/* General Information */}
+          <FarmerCard style={styles.formCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text
+                style={styles.sectionHeading}
+                maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+              >
+                GENERAL INFORMATION
+              </Text>
+              <View style={styles.sectionDivider} />
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tagline</Text>
-              <TextInput style={styles.input} value={tagline} onChangeText={setTagline} placeholder="E.g. Fresh from the roots" />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Location *</Text>
-              <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="E.g. Nashik, Maharashtra" />
-            </View>
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Farming Since</Text>
-                <TextInput style={styles.input} value={farmingSince} onChangeText={setFarmingSince} placeholder="YYYY" keyboardType="numeric" maxLength={4} />
+
+            <FarmerInput
+              label="Farm Name"
+              required
+              value={farmName}
+              onChangeText={setFarmName}
+              placeholder="E.g. Green Valley Farm"
+            />
+
+            <FarmerInput
+              label="Tagline"
+              value={tagline}
+              onChangeText={setTagline}
+              placeholder="E.g. Fresh from the roots"
+            />
+
+            <FarmerInput
+              label="Location"
+              required
+              value={location}
+              onChangeText={setLocation}
+              placeholder="E.g. Nashik, Maharashtra"
+            />
+
+            <View style={styles.twoColRow}>
+              <View style={styles.twoColItem}>
+                <FarmerInput
+                  label="Farming Since"
+                  value={farmingSince}
+                  onChangeText={setFarmingSince}
+                  placeholder="YYYY"
+                  keyboardType="numeric"
+                  maxLength={4}
+                />
               </View>
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>Farming Type</Text>
-                <TextInput style={styles.input} value={farmingType} onChangeText={setFarmingType} placeholder="E.g. Organic" />
-              </View>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>About Farm</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={aboutFarm}
-                onChangeText={setAboutFarm}
-                placeholder="Tell us about your farming practices..."
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-            </View>
-          </View>
-          {}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Metrics & Area</Text>
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Farm Area</Text>
-                <TextInput style={styles.input} value={farmArea} onChangeText={setFarmArea} placeholder="E.g. 5.5" keyboardType="numeric" />
-              </View>
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>Unit</Text>
-                <TouchableOpacity
-                  style={styles.unitToggle}
-                  onPress={() => setShowUnitDropdown(true)}
-                >
-                  <Text style={styles.unitToggleText}>{farmAreaUnit}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#176B2C" style={{ marginLeft: 6 }} />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Crops Grown Count</Text>
-                <TextInput style={styles.input} value={cropsGrownCount} onChangeText={setCropsGrownCount} placeholder="E.g. 15" keyboardType="numeric" />
-              </View>
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>Years Experience</Text>
-                <TextInput style={styles.input} value={yearsExperience} onChangeText={setYearsExperience} placeholder="E.g. 6" keyboardType="numeric" />
+              <View style={styles.twoColItem}>
+                <FarmerInput
+                  label="Farming Type"
+                  value={farmingType}
+                  onChangeText={setFarmingType}
+                  placeholder="E.g. Organic"
+                />
               </View>
             </View>
-          </View>
-          {}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Agricultural Details</Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Farmer Name</Text>
-              <TextInput style={styles.input} value={farmerName} onChangeText={setFarmerName} placeholder="Enter your full name" />
+
+            <FarmerInput
+              label="About Farm"
+              value={aboutFarm}
+              onChangeText={setAboutFarm}
+              placeholder="Tell us about your farming practices and story..."
+              multiline
+              numberOfLines={4}
+            />
+          </FarmerCard>
+
+          {/* Metrics & Area */}
+          <FarmerCard style={styles.formCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text
+                style={styles.sectionHeading}
+                maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+              >
+                METRICS & AREA
+              </Text>
+              <View style={styles.sectionDivider} />
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Main Crops (comma separated)</Text>
-              <TextInput style={styles.input} value={mainCrops} onChangeText={setMainCrops} placeholder="E.g. Tomato, Onion, Wheat" />
+
+            <View style={styles.twoColRow}>
+              <View style={styles.twoColItem}>
+                <FarmerInput
+                  label="Farm Area"
+                  value={farmArea}
+                  onChangeText={setFarmArea}
+                  placeholder="E.g. 5.5"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.twoColItem}>
+                <FarmerInput
+                  label="Unit"
+                  value={farmAreaUnit}
+                  isTouchable
+                  onPressContainer={() => setShowUnitDropdown(true)}
+                  rightIcon={<ChevronDownIcon size={16} color={FARMER_THEME.colors.primaryGreen} strokeWidth={2.4} />}
+                />
+              </View>
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Irrigation Source</Text>
-              <TextInput style={styles.input} value={irrigationSource} onChangeText={setIrrigationSource} placeholder="E.g. Drip Irrigation" />
+
+            <View style={styles.twoColRow}>
+              <View style={styles.twoColItem}>
+                <FarmerInput
+                  label="Crops Grown Count"
+                  value={cropsGrownCount}
+                  onChangeText={setCropsGrownCount}
+                  placeholder="E.g. 15"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.twoColItem}>
+                <FarmerInput
+                  label="Years Experience"
+                  value={yearsExperience}
+                  onChangeText={setYearsExperience}
+                  placeholder="E.g. 6"
+                  keyboardType="numeric"
+                />
+              </View>
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Soil Type</Text>
-              <TextInput style={styles.input} value={soilType} onChangeText={setSoilType} placeholder="E.g. Black Cotton Soil" />
+          </FarmerCard>
+
+          {/* Agricultural Details */}
+          <FarmerCard style={styles.formCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text
+                style={styles.sectionHeading}
+                maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+              >
+                AGRICULTURAL DETAILS
+              </Text>
+              <View style={styles.sectionDivider} />
             </View>
-          </View>
-          {}
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSave} disabled={saving}>
-            {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitBtnText}>Save Farm Details</Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+            <FarmerInput
+              label="Farmer Name"
+              value={farmerName}
+              onChangeText={setFarmerName}
+              placeholder="Enter your full name"
+            />
+
+            <FarmerInput
+              label="Main Crops (comma separated)"
+              value={mainCrops}
+              onChangeText={setMainCrops}
+              placeholder="E.g. Tomato, Onion, Wheat"
+            />
+
+            <FarmerInput
+              label="Irrigation Source"
+              value={irrigationSource}
+              onChangeText={setIrrigationSource}
+              placeholder="E.g. Drip Irrigation, Canal"
+            />
+
+            <FarmerInput
+              label="Soil Type"
+              value={soilType}
+              onChangeText={setSoilType}
+              placeholder="E.g. Black Cotton Soil, Red Loam"
+            />
+          </FarmerCard>
+      </KeyboardAwareScrollView>
+
+      {/* Sticky Save Bar */}
+      <FarmerStickyBar>
+        <FarmerDeepButton
+          title="Save Farm Details"
+          onPress={handleSave}
+          loading={saving}
+          disabled={saving}
+        />
+      </FarmerStickyBar>
 
       {/* Unit Dropdown Modal */}
       {showUnitDropdown && (
-        <Modal transparent animationType="fade" visible={showUnitDropdown} onRequestClose={() => setShowUnitDropdown(false)}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowUnitDropdown(false)}>
-            <View style={styles.dropdownMenu}>
-              <Text style={styles.dropdownTitle}>Select Unit</Text>
-              {UNITS.map((u) => (
-                <TouchableOpacity
-                  key={u}
-                  style={[styles.dropdownItem, farmAreaUnit === u && styles.dropdownItemActive]}
-                  onPress={() => {
-                    setFarmAreaUnit(u);
-                    setShowUnitDropdown(false);
-                  }}
-                >
-                  <Text style={[styles.dropdownItemText, farmAreaUnit === u && styles.dropdownItemTextActive]}>{u}</Text>
-                  {farmAreaUnit === u && <Ionicons name="checkmark" size={20} color="#176B2C" />}
-                </TouchableOpacity>
-              ))}
+        <Modal
+          transparent
+          animationType="fade"
+          visible={showUnitDropdown}
+          onRequestClose={() => setShowUnitDropdown(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowUnitDropdown(false)}
+          >
+            <View style={styles.dropdownDialog}>
+              <Text
+                style={styles.dropdownTitle}
+                maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+              >
+                Select Farm Unit
+              </Text>
+              {UNITS.map((u) => {
+                const isActive = farmAreaUnit === u;
+                return (
+                  <TouchableOpacity
+                    key={u}
+                    style={[
+                      styles.dropdownItem,
+                      isActive && styles.dropdownItemActive,
+                    ]}
+                    onPress={() => {
+                      setFarmAreaUnit(u);
+                      setShowUnitDropdown(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        isActive && styles.dropdownItemTextActive,
+                      ]}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      {u}
+                    </Text>
+                    {isActive && (
+                      <CheckmarkIcon
+                        size={18}
+                        color={FARMER_THEME.colors.primaryGreen}
+                        strokeWidth={2.4}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </TouchableOpacity>
         </Modal>
       )}
-    </SafeAreaView>
+    </FarmerPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  safeArea: {
+  keyboardContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  headerBlock: {
-    backgroundColor: '#1E5631',
-    paddingTop: Platform.OS === 'android' ? 50 : 30,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  backButton: {
-    paddingRight: 8,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-    marginLeft: 4,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingHorizontal: FARMER_THEME.spacing.pagePadding,
+    paddingTop: 16,
+    paddingBottom: 110, // Avoid overlapping sticky bar
+    gap: FARMER_THEME.spacing.cardGap,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    borderWidth: 1,
-    borderColor: '#EAF6D8',
+  formCard: {
+    padding: 18,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#176B2C',
-    marginBottom: 20,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  sectionHeading: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    color: FARMER_THEME.colors.primaryGreen,
+  },
+  sectionDivider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: FARMER_THEME.colors.divider,
   },
   mediaRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
   },
-  mediaUploadBox: {
+  mediaBox: {
     flex: 1,
     height: 120,
-    backgroundColor: '#F1FAF2',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#B8DDBB',
+    backgroundColor: FARMER_THEME.colors.uploadTileBg,
+    borderRadius: FARMER_THEME.radius.smallCards,
+    borderWidth: 1.5,
+    borderColor: FARMER_THEME.colors.uploadTileBorder,
     borderStyle: 'dashed',
-    marginHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  mediaPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    ...FARMER_THEME.shadows.tile,
+  },
+  mediaBoxLabel: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 12,
+    color: FARMER_THEME.colors.headings,
+  },
   mediaPreview: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
+  },
+  mediaOverlayPill: {
+    position: 'absolute',
+    bottom: 8,
+    backgroundColor: 'rgba(14,59,41,0.75)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  mediaOverlayText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 10,
+    color: '#FFFFFF',
   },
   videoSuccessBox: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#176B2C',
+    backgroundColor: FARMER_THEME.colors.primaryGreen,
     alignItems: 'center',
     justifyContent: 'center',
   },
   videoSuccessText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 12,
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 'bold',
     marginTop: 6,
   },
-  mediaLabelWrap: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  mediaLabel: {
-    fontSize: 12,
-    color: '#176B2C',
-    fontWeight: '700',
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  row: {
+  twoColRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
   },
-  label: {
-    fontSize: 14,
-    color: '#334155',
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: '#1E293B',
-  },
-  textArea: {
-    minHeight: 120,
-  },
-  unitToggle: {
-    backgroundColor: '#F1FAF2',
-    borderWidth: 1,
-    borderColor: '#B8DDBB',
-    borderRadius: 12,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  unitToggleText: {
-    color: '#176B2C',
-    fontWeight: '700',
-    fontSize: 14,
+  twoColItem: {
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: FARMER_THEME.colors.backdrop,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
-  dropdownMenu: {
-    width: '80%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+  dropdownDialog: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: FARMER_THEME.colors.cardBg,
+    borderRadius: FARMER_THEME.radius.dialogs,
+    borderWidth: 1,
+    borderColor: FARMER_THEME.colors.cardBorder,
+    padding: 20,
+    ...FARMER_THEME.shadows.card,
   },
   dropdownTitle: {
+    fontFamily: FARMER_THEME.fonts.serif,
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#334155',
-    marginBottom: 12,
+    color: FARMER_THEME.colors.headings,
     textAlign: 'center',
+    marginBottom: 14,
   },
   dropdownItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderRadius: 12,
   },
   dropdownItemActive: {
-    backgroundColor: '#F1FAF2',
-    borderRadius: 8,
-    borderBottomWidth: 0,
+    backgroundColor: FARMER_THEME.colors.chipBgActive,
   },
   dropdownItemText: {
-    fontSize: 16,
-    color: '#475569',
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 15,
+    color: FARMER_THEME.colors.textSecondary,
   },
   dropdownItemTextActive: {
-    color: '#176B2C',
-    fontWeight: 'bold',
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: FARMER_THEME.colors.headings,
   },
-  submitBtn: {
-    backgroundColor: '#176B2C',
-    borderRadius: 16,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-    elevation: 4,
-    shadowColor: '#176B2C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  submitBtnText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  }
 });
+
 export default EditFarmDetailsScreen;

@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TextInput, 
-  TouchableOpacity, 
-  Alert, 
-  ActivityIndicator,
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  TouchableOpacity,
 } from 'react-native';
-import { AdminHeader } from '../../components/admin/AdminHeader';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { createAdminMarket, updateAdminMarket } from '../../services/adminService';
+import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
+import { AdminHeader } from '../../components/admin/AdminHeader';
+import { AdminCard } from '../../components/admin/AdminCard';
+import { AdminInput } from '../../components/admin/AdminInput';
+import { AdminPrimaryButton } from '../../components/admin/AdminButtons';
+import { AdminStickyBar } from '../../components/admin/AdminStickyBar';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import { CheckIcon } from '../../components/admin/AdminIcons';
 
 export const AdminAddEditMarketScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -41,7 +46,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
   });
 
   const handleChange = (key: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   const validate = () => {
@@ -49,7 +54,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
       Alert.alert('Validation Error', 'Market Name is required.');
       return false;
     }
-    
+
     if (formData.latitude) {
       const lat = parseFloat(formData.latitude);
       if (isNaN(lat) || lat < -90 || lat > 90) {
@@ -147,172 +152,273 @@ export const AdminAddEditMarketScreen: React.FC = () => {
       if (isEdit) {
         await updateAdminMarket(market.id, payload);
         Alert.alert('Success', 'Market updated successfully.', [
-          { text: 'OK', onPress: () => navigation.goBack() }
+          { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else {
         await createAdminMarket(payload);
         Alert.alert('Success', 'Market created successfully.', [
-          { text: 'OK', onPress: () => navigation.goBack() }
+          { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       }
     } catch (error: any) {
       console.log('Error saving market', error);
-      const serverMsg = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'Failed to save market.';
+      const serverMsg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Failed to save market.';
       Alert.alert('Error', serverMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderInput = (label: string, key: keyof typeof formData, placeholder: string, keyboardType: any = 'default', multiline = false) => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[styles.input, multiline && styles.textArea]}
-        placeholder={placeholder}
-        placeholderTextColor="#64748B"
-        value={String(formData[key])}
-        onChangeText={(text) => handleChange(key, text)}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        numberOfLines={multiline ? 3 : 1}
-      />
+  const renderSectionHeader = (title: string) => (
+    <View style={styles.sectionHeaderWrapper}>
+      <Text style={styles.sectionHeaderTitle}>{title}</Text>
+      <View style={styles.sectionHeaderDivider} />
     </View>
   );
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
-      <AdminHeader showBackButton />
-      <Text style={styles.pageTitle}>{isEdit ? 'Edit Market' : 'Add Market'}</Text>
-      
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        automaticallyAdjustKeyboardInsets={true}
+    <AdminPageBackground>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
-          {renderInput('Market Name *', 'marketName', 'e.g., APMC Vashi')}
-          {renderInput('Description', 'description', 'Optional details...', 'default', true)}
-          
-          <Text style={styles.sectionTitle}>Location Details</Text>
-          {renderInput('Address', 'address', 'Street address')}
-          <View style={styles.row}>
-            <View style={styles.flex1}>{renderInput('Village', 'village', 'Village')}</View>
-            <View style={styles.spacing} />
-            <View style={styles.flex1}>{renderInput('Taluka', 'taluka', 'Taluka')}</View>
-          </View>
-          <View style={styles.row}>
-            <View style={styles.flex1}>{renderInput('District', 'district', 'District')}</View>
-            <View style={styles.spacing} />
-            <View style={styles.flex1}>{renderInput('State', 'state', 'State')}</View>
-          </View>
-          {renderInput('Pincode', 'pincode', 'e.g. 400703', 'numeric')}
+        <AdminHeader
+          variant="inner"
+          title={isEdit ? 'Edit Market' : 'Add Market'}
+          subtitle={isEdit ? market?.marketName : 'Register a new APMC / mandi'}
+          onBack={() => navigation.goBack()}
+        />
 
-          <Text style={styles.sectionTitle}>Map Coordinates</Text>
-          <View style={styles.row}>
-            <View style={styles.flex1}>{renderInput('Latitude *', 'latitude', 'e.g. 19.0760', 'numeric')}</View>
-            <View style={styles.spacing} />
-            <View style={styles.flex1}>{renderInput('Longitude *', 'longitude', 'e.g. 72.8777', 'numeric')}</View>
-          </View>
-
-          <Text style={styles.sectionTitle}>Operations & Contact</Text>
-          <View style={styles.row}>
-            <View style={styles.flex1}>{renderInput('Opening Time', 'openingTime', 'e.g. 06:00 AM')}</View>
-            <View style={styles.spacing} />
-            <View style={styles.flex1}>{renderInput('Closing Time', 'closingTime', 'e.g. 06:00 PM')}</View>
-          </View>
-          {renderInput('Contact Person', 'marketContactName', 'Name of manager')}
-          {renderInput('Contact Number', 'contactNumber', 'Phone number', 'phone-pad')}
-
-          <View style={styles.switchContainer}>
-            <Text style={styles.label}>Active Status</Text>
-            <TouchableOpacity 
-              style={[styles.toggleBtn, formData.isActive ? styles.toggleActive : styles.toggleInactive]}
-              onPress={() => handleChange('isActive', !formData.isActive)}
-            >
-              <Text style={styles.toggleText}>{formData.isActive ? 'Active' : 'Inactive'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <TouchableOpacity 
-          style={styles.saveBtn} 
-          onPress={handleSave}
-          disabled={loading}
-          activeOpacity={0.8}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {loading ? (
-            <ActivityIndicator color="#1B2430" />
-          ) : (
-            <Text style={styles.saveBtnText}>{isEdit ? 'Update Market' : 'Save Market'}</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Basic Information */}
+          {renderSectionHeader('BASIC INFORMATION')}
+          <AdminCard style={styles.card}>
+            <AdminInput
+              label="Market Name"
+              required
+              placeholder="e.g. APMC Vashi"
+              value={formData.marketName}
+              onChangeText={(text) => handleChange('marketName', text)}
+            />
+            <AdminInput
+              label="Description"
+              placeholder="Optional market details..."
+              value={formData.description}
+              onChangeText={(text) => handleChange('description', text)}
+              multiline
+              containerStyle={{ marginBottom: 0 }}
+            />
+          </AdminCard>
+
+          {/* Location Details */}
+          {renderSectionHeader('LOCATION DETAILS')}
+          <AdminCard style={styles.card}>
+            <AdminInput
+              label="Address"
+              placeholder="Street or area address"
+              value={formData.address}
+              onChangeText={(text) => handleChange('address', text)}
+            />
+            <View style={styles.row}>
+              <View style={styles.flex1}>
+                <AdminInput
+                  label="Village"
+                  placeholder="Village"
+                  value={formData.village}
+                  onChangeText={(text) => handleChange('village', text)}
+                />
+              </View>
+              <View style={styles.spacing} />
+              <View style={styles.flex1}>
+                <AdminInput
+                  label="Taluka"
+                  placeholder="Taluka"
+                  value={formData.taluka}
+                  onChangeText={(text) => handleChange('taluka', text)}
+                />
+              </View>
+            </View>
+            <View style={styles.row}>
+              <View style={styles.flex1}>
+                <AdminInput
+                  label="District"
+                  placeholder="District"
+                  value={formData.district}
+                  onChangeText={(text) => handleChange('district', text)}
+                />
+              </View>
+              <View style={styles.spacing} />
+              <View style={styles.flex1}>
+                <AdminInput
+                  label="State"
+                  placeholder="State"
+                  value={formData.state}
+                  onChangeText={(text) => handleChange('state', text)}
+                />
+              </View>
+            </View>
+            <AdminInput
+              label="Pincode"
+              placeholder="e.g. 400703"
+              value={formData.pincode}
+              onChangeText={(text) => handleChange('pincode', text)}
+              keyboardType="numeric"
+              containerStyle={{ marginBottom: 0 }}
+            />
+          </AdminCard>
+
+          {/* Map Coordinates */}
+          {renderSectionHeader('MAP COORDINATES')}
+          <AdminCard style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.flex1}>
+                <AdminInput
+                  label="Latitude"
+                  required
+                  placeholder="e.g. 19.0760"
+                  value={formData.latitude}
+                  onChangeText={(text) => handleChange('latitude', text)}
+                  keyboardType="numeric"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              </View>
+              <View style={styles.spacing} />
+              <View style={styles.flex1}>
+                <AdminInput
+                  label="Longitude"
+                  required
+                  placeholder="e.g. 72.8777"
+                  value={formData.longitude}
+                  onChangeText={(text) => handleChange('longitude', text)}
+                  keyboardType="numeric"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              </View>
+            </View>
+          </AdminCard>
+
+          {/* Operations & Contact */}
+          {renderSectionHeader('OPERATIONS & CONTACT')}
+          <AdminCard style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.flex1}>
+                <AdminInput
+                  label="Opening Time"
+                  placeholder="e.g. 06:00 AM"
+                  value={formData.openingTime}
+                  onChangeText={(text) => handleChange('openingTime', text)}
+                />
+              </View>
+              <View style={styles.spacing} />
+              <View style={styles.flex1}>
+                <AdminInput
+                  label="Closing Time"
+                  placeholder="e.g. 06:00 PM"
+                  value={formData.closingTime}
+                  onChangeText={(text) => handleChange('closingTime', text)}
+                />
+              </View>
+            </View>
+            <AdminInput
+              label="Contact Person"
+              placeholder="Name of market manager"
+              value={formData.marketContactName}
+              onChangeText={(text) => handleChange('marketContactName', text)}
+            />
+            <AdminInput
+              label="Contact Number"
+              placeholder="Phone number"
+              value={formData.contactNumber}
+              onChangeText={(text) => handleChange('contactNumber', text)}
+              keyboardType="phone-pad"
+              containerStyle={{ marginBottom: 0 }}
+            />
+          </AdminCard>
+
+          {/* Status */}
+          {renderSectionHeader('MARKET STATUS')}
+          <AdminCard style={styles.card}>
+            <View style={styles.statusRow}>
+              <View style={styles.statusInfo}>
+                <Text style={styles.statusLabel}>Market Active</Text>
+                <Text style={styles.statusSubtext}>
+                  {formData.isActive
+                    ? 'Visible to farmers and active in listings'
+                    : 'Hidden from market discovery'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => handleChange('isActive', !formData.isActive)}
+                style={[
+                  styles.toggleBadge,
+                  formData.isActive ? styles.toggleBadgeActive : styles.toggleBadgeInactive,
+                ]}
+              >
+                {formData.isActive && <CheckIcon size={12} color="#1F8F89" />}
+                <Text
+                  style={[
+                    styles.toggleBadgeText,
+                    formData.isActive
+                      ? styles.toggleBadgeTextActive
+                      : styles.toggleBadgeTextInactive,
+                  ]}
+                >
+                  {formData.isActive ? 'Active' : 'Inactive'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </AdminCard>
+        </ScrollView>
+
+        <AdminStickyBar>
+          <AdminPrimaryButton
+            title={isEdit ? 'Update Market' : 'Save Market'}
+            onPress={handleSave}
+            loading={loading}
+          />
+        </AdminStickyBar>
+      </KeyboardAvoidingView>
+    </AdminPageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
-  },
-  pageTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingTop: 10,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 90,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  sectionHeaderWrapper: {
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  sectionHeaderTitle: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    color: '#4F5BD5',
+    marginBottom: 6,
+  },
+  sectionHeaderDivider: {
+    height: 1,
+    backgroundColor: '#EEF0F7',
+    marginBottom: 4,
   },
   card: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    color: '#F5C16C',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    paddingBottom: 8,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 8,
-    color: '#F8FAFC',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
+    marginBottom: 14,
+    padding: 16,
   },
   row: {
     flexDirection: 'row',
@@ -323,49 +429,52 @@ const styles = StyleSheet.create({
   spacing: {
     width: 12,
   },
-  switchContainer: {
+  statusRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
   },
-  toggleBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+  statusInfo: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  statusLabel: {
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 14,
+    color: ADMIN_THEME.colors.ink,
+    marginBottom: 2,
+  },
+  statusSubtext: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 12,
+    color: ADMIN_THEME.colors.inkMuted,
+  },
+  toggleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
+    borderWidth: 1,
   },
-  toggleActive: {
-    backgroundColor: '#10B981',
+  toggleBadgeActive: {
+    backgroundColor: '#D9F3F1',
+    borderColor: '#A0E4E0',
   },
-  toggleInactive: {
-    backgroundColor: '#EF4444',
+  toggleBadgeInactive: {
+    backgroundColor: '#FDE7E7',
+    borderColor: '#FAC4C4',
   },
-  toggleText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 13,
+  toggleBadgeText: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 12,
   },
-  saveBtn: {
-    backgroundColor: '#F5C16C',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 40,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+  toggleBadgeTextActive: {
+    color: '#1F8F89',
   },
-  saveBtnText: {
-    color: '#1B2430',
-    fontSize: 16,
-    fontWeight: 'bold',
+  toggleBadgeTextInactive: {
+    color: '#D64545',
   },
 });
 

@@ -1,0 +1,24 @@
+appId: com.siddhant.farm2home
+
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "Email or Mobile"
+
+- tapOn:
+    id: "customer_email_input"
+- inputText: "barry00@gmail.com"
+- hideKeyboard
+
+- tapOn:
+    id: "customer_password_input"
+- inputText: "Barry@00"
+- hideKeyboard
+
+- tapOn:
+    id: "customer_sign_in_button"
+
+- extendedWaitUntil:
+    visible: "Farm2Home"
+    timeout: 10000

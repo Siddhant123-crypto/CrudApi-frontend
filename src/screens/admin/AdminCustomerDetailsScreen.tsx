@@ -1,17 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, FlatList, Platform } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import api, { BASE_URL } from '../../services/api';
-import { StatusBadge } from '../../components/admin/StatusBadge';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import {
+  AdminPageBackground,
+  AdminHeader,
+  AdminCard,
+  AdminBadge,
+  UserIcon,
+  MailIcon,
+  PhoneIcon,
+  LocationIcon,
+} from '../../components/admin';
+
 export const AdminCustomerDetailsScreen: React.FC = () => {
   const route = useRoute<any>();
-  const navigation = useNavigation<any>();
   const { customerId } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState<any>(null);
   const [statistics, setStatistics] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
+
   useEffect(() => {
     if (customerId) {
       fetchCustomerData();
@@ -19,13 +36,14 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
       setLoading(false);
     }
   }, [customerId]);
+
   const fetchCustomerData = async () => {
     try {
       setLoading(true);
       const [customerRes, statsRes, ordersRes] = await Promise.all([
         api.get(`/admin/customers/${customerId}`),
         api.get(`/admin/customers/${customerId}/statistics`),
-        api.get(`/admin/customers/${customerId}/orders`)
+        api.get(`/admin/customers/${customerId}/orders`),
       ]);
       if (customerRes.data?.data) setCustomer(customerRes.data.data);
       if (statsRes.data?.data) setStatistics(statsRes.data.data);
@@ -36,6 +54,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
       setLoading(false);
     }
   };
+
   const getProfileImage = () => {
     if (customer?.profilePhoto) {
       if (customer.profilePhoto.startsWith('http')) {
@@ -43,28 +62,9 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
       }
       return `${BASE_URL}/user/image/${customer.profilePhoto}`;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(customer?.name || 'Unknown')}&background=F5C16C&color=17212F&size=150&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(customer?.name || 'Unknown')}&background=E8EBFF&color=4F5BD5&size=150&bold=true`;
   };
-  if (loading) {
-    return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#F5C16C" />
-      </View>
-    );
-  }
-  if (!customer) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Customer Details</Text>
-        </View>
-        <Text style={styles.emptyText}>Customer not found.</Text>
-      </View>
-    );
-  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -72,87 +72,139 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(amount || 0);
   };
+
   const renderOrderItem = ({ item }: { item: any }) => (
     <View style={styles.orderCard}>
       <View style={styles.orderHeader}>
-        <Text style={styles.orderId}>Order #{item.orderNumber?.slice(-6).toUpperCase()}</Text>
-        <Text style={[styles.orderStatus, { color: item.orderStatus === 'DELIVERED' ? '#2D983A' : '#F5C16C' }]}>
-          {item.orderStatus}
+        <Text style={styles.orderId}>
+          Order #{item.orderNumber ? item.orderNumber.slice(-6).toUpperCase() : 'N/A'}
         </Text>
+        <AdminBadge status={item.orderStatus} />
       </View>
-      <Text style={styles.customerName}>Amount: {formatCurrency(item.totalAmount)}</Text>
-      <Text style={styles.orderDate}>{new Date(item.orderDate).toLocaleDateString()}</Text>
+      <View style={styles.orderBottomRow}>
+        <Text style={styles.orderAmount}>Total: {formatCurrency(item.totalAmount)}</Text>
+        <Text style={styles.orderDate}>{new Date(item.orderDate).toLocaleDateString()}</Text>
+      </View>
     </View>
   );
+
+  if (loading) {
+    return (
+      <AdminPageBackground>
+        <AdminHeader variant="inner" title="Customer Details" />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={ADMIN_THEME.colors.indigo} />
+        </View>
+      </AdminPageBackground>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <AdminPageBackground>
+        <AdminHeader variant="inner" title="Customer Details" />
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Customer not found.</Text>
+        </View>
+      </AdminPageBackground>
+    );
+  }
+
+  const statusText =
+    customer.status === 'ACTIVE'
+      ? 'Active'
+      : customer.status === 'BLOCKED'
+      ? 'Blocked'
+      : 'Inactive';
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Customer Details</Text>
-      </View>
+    <AdminPageBackground>
+      <AdminHeader variant="inner" title="Customer Details" />
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {}
-        <View style={styles.profileSection}>
+        {/* 1) PROFILE ADMIN CARD (72px avatar, 3px white ring, shadow, Fraunces 22 name) */}
+        <AdminCard style={styles.profileCard}>
           <View style={styles.avatarContainer}>
             <Image source={{ uri: getProfileImage() }} style={styles.profileImage} />
           </View>
-          <Text style={styles.customerProfileName}>{customer.name}</Text>
-          <Text style={styles.customerEmail}>{customer.email || 'No email'}</Text>
-          <View style={styles.statusBadgeContainer}>
-            <StatusBadge status={customer.status === 'ACTIVE' ? 'Active' : (customer.status === 'BLOCKED' ? 'Blocked' : 'Inactive')} />
+          <Text style={styles.customerName}>{customer.name}</Text>
+          <Text style={styles.customerEmail}>{customer.email || 'No email registered'}</Text>
+
+          <View style={styles.statusBadgeWrapper}>
+            <AdminBadge status={statusText} />
           </View>
-        </View>
-        {}
-        <View style={styles.section3D}>
+        </AdminCard>
+
+        {/* 2) FULL INFORMATION */}
+        <AdminCard style={styles.infoCard}>
           <Text style={styles.sectionTitle}>Full Information</Text>
+
           <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <UserIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Name</Text>
               <Text style={styles.infoValue}>{customer.name || 'N/A'}</Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="mail-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <MailIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Email</Text>
               <Text style={styles.infoValue}>{customer.email || 'N/A'}</Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <PhoneIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Mobile No.</Text>
               <Text style={styles.infoValue}>{customer.mobile || 'N/A'}</Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="location-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Address</Text>
               <Text style={styles.infoValue}>{customer.address || 'N/A'}</Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="map-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>State & Village</Text>
-              <Text style={styles.infoValue}>{customer.state || 'N/A'}, {customer.village || 'N/A'}</Text>
+              <Text style={styles.infoValue}>
+                {[customer.village, customer.state].filter(Boolean).join(', ') || 'N/A'}
+              </Text>
             </View>
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="navigate-circle-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+
+          <View style={styles.infoRowLast}>
+            <View style={styles.infoIconBox}>
+              <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Postal Code</Text>
               <Text style={styles.infoValue}>{customer.postalCode || 'N/A'}</Text>
             </View>
           </View>
-        </View>
-        {}
+        </AdminCard>
+
+        {/* 3) CUSTOMER ACTIVITY STATS */}
         {statistics && (
-          <View style={styles.section3D}>
+          <AdminCard style={styles.statsCard}>
             <Text style={styles.sectionTitle}>Customer Activity</Text>
             <View style={styles.statsGrid}>
               <View style={styles.statBox}>
@@ -172,13 +224,12 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
                 <Text style={styles.statLabel}>Cancelled</Text>
               </View>
             </View>
-          </View>
+          </AdminCard>
         )}
-        {}
-        <View style={styles.section3D}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Order History</Text>
-          </View>
+
+        {/* 4) ORDER HISTORY */}
+        <AdminCard style={styles.ordersCard}>
+          <Text style={styles.sectionTitle}>Order History</Text>
           {orders.length > 0 ? (
             orders.map((order) => (
               <React.Fragment key={order.orderId}>
@@ -188,103 +239,195 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
           ) : (
             <Text style={styles.emptyTextSmall}>No orders yet.</Text>
           )}
-        </View>
+        </AdminCard>
       </ScrollView>
-    </View>
+    </AdminPageBackground>
   );
 };
+
+export default AdminCustomerDetailsScreen;
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
-  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' },
-  header: {
-    flexDirection: 'row',
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 16,
-    backgroundColor: '#17212F',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
-    marginBottom: 16,
-    zIndex: 10,
   },
-  backButton: { marginRight: 8, padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5 },
-  scrollContent: { paddingBottom: 40 },
-  profileSection: {
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontFamily: AdminFonts.medium,
+    color: ADMIN_THEME.colors.textSecondary,
+    fontSize: 16,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 40,
+    gap: 14,
+  },
+
+  // Profile Card
+  profileCard: {
     alignItems: 'center',
     paddingVertical: 24,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
   },
   avatarContainer: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: '#F5C16C',
-    justifyContent: 'center', alignItems: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
     overflow: 'hidden',
+    backgroundColor: ADMIN_THEME.colors.indigoTint,
+    ...ADMIN_THEME.shadows.card,
     marginBottom: 12,
-    borderWidth: 3, borderColor: '#17212F',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8,
   },
-  profileImage: { width: '100%', height: '100%' },
-  customerProfileName: { fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 4 },
-  customerEmail: { fontSize: 13, color: '#4B5563', marginBottom: 12, fontWeight: '500' },
-  statusBadgeContainer: { flexDirection: 'row', justifyContent: 'center' },
-  section3D: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#17212F', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 8 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#F9FAFB', padding: 10, borderRadius: 10 },
-  infoIcon: { marginRight: 12 },
-  infoTextContainer: { flex: 1 },
-  infoLabel: { fontSize: 12, color: '#6B7280', marginBottom: 2, fontWeight: '600' },
-  infoValue: { fontSize: 14, color: '#111827', fontWeight: 'bold' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  customerName: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 22,
+    color: ADMIN_THEME.colors.ink,
+    textAlign: 'center',
+  },
+  customerEmail: {
+    marginTop: 3,
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.textSecondary,
+    textAlign: 'center',
+  },
+  statusBadgeWrapper: {
+    marginTop: 12,
+  },
+
+  // Info Card
+  infoCard: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 18,
+    color: ADMIN_THEME.colors.ink,
+    marginBottom: 14,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: ADMIN_THEME.colors.divider,
+  },
+  infoRowLast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  infoIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: ADMIN_THEME.colors.indigoTint,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoTextContainer: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 11.5,
+    color: ADMIN_THEME.colors.textSecondary,
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 13.5,
+    color: ADMIN_THEME.colors.ink,
+  },
+
+  // Stats Card
+  statsCard: {
+    padding: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
   statBox: {
-    width: '47%', backgroundColor: '#17212F',
-    padding: 14, borderRadius: 14, marginBottom: 12,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 6,
+    width: '48%',
+    backgroundColor: ADMIN_THEME.colors.inputBg,
+    borderRadius: ADMIN_THEME.radius.input,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
+    alignItems: 'center',
   },
-  statValue: { fontSize: 20, fontWeight: '900', color: '#F5C16C', marginBottom: 6 },
-  statLabel: { fontSize: 12, color: '#E5E7EB', fontWeight: '600', textAlign: 'center' },
+  statValue: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 20,
+    color: ADMIN_THEME.colors.ink,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontFamily: AdminFonts.medium,
+    fontSize: 11.5,
+    color: ADMIN_THEME.colors.textSecondary,
+    textAlign: 'center',
+  },
+
+  // Orders Card
+  ordersCard: {
+    padding: 16,
+  },
   orderCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12, padding: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: '#E5E7EB',
+    backgroundColor: ADMIN_THEME.colors.inputBg,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
   },
-  orderHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  orderId: { fontSize: 13, fontWeight: 'bold', color: '#17212F' },
-  orderStatus: { fontSize: 12, fontWeight: 'bold' },
-  customerName: { fontSize: 12, color: '#4B5563', marginBottom: 4, fontWeight: '500' },
-  orderDate: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
-  emptyText: { textAlign: 'center', color: '#6B7280', marginTop: 40, fontSize: 18, fontWeight: '500' },
-  emptyTextSmall: { textAlign: 'center', color: '#9CA3AF', marginVertical: 16, fontSize: 15, fontStyle: 'italic' },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  orderId: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.ink,
+  },
+  orderBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  orderAmount: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.ink,
+  },
+  orderDate: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 11,
+    color: ADMIN_THEME.colors.muted,
+  },
+  emptyTextSmall: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.textSecondary,
+    marginVertical: 10,
+  },
 });
-export default AdminCustomerDetailsScreen;

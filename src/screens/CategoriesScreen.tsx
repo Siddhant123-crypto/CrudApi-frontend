@@ -1,11 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Dimensions,
+} from 'react-native';
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../services/api';
+import { useCart } from '../context/CartContext';
+import { THEME } from '../constants/theme';
+import { PageBackground } from '../components/ui/PageBackground';
+import { ThemedHeader } from '../components/ui/ThemedHeader';
+import { Card } from '../components/ui/Card';
+
+const { width: screenWidth } = Dimensions.get('window');
+const CARD_WIDTH = (screenWidth - 40 - 12) / 2;
 
 const CategoriesScreen = ({ navigation }: any) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { cartCount } = useCart();
 
   useEffect(() => {
     fetchCategories();
@@ -25,128 +43,128 @@ const CategoriesScreen = ({ navigation }: any) => {
     }
   };
 
-  const getCategoryStyles = (name: string) => {
-    const n = name.toLowerCase();
-    if (n.includes('veg')) return { icon: 'leaf', color: '#10B981', bg: '#E6F4EA' };
-    if (n.includes('fruit')) return { icon: 'nutrition', color: '#F59E0B', bg: '#FFF3E0' };
-    if (n.includes('root')) return { icon: 'rose', color: '#EC4899', bg: '#FCE4EC' };
-    if (n.includes('grain')) return { icon: 'basket', color: '#D97706', bg: '#FEF3C7' };
-    if (n.includes('dairy') || n.includes('milk')) return { icon: 'water', color: '#3B82F6', bg: '#DBEAFE' };
-    if (n.includes('spice')) return { icon: 'flame', color: '#EA4335', bg: '#FCE8E6' };
-    return { icon: 'grid', color: '#8B5CF6', bg: '#F3E5F5' };
+  const getCategoryEmojiOrIcon = (name: string) => {
+    const n = (name || '').toLowerCase();
+    if (n.includes('fruit')) return { emoji: '🍎', icon: 'nutrition' };
+    if (n.includes('dairy') || n.includes('milk')) return { emoji: '🥛', icon: 'water' };
+    if (n.includes('wild') || n.includes('forest')) return { emoji: '🌿', icon: 'leaf' };
+    if (n.includes('veg')) return { emoji: '🥬', icon: 'leaf' };
+    if (n.includes('grain') || n.includes('wheat') || n.includes('rice')) return { emoji: '🌾', icon: 'basket' };
+    if (n.includes('pulse') || n.includes('dal') || n.includes('bean')) return { emoji: '🫘', icon: 'basket' };
+    if (n.includes('spice')) return { emoji: '🌶️', icon: 'flame' };
+    return { emoji: '🌱', icon: 'grid' };
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>All Categories</Text>
-      </View>
+    <PageBackground>
+      <ThemedHeader
+        variant="tab"
+        title="Categories"
+        subtitle="Explore fresh farm produce"
+        titleStyle={{ fontSize: 21 }}
+        showCart
+        cartCount={cartCount}
+        showBell
+      />
+
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#1E3A8A" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={THEME.colors.accentDeep} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.grid}>
             {categories.map((category) => {
-              const stylesObj = getCategoryStyles(category.name);
+              const info = getCategoryEmojiOrIcon(category.name);
               return (
-                <TouchableOpacity
+                <Card
                   key={category.categoryId || category.name}
                   style={styles.card}
-                  onPress={() => navigation.navigate('CategoryDashboard', { category: category.name })}
-                  activeOpacity={0.7}
+                  onPress={() =>
+                    navigation.navigate('CategoryDashboard', { category: category.name })
+                  }
+                  activeOpacity={0.8}
                 >
-                  <View
-                    style={[
-                      styles.iconBox,
-                      {
-                        backgroundColor: stylesObj.bg,
-                        borderColor: stylesObj.color,
-                        borderWidth: 2,
-                      }
-                    ]}
-                  >
-                    <Ionicons name={stylesObj.icon as any} size={30} color={stylesObj.color} />
+                  <View style={styles.iconTile}>
+                    <Svg width={72} height={72} style={StyleSheet.absoluteFill}>
+                      <Defs>
+                        <RadialGradient id={`catRadial-${category.name}`} cx="50%" cy="50%" r="50%">
+                          <Stop offset="0%" stopColor={THEME.colors.tileRadialStart} />
+                          <Stop offset="65%" stopColor={THEME.colors.tileRadialMiddle} />
+                          <Stop offset="100%" stopColor={THEME.colors.tileRadialEnd} />
+                        </RadialGradient>
+                      </Defs>
+                      <Rect
+                        x="0"
+                        y="0"
+                        width="72"
+                        height="72"
+                        rx="20"
+                        fill={`url(#catRadial-${category.name})`}
+                      />
+                    </Svg>
+                    <Text style={styles.emojiText}>{info.emoji}</Text>
                   </View>
-                  <Text style={styles.name}>{category.name}</Text>
-                </TouchableOpacity>
+                  <Text style={styles.name} numberOfLines={2}>
+                    {category.name}
+                  </Text>
+                </Card>
               );
             })}
           </View>
         </ScrollView>
       )}
-    </SafeAreaView>
+    </PageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  safeArea: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  header: {
-    backgroundColor: '#1E3A8A',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    alignItems: 'center',
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: THEME.spacing.pageHorizontal,
+    paddingTop: 18,
+    paddingBottom: 130, // Space for floating bottom nav
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: THEME.spacing.cardGap,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    width: '47%',
-    height: 140,
+    width: CARD_WIDTH,
+    height: 146,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    padding: 14,
+    borderRadius: THEME.radius.cards,
   },
-  iconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
+  iconTile: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: THEME.colors.cardBorder,
+  },
+  emojiText: {
+    fontSize: 34,
   },
   name: {
+    fontFamily: THEME.fonts.bold,
     fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
+    color: THEME.colors.textHeading,
     textAlign: 'center',
   },
 });
+
 export default CategoriesScreen;

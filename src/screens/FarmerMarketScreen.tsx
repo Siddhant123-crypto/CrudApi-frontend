@@ -4,9 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
-  SafeAreaView,
   Dimensions,
   Platform,
   Alert,
@@ -19,10 +17,18 @@ import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { getNearbyMarkets, searchMarkets, Market } from '../services/marketService';
 
+import { FARMER_THEME } from '../constants/farmerTheme';
+import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
+import { FarmerHeader } from '../components/farmer/FarmerHeader';
+import { FarmerCard } from '../components/farmer/FarmerCard';
+import { FarmerBadge, FarmerEmptyState } from '../components/farmer/FarmerUI';
+import { FarmerPrimaryButton } from '../components/farmer/FarmerButtons';
+import { PinIcon, ChevronRightIcon } from '../components/farmer/FarmerIcons';
+
 const { width, height } = Dimensions.get('window');
 const LIST_HEIGHT = height * 0.55;
-const MIN_HEADER_HEIGHT = 60; // Height of the drag handle area
-const COLLAPSED_HEIGHT = 200; // Height to keep the first card visible
+const MIN_HEADER_HEIGHT = 64;
+const COLLAPSED_HEIGHT = 200;
 
 export const FarmerMarketScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -35,7 +41,7 @@ export const FarmerMarketScreen: React.FC = () => {
 
   // Animation states for bottom sheet
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const listAnim = useRef(new Animated.Value(0)).current; // 0 = expanded, 1 = collapsed
+  const listAnim = useRef(new Animated.Value(0)).current;
 
   const toggleList = () => {
     if (isCollapsed) {
@@ -127,72 +133,80 @@ export const FarmerMarketScreen: React.FC = () => {
   }, []);
 
   const renderMarketItem = (item: Market, idx: number) => (
-    <View key={item.id?.toString() ?? idx.toString()} style={styles.marketCard}>
-      <View style={styles.cardShine} />
+    <FarmerCard
+      key={item.id?.toString() ?? idx.toString()}
+      style={styles.marketCard}
+    >
       <View style={styles.marketCardContent}>
         <View style={styles.marketInfo}>
-          <Text style={styles.marketName} numberOfLines={2}>{item.marketName}</Text>
+          <Text
+            style={styles.marketName}
+            numberOfLines={2}
+            maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+          >
+            {item.marketName}
+          </Text>
+
           <View style={styles.addressContainer}>
-            <Ionicons name="location-outline" size={12} color="#64748B" />
-            <Text style={styles.marketAddress} numberOfLines={1}>
+            <PinIcon size={13} color={FARMER_THEME.colors.primaryGreen} strokeWidth={2} />
+            <Text
+              style={styles.marketAddress}
+              numberOfLines={1}
+              maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+            >
               {item.district}, {item.state}
             </Text>
           </View>
+
           {item.distance !== undefined && (
-            <View style={styles.distanceBadge}>
-              <Ionicons name="navigate-circle-outline" size={12} color="#1E5631" />
-              <Text style={styles.distanceText}>
-                {item.distance.toFixed(1)} {item.distanceUnit || 'km'} away
-              </Text>
+            <View style={styles.distanceBadgeRow}>
+              <FarmerBadge
+                label={`${item.distance.toFixed(1)} ${item.distanceUnit || 'km'} away`}
+                variant="success"
+              />
             </View>
           )}
         </View>
+
         <TouchableOpacity
           style={styles.detailsButton}
           onPress={() => navigation.navigate('MarketDetails', { market: item })}
           activeOpacity={0.85}
         >
-          <Text style={styles.detailsButtonText}>View{'\n'}Details</Text>
-          <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+          <Text
+            style={styles.detailsButtonText}
+            maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+          >
+            Details
+          </Text>
+          <ChevronRightIcon size={14} color="#FFFFFF" strokeWidth={2.4} />
         </TouchableOpacity>
       </View>
-    </View>
+    </FarmerCard>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.topContainer}>
-        {/* Compact header */}
-        <View style={styles.headerBlock}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Markets</Text>
-          </View>
-        </View>
+    <FarmerPageBackground>
+      {/* Farmer Emerald Header */}
+      <FarmerHeader
+        variant="tab"
+        title="Markets"
+        subtitle="Locate nearby APMC & mandi markets"
+        onBackPress={() => {
+          if (navigation?.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation?.navigate('Home');
+          }
+        }}
+        showSearch
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search markets by name..."
+        onNotificationPress={() => navigation.navigate('Notifications')}
+      />
 
-        {/* Search bar */}
-        <View style={styles.searchWrapper}>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={17} color="#94A3B8" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search markets by name..."
-              placeholderTextColor="#94A3B8"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={18} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      </View>
-
-      {/* Map (Full Screen behind sheet) */}
+      {/* Map (Full Background Area) */}
       <View style={styles.mapContainer}>
         {location ? (
           <MapView
@@ -219,15 +233,20 @@ export const FarmerMarketScreen: React.FC = () => {
                   description={`${market.district}, ${market.state}`}
                   onCalloutPress={() => navigation.navigate('MarketDetails', { market })}
                 >
-                  <Ionicons name="location" size={30} color="#1E5631" />
+                  <View style={styles.markerPin}>
+                    <Ionicons name="storefront" size={16} color="#FFFFFF" />
+                  </View>
                 </Marker>
               ) : null;
             })}
           </MapView>
         ) : (
           <View style={styles.mapPlaceholder}>
-            <Ionicons name="map-outline" size={40} color="#94A3B8" />
-            <Text style={styles.mapPlaceholderText}>
+            <Ionicons name="map-outline" size={40} color={FARMER_THEME.colors.placeholder} />
+            <Text
+              style={styles.mapPlaceholderText}
+              maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+            >
               {locationErrorMsg || 'Loading map...'}
             </Text>
           </View>
@@ -236,13 +255,24 @@ export const FarmerMarketScreen: React.FC = () => {
 
       {/* Bottom Sheet */}
       <Animated.View style={[styles.bottomSheet, { transform: [{ translateY }] }]}>
-        <TouchableOpacity activeOpacity={0.9} onPress={toggleList} style={styles.sheetHandleContainer}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={toggleList}
+          style={styles.sheetHandleContainer}
+        >
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeaderContent}>
-            <Text style={styles.sectionTitle}>
+            <Text
+              style={styles.sectionTitle}
+              maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+            >
               {isSearching ? 'Search Results' : 'Nearby Markets'}
             </Text>
-            <Ionicons name={isCollapsed ? "chevron-up" : "chevron-down"} size={22} color="#64748B" />
+            <Ionicons
+              name={isCollapsed ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={FARMER_THEME.colors.textSecondary}
+            />
           </View>
         </TouchableOpacity>
 
@@ -252,93 +282,48 @@ export const FarmerMarketScreen: React.FC = () => {
         >
           {loading ? (
             <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#1E5631" />
+              <ActivityIndicator size="large" color={FARMER_THEME.colors.primaryGreen} />
             </View>
           ) : (Array.isArray(markets) ? markets : []).length === 0 ? (
-            <View style={styles.centerContainer}>
-              <Ionicons name="storefront-outline" size={44} color="#CBD5E1" />
-              <Text style={styles.emptyText}>No markets found</Text>
-            </View>
+            <FarmerEmptyState
+              icon={<Ionicons name="storefront-outline" size={44} color={FARMER_THEME.colors.primaryGreen} />}
+              title="No markets found"
+              subtitle={
+                isSearching
+                  ? 'Try searching with a different name or town'
+                  : 'No markets located in your immediate radius'
+              }
+            />
           ) : (
             (Array.isArray(markets) ? markets : []).map((item, idx) =>
               renderMarketItem(item, idx)
             )
           )}
-          <View style={{ height: 40 }} />
+          <View style={{ height: 60 }} />
         </ScrollView>
       </Animated.View>
-    </SafeAreaView>
+    </FarmerPageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#1E5631',
-  },
-  topContainer: {
-    zIndex: 10,
-    backgroundColor: '#1E5631',
-  },
-  headerBlock: {
-    paddingTop: Platform.OS === 'android' ? 36 : 8,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(0,0,0,0.30)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  searchWrapper: {
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    paddingHorizontal: 14,
-    height: 40,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: '#0F172A',
-    height: '100%',
-  },
-  clearButton: {
-    padding: 2,
-  },
   mapContainer: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E8F0EA',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  markerPin: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: FARMER_THEME.colors.primaryGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    ...FARMER_THEME.shadows.tile,
   },
   mapPlaceholder: {
     flex: 1,
@@ -347,7 +332,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   mapPlaceholderText: {
-    color: '#64748B',
+    fontFamily: FARMER_THEME.fonts.medium,
+    color: FARMER_THEME.colors.textSecondary,
     fontSize: 13,
   },
   bottomSheet: {
@@ -356,32 +342,28 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: LIST_HEIGHT,
-    backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    backgroundColor: FARMER_THEME.colors.pageBgBottom,
+    borderTopLeftRadius: FARMER_THEME.radius.bottomSheets,
+    borderTopRightRadius: FARMER_THEME.radius.bottomSheets,
+    ...FARMER_THEME.shadows.stickyBar,
   },
   sheetHandleContainer: {
     height: MIN_HEADER_HEIGHT,
-    paddingTop: 12,
+    paddingTop: 10,
     paddingHorizontal: 20,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: FARMER_THEME.radius.bottomSheets,
+    borderTopRightRadius: FARMER_THEME.radius.bottomSheets,
+    backgroundColor: FARMER_THEME.colors.cardBg,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: FARMER_THEME.colors.divider,
   },
   sheetHandle: {
-    width: 48,
-    height: 6,
-    backgroundColor: '#1E5631', // primary color for highlight
+    width: 44,
+    height: 5,
+    backgroundColor: FARMER_THEME.colors.cardBorder,
     borderRadius: 3,
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   sheetHeaderContent: {
     flexDirection: 'row',
@@ -389,113 +371,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E293B',
-    letterSpacing: 0.2,
+    fontFamily: FARMER_THEME.fonts.serif,
+    fontSize: 18,
+    color: FARMER_THEME.colors.headings,
+    letterSpacing: -0.2,
   },
   listContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: FARMER_THEME.spacing.pagePadding,
+    paddingTop: 14,
+    paddingBottom: 40,
+    gap: 10,
   },
   marketCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 14,
-    elevation: 4,
-    shadowColor: '#1E5631',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(30,86,49,0.05)',
-    overflow: 'hidden',
-  },
-  cardShine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 40,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    opacity: 0.5,
-    zIndex: 1,
+    padding: 14,
+    borderRadius: FARMER_THEME.radius.smallCards,
   },
   marketCardContent: {
-    padding: 13,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    zIndex: 2,
   },
   marketInfo: {
     flex: 1,
-    marginRight: 10,
+    marginRight: 12,
   },
   marketName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 5,
-    lineHeight: 18,
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 15,
+    color: FARMER_THEME.colors.headings,
+    marginBottom: 4,
+    lineHeight: 20,
   },
   addressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
+    gap: 4,
   },
   marketAddress: {
-    fontSize: 11,
-    color: '#64748B',
-    marginLeft: 3,
+    fontFamily: FARMER_THEME.fonts.regular,
+    fontSize: 12,
+    color: FARMER_THEME.colors.textSecondary,
     flex: 1,
   },
-  distanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 10,
+  distanceBadgeRow: {
     alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-  },
-  distanceText: {
-    fontSize: 11,
-    color: '#16A34A',
-    fontWeight: '700',
-    marginLeft: 3,
   },
   detailsButton: {
-    backgroundColor: '#1E5631',
+    backgroundColor: FARMER_THEME.colors.primaryGreen,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    borderRadius: 12,
-    elevation: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    gap: 4,
   },
   detailsButtonText: {
+    fontFamily: FARMER_THEME.fonts.bold,
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-    marginRight: 3,
-    textAlign: 'center',
-    lineHeight: 15,
+    fontSize: 12,
   },
   centerContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
   },
 });
 

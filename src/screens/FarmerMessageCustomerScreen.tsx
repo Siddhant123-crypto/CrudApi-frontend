@@ -22,6 +22,10 @@ import { NotificationService } from '../services/NotificationService';
 import { NotificationSendRequest } from '../types';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
+import { FarmerHeader } from '../components/farmer/FarmerHeader';
+import { FARMER_THEME } from '../constants/farmerTheme';
+
 export const FarmerMessageCustomerScreen = () => {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
@@ -142,14 +146,13 @@ export const FarmerMessageCustomerScreen = () => {
     return nameMatch || emailMatch;
   });
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#176B2C" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isAdminMessage ? 'Message Admin' : 'Message Customer'}</Text>
-      </View>
+    <FarmerPageBackground>
+      <StatusBar barStyle="light-content" backgroundColor="#1F7A4D" />
+      <FarmerHeader
+        variant="inner"
+        title={isAdminMessage ? 'Message Admin' : 'Message Customer'}
+        onBackPress={() => navigation.goBack()}
+      />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -164,7 +167,7 @@ export const FarmerMessageCustomerScreen = () => {
         {isAdminMessage ? (
           <View style={styles.adminProfileCard}>
             <View style={styles.adminAvatarContainer}>
-              <Ionicons name="shield-checkmark" size={32} color="#FFFFFF" />
+              <Ionicons name="shield-checkmark" size={30} color="#FFFFFF" />
             </View>
             <View style={styles.adminInfo}>
               <Text style={styles.adminName}>{preSelectedName || 'System Administrator'}</Text>
@@ -178,6 +181,7 @@ export const FarmerMessageCustomerScreen = () => {
               <TouchableOpacity
                 style={[styles.selectorBtn, recipient === 'ALL' && styles.selectorBtnActive]}
                 onPress={() => setRecipient('ALL')}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.selectorText, recipient === 'ALL' && styles.selectorTextActive]}>
                   All Customers
@@ -186,6 +190,7 @@ export const FarmerMessageCustomerScreen = () => {
               <TouchableOpacity
                 style={[styles.selectorBtn, recipient === 'SPECIFIC' && styles.selectorBtnActive]}
                 onPress={() => setRecipient('SPECIFIC')}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.selectorText, recipient === 'SPECIFIC' && styles.selectorTextActive]}>
                   Select Customer
@@ -197,17 +202,17 @@ export const FarmerMessageCustomerScreen = () => {
         {!isAdminMessage && recipient === 'SPECIFIC' && (
           <View style={styles.specificUserContainer}>
             <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+              <Ionicons name="search" size={20} color="#5C6B60" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search by name or email..."
-                placeholderTextColor="#6B7280"
+                placeholderTextColor="#7D8D81"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
             </View>
             {fetchingUsers ? (
-              <ActivityIndicator size="small" color="#176B2C" />
+              <ActivityIndicator size="small" color="#1F7A4D" />
             ) : filteredCustomers.length === 0 ? (
               <Text style={styles.infoText}>No customers found.</Text>
             ) : (
@@ -220,8 +225,9 @@ export const FarmerMessageCustomerScreen = () => {
                       key={uId}
                       style={[styles.userCard, isSelected && styles.userCardSelected]}
                       onPress={() => setSpecificUserId(uId)}
+                      activeOpacity={0.8}
                     >
-                      <Ionicons name="person-circle-outline" size={32} color={isSelected ? "#FFF" : "#6B7280"} />
+                      <Ionicons name="person-circle-outline" size={32} color={isSelected ? "#FFF" : "#5C6B60"} />
                       <Text style={[styles.userName, isSelected && { color: '#FFF' }]} numberOfLines={1}>
                         {user.name || user.email || 'Unknown'}
                       </Text>
@@ -247,7 +253,7 @@ export const FarmerMessageCustomerScreen = () => {
           placeholder="e.g., Fresh Produce Available"
           value={title}
           onChangeText={handleTitleChange}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#7D8D81"
         />
         <Text style={styles.label}>Message</Text>
         <TextInput
@@ -259,12 +265,13 @@ export const FarmerMessageCustomerScreen = () => {
           multiline
           numberOfLines={4}
           textAlignVertical="top"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#7D8D81"
         />
         <TouchableOpacity
           style={[styles.sendButton, loading && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={loading}
+          activeOpacity={0.85}
         >
           {loading ? (
             <ActivityIndicator color="#FFF" />
@@ -278,59 +285,31 @@ export const FarmerMessageCustomerScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.successModalContent}>
             <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={60} color="#10B981" />
+              <Ionicons name="checkmark-circle" size={56} color="#17663F" />
             </View>
             <Text style={styles.successModalTitle}>Success!</Text>
             <Text style={styles.successModalMessage}>Message sent successfully</Text>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </FarmerPageBackground>
   );
 };
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F5F7F5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 16 : 16,
-    paddingBottom: 24,
-    backgroundColor: '#176B2C',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  backButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginLeft: 16,
-  },
   content: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 40,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
+    fontSize: 13,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#0E3B29',
     marginBottom: 8,
     marginTop: 16,
+    letterSpacing: 0.3,
   },
   rowSelector: {
     flexDirection: 'row',
@@ -339,38 +318,42 @@ const styles = StyleSheet.create({
   selectorBtn: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    backgroundColor: '#FBFEF9',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#DCE8DF',
     alignItems: 'center',
+    ...FARMER_THEME.shadows.tile,
   },
   selectorBtnActive: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#176B2C',
+    backgroundColor: '#DDF3E4',
+    borderColor: '#17663F',
+    borderWidth: 1.5,
   },
   selectorText: {
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#5C6B60',
+    fontFamily: FARMER_THEME.fonts.medium,
   },
   selectorTextActive: {
-    color: '#176B2C',
-    fontWeight: '700',
+    color: '#17663F',
+    fontFamily: FARMER_THEME.fonts.bold,
   },
   readOnlyContainer: {
     marginTop: 8,
   },
   readOnlyBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#176B2C',
+    backgroundColor: '#DDF3E4',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#B8E2C8',
   },
   readOnlyBadgeText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: '#17663F',
+    fontFamily: FARMER_THEME.fonts.bold,
     fontSize: 12,
   },
   adminProfileCard: {
@@ -378,21 +361,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 16,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 18,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E5EFE3',
+    ...FARMER_THEME.shadows.card,
   },
   adminAvatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#176B2C',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#17663F',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -401,31 +380,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   adminName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
+    fontSize: 16,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#0E3B29',
+    marginBottom: 3,
   },
   adminRole: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 13,
+    color: '#5C6B60',
+    fontFamily: FARMER_THEME.fonts.regular,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#111827',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#F5FBF7',
+    borderWidth: 1.5,
+    borderColor: '#D3E5D8',
+    borderRadius: 16,
+    padding: 14,
+    fontSize: 14,
+    color: '#1B2A22',
+    fontFamily: FARMER_THEME.fonts.regular,
   },
   textArea: {
-    height: 140,
+    height: 130,
   },
   specificUserContainer: {
     marginTop: 12,
@@ -434,102 +410,98 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    backgroundColor: '#F5FBF7',
+    borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderWidth: 1.5,
+    borderColor: '#D3E5D8',
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: '#374151',
+    fontSize: 13,
+    color: '#1B2A22',
   },
   infoText: {
-    color: '#6B7280',
-    fontSize: 14,
+    color: '#5C6B60',
+    fontSize: 13,
     fontStyle: 'italic',
   },
   usersScroll: {
     flexDirection: 'row',
   },
   userCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FBFEF9',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
+    borderColor: '#DCE8DF',
+    borderRadius: 12,
     padding: 12,
-    marginRight: 12,
+    marginRight: 10,
     width: 100,
     alignItems: 'center',
+    ...FARMER_THEME.shadows.tile,
   },
   userCardSelected: {
-    backgroundColor: '#176B2C',
-    borderColor: '#176B2C',
+    backgroundColor: '#17663F',
+    borderColor: '#17663F',
   },
   userName: {
-    marginTop: 8,
+    marginTop: 6,
     fontSize: 12,
-    color: '#374151',
-    fontWeight: '500',
+    color: '#1B2A22',
+    fontFamily: FARMER_THEME.fonts.medium,
   },
   sendButton: {
-    backgroundColor: '#176B2C',
+    backgroundColor: '#17663F',
     borderRadius: 16,
-    paddingVertical: 18,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 40,
-    shadowColor: '#176B2C',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    marginTop: 28,
+    marginBottom: 20,
+    ...FARMER_THEME.shadows.button,
   },
   sendButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   sendButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontFamily: FARMER_THEME.fonts.bold,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   successModalContent: {
-    width: '80%',
+    width: '82%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-    elevation: 10,
+    borderWidth: 1,
+    borderColor: '#E5EFE3',
+    ...FARMER_THEME.shadows.card,
   },
   successIconContainer: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   successModalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 8,
+    fontSize: 20,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#0E3B29',
+    marginBottom: 6,
   },
   successModalMessage: {
-    fontSize: 16,
-    color: '#4B5563',
+    fontSize: 14,
+    color: '#5C6B60',
     textAlign: 'center',
+    fontFamily: FARMER_THEME.fonts.regular,
   },
 });
 export default FarmerMessageCustomerScreen;

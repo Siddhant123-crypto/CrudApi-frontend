@@ -1,6 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, ViewStyle, StyleProp } from 'react-native';
+import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { THEME } from '../constants/theme';
+import { PrimaryButton } from './ui/Buttons';
+
 interface EmptyStateProps {
   title: string;
   subtitle: string;
@@ -8,7 +12,9 @@ interface EmptyStateProps {
   onButtonPress: () => void;
   iconName?: keyof typeof Ionicons.glyphMap;
   imageUrl?: any;
+  style?: StyleProp<ViewStyle>;
 }
+
 const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   subtitle,
@@ -16,78 +22,85 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   onButtonPress,
   iconName,
   imageUrl,
+  style,
 }) => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <View style={styles.imageContainer}>
         {imageUrl ? (
           <Image source={imageUrl} style={styles.image} resizeMode="contain" />
         ) : (
           <View style={styles.iconCircle}>
-            <Ionicons name={iconName || 'basket-outline'} size={80} color="#2D983A" />
+            <Svg width={120} height={120} style={StyleSheet.absoluteFill}>
+              <Defs>
+                <RadialGradient id="emptyPeachRadial" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0%" stopColor={THEME.colors.tileRadialStart} />
+                  <Stop offset="65%" stopColor={THEME.colors.tileRadialMiddle} />
+                  <Stop offset="100%" stopColor={THEME.colors.tileRadialEnd} />
+                </RadialGradient>
+              </Defs>
+              <Circle cx={60} cy={60} r={58} fill="url(#emptyPeachRadial)" />
+            </Svg>
+            <Ionicons
+              name={iconName || 'basket-outline'}
+              size={48}
+              color={THEME.colors.accent}
+            />
           </View>
         )}
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
-      <TouchableOpacity style={styles.button} onPress={onButtonPress} activeOpacity={0.8}>
-        <Text style={styles.buttonText}>{buttonText}</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonWrapper}>
+        <PrimaryButton title={buttonText} onPress={onButtonPress} />
+      </View>
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 30,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   imageContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   image: {
-    width: 200,
-    height: 200,
+    width: 180,
+    height: 180,
   },
   iconCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: '#E8F5E9',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1,
+    borderColor: THEME.colors.cardBorder,
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#263329',
-    marginBottom: 12,
+    fontFamily: THEME.fonts.serif,
+    fontSize: 20,
+    color: THEME.colors.textHeading,
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    color: '#757575',
+    fontFamily: THEME.fonts.regular,
+    fontSize: 14,
+    color: THEME.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 22,
+    marginBottom: 26,
+    lineHeight: 20,
   },
-  button: {
-    backgroundColor: '#2D983A',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 25,
-    shadowColor: '#2D983A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  buttonWrapper: {
+    width: '100%',
+    maxWidth: 220,
   },
 });
+
 export default EmptyState;

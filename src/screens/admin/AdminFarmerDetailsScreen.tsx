@@ -1,12 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, FlatList, Platform, Modal, KeyboardAvoidingView, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+  TouchableOpacity,
+  FlatList,
+  Platform,
+  Modal,
+  KeyboardAvoidingView,
+  Alert,
+} from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api, { BASE_URL } from '../../services/api';
-import { StatusBadge } from '../../components/admin/StatusBadge';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import {
+  AdminPageBackground,
+  AdminHeader,
+  AdminCard,
+  AdminBadge,
+  AdminOutlineButton,
+  AdminDangerButton,
+  AdminInput,
+  ChatIcon,
+  PhoneIcon,
+  MailIcon,
+  LocationIcon,
+  UserIcon,
+  BanIcon,
+} from '../../components/admin';
+
 export const AdminFarmerDetailsScreen: React.FC = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { farmerId } = route.params;
   const [loading, setLoading] = useState(true);
   const [farmer, setFarmer] = useState<any>(null);
@@ -16,39 +48,43 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
   const [isBlockModalVisible, setIsBlockModalVisible] = useState(false);
   const [blockReason, setBlockReason] = useState('');
   const [blockUntilDate, setBlockUntilDate] = useState('');
-  
+
   const parseDateFromDDMMYYYY = (dateStr: string) => {
-    const parts = dateStr.split(/[-/]/);
+    const parts = dateStr.trim().split(/[-/]/);
     if (parts.length === 3) {
-      // Return YYYY-MM-DD format for Date object parsing
-      // padding with 0s if they enter single digits for day/month
-      const d = parts[0].padStart(2, '0');
-      const m = parts[1].padStart(2, '0');
-      const y = parts[2];
-      return new Date(`${y}-${m}-${d}`);
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parseInt(parts[2], 10);
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y) && m >= 0 && m <= 11 && d >= 1 && d <= 31 && y > 1900) {
+        return new Date(y, m, d, 0, 0, 0, 0);
+      }
     }
     return new Date('invalid');
   };
 
   const isValidBlockDate = () => {
-    const regex = /^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/;
-    if (!regex.test(blockUntilDate.trim())) return false;
-    const targetDate = parseDateFromDDMMYYYY(blockUntilDate);
+    const trimmed = blockUntilDate.trim();
+    const regex = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/;
+    if (!regex.test(trimmed)) return false;
+    const targetDate = parseDateFromDDMMYYYY(trimmed);
     if (isNaN(targetDate.getTime())) return false;
     const today = new Date();
-    // Allow at least 1 day in the future
+    today.setHours(0, 0, 0, 0);
     return targetDate.getTime() > today.getTime();
   };
 
   const calculateDurationDays = () => {
-    const targetDate = parseDateFromDDMMYYYY(blockUntilDate);
+    const targetDate = parseDateFromDDMMYYYY(blockUntilDate.trim());
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const diffTime = targetDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
   };
+
   useEffect(() => {
     fetchFarmerData();
   }, [farmerId]);
+
   const fetchFarmerData = async () => {
     try {
       setLoading(true);
@@ -56,7 +92,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
         api.get(`/admin/farmers/${farmerId}`),
         api.get(`/admin/farmers/${farmerId}/sales`),
         api.get(`/admin/products/farmer/${farmerId}`),
-        api.get(`/admin/orders/farmer/${farmerId}`)
+        api.get(`/admin/orders/farmer/${farmerId}`),
       ]);
       if (farmerRes.data?.data) setFarmer(farmerRes.data.data);
       if (salesRes.data?.data) setSales(salesRes.data.data);
@@ -68,6 +104,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       setLoading(false);
     }
   };
+
   const getProfileImage = () => {
     if (farmer?.profilePhoto) {
       if (farmer.profilePhoto.startsWith('http')) {
@@ -75,28 +112,9 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       }
       return `${BASE_URL}/user/image/${farmer.profilePhoto}`;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(farmer?.name || 'Unknown')}&background=F5C16C&color=17212F&size=150&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(farmer?.name || 'Unknown')}&background=E8EBFF&color=4F5BD5&size=150&bold=true`;
   };
-  if (loading) {
-    return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#F5C16C" />
-      </View>
-    );
-  }
-  if (!farmer) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Farmer Details</Text>
-        </View>
-        <Text style={styles.emptyText}>Farmer not found.</Text>
-      </View>
-    );
-  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -104,6 +122,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(amount || 0);
   };
+
   const getProductImage = (item: any) => {
     if (item.productPhoto) {
       if (item.productPhoto.startsWith('http')) {
@@ -111,146 +130,276 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
       }
       return `${BASE_URL}/product/image/${item.productPhoto}`;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.productName || 'Product')}&background=E5E7EB&color=6B7280`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.productName || 'Product')}&background=F4F6FB&color=4F5BD5`;
   };
+
   const renderProductItem = ({ item }: { item: any }) => (
     <View style={styles.productCard}>
-      <Image
-        source={{ uri: getProductImage(item) }}
-        style={styles.productImage}
-      />
+      <Image source={{ uri: getProductImage(item) }} style={styles.productImage} />
       <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={1}>{item.productName}</Text>
+        <Text style={styles.productName} numberOfLines={1}>
+          {item.productName}
+        </Text>
         <Text style={styles.productPrice}>{formatCurrency(item.price)}</Text>
       </View>
     </View>
   );
+
   const renderOrderItem = ({ item }: { item: any }) => (
     <View style={styles.orderCard}>
       <View style={styles.orderHeader}>
         <Text style={styles.orderId}>Order #{item.orderId?.substring(0, 8)}</Text>
-        <Text style={[styles.orderStatus, { color: item.orderStatus === 'DELIVERED' ? '#2D983A' : '#F5C16C' }]}>
-          {item.orderStatus}
-        </Text>
+        <AdminBadge status={item.orderStatus} />
       </View>
       <Text style={styles.customerName}>Customer: {item.customerName || 'Unknown'}</Text>
-      <Text style={styles.orderAmount}>Total: {formatCurrency(item.totalAmount)}</Text>
-      <Text style={styles.orderDate}>{new Date(item.orderDate).toLocaleDateString()}</Text>
+      <View style={styles.orderBottomRow}>
+        <Text style={styles.orderAmount}>Total: {formatCurrency(item.totalAmount)}</Text>
+        <Text style={styles.orderDate}>{new Date(item.orderDate).toLocaleDateString()}</Text>
+      </View>
     </View>
   );
+
+  if (loading) {
+    return (
+      <AdminPageBackground>
+        <AdminHeader variant="inner" title="Farmer Details" />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={ADMIN_THEME.colors.indigo} />
+        </View>
+      </AdminPageBackground>
+    );
+  }
+
+  if (!farmer) {
+    return (
+      <AdminPageBackground>
+        <AdminHeader variant="inner" title="Farmer Details" />
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Farmer not found.</Text>
+        </View>
+      </AdminPageBackground>
+    );
+  }
+
+  const isBlocked = farmer.status === 'INACTIVE' || farmer.status === 'Blocked';
+  const isBlockReady = Boolean(blockReason.trim()) && isValidBlockDate();
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Farmer Details</Text>
-      </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {}
-        <View style={styles.profileSection}>
+    <AdminPageBackground>
+      <AdminHeader
+        variant="inner"
+        title="Farmer Details"
+        titleAlign="left"
+        titleStyle={styles.headerTitle}
+        rightAction={
+          <TouchableOpacity
+            style={styles.headerChatBtn}
+            onPress={() =>
+              navigation.navigate('AdminMessage', {
+                preSelectedUserEmail: farmer.email,
+                preSelectedUserName: farmer.name,
+                preSelectedRole: 'FARMER',
+              })
+            }
+          >
+            <ChatIcon size={20} color={ADMIN_THEME.colors.gold} strokeWidth={2} />
+          </TouchableOpacity>
+        }
+      />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 20) + 70 },
+        ]}
+      >
+        {/* 1) PROFILE ADMIN CARD */}
+        <AdminCard style={styles.profileCard}>
           <View style={styles.avatarContainer}>
             <Image source={{ uri: getProfileImage() }} style={styles.profileImage} />
           </View>
           <Text style={styles.farmerName}>{farmer.name}</Text>
-          <Text style={styles.farmerEmail}>{farmer.email}</Text>
-          <View style={[styles.statusBadgeContainer, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
-            <StatusBadge status={farmer.status === 'ACTIVE' ? 'Active' : (farmer.status === 'PENDING' ? 'Pending' : (farmer.status === 'INACTIVE' ? 'Blocked' : 'Inactive'))} />
+          <Text style={styles.farmerEmail}>{farmer.email || 'No email registered'}</Text>
+          {farmer.farmName ? <Text style={styles.farmNameText}>{farmer.farmName}</Text> : null}
+
+          <View style={styles.profileBadgeAndActionRow}>
+            {/* Highlighted Status Button with Already Blocked Alert */}
             <TouchableOpacity
-              style={styles.blockBtn}
+              activeOpacity={0.8}
               onPress={() => {
-                const newStatus = farmer.status === 'INACTIVE' ? 'ACTIVE' : 'INACTIVE';
-                const actionText = farmer.status === 'INACTIVE' ? 'Unblock' : 'Block';
-                if (newStatus === 'INACTIVE') {
+                if (isBlocked) {
+                  Alert.alert(
+                    'Already Blocked',
+                    'This farmer is already blocked. Tap "Unblock Farmer" if you wish to restore their account access.',
+                    [{ text: 'OK', style: 'default' }]
+                  );
+                } else if (farmer.status === 'ACTIVE') {
+                  Alert.alert(
+                    'Farmer Active',
+                    'This farmer account is currently active. Use the "Block Farmer" button if you want to block this account.',
+                    [{ text: 'OK', style: 'default' }]
+                  );
+                }
+              }}
+              style={[
+                styles.statusWrapper,
+                farmer.status === 'ACTIVE'
+                  ? styles.activeShadow
+                  : isBlocked
+                  ? styles.blockShadow
+                  : styles.pendingShadow,
+              ]}
+            >
+              <LinearGradient
+                colors={
+                  farmer.status === 'ACTIVE'
+                    ? ['#10B981', '#059669']
+                    : isBlocked
+                    ? ['#EF4444', '#DC2626']
+                    : ['#F59E0B', '#D97706']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.statusIndicatorGradient}
+              >
+                <View style={styles.statusIndicatorDotWhite} />
+                <Text style={styles.statusIndicatorTextWhite}>
+                  {farmer.status === 'ACTIVE'
+                    ? 'ACTIVE'
+                    : isBlocked
+                    ? 'BLOCKED'
+                    : farmer.status || 'INACTIVE'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Block / Unblock Action Button */}
+            {isBlocked ? (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.actionButtonWrapper, styles.unblockShadow]}
+                onPress={() => {
+                  Alert.alert('Unblock Farmer', 'Are you sure you want to unblock this farmer?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Unblock',
+                      style: 'default',
+                      onPress: async () => {
+                        try {
+                          await api.put(`/admin/farmers/${farmer.farmerId || farmer.id}/unblock`);
+                          fetchFarmerData();
+                        } catch (error) {
+                          Alert.alert('Error', 'Failed to unblock farmer.');
+                        }
+                      },
+                    },
+                  ]);
+                }}
+              >
+                <LinearGradient
+                  colors={['#10B981', '#059669']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.actionButtonGradient}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Unblock Farmer</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.actionButtonWrapper, styles.blockShadow]}
+                onPress={() => {
                   setBlockReason('');
                   setBlockUntilDate('');
                   setIsBlockModalVisible(true);
-                } else {
-                  import('react-native').then(({ Alert }) => {
-                    Alert.alert(
-                      `${actionText} Farmer`,
-                      `Are you sure you want to ${actionText.toLowerCase()} this farmer?`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { 
-                          text: actionText, 
-                          style: 'default',
-                          onPress: async () => {
-                            try {
-                              await api.put(`/admin/farmers/${farmer.farmerId || farmer.id}/unblock`);
-                              fetchFarmerData();
-                            } catch (error) {
-                              Alert.alert('Error', `Failed to ${actionText.toLowerCase()} farmer.`);
-                            }
-                          } 
-                        }
-                      ]
-                    );
-                  });
-                }
-              }}
-            >
-              <Text style={styles.blockBtnText}>{farmer.status === 'INACTIVE' ? 'Unblock' : 'Block'}</Text>
-            </TouchableOpacity>
+                }}
+              >
+                <LinearGradient
+                  colors={['#EF4444', '#DC2626']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.actionButtonGradient}
+                >
+                  <Ionicons name="ban-outline" size={15} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Block Farmer</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
-        {}
-        <View style={styles.section3D}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={[styles.sectionTitle, { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 }]}>Full Information</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AdminMessage', { 
-              preSelectedUserEmail: farmer.email,
-              preSelectedUserName: farmer.name,
-              preSelectedRole: 'FARMER'
-            })}>
-              <Ionicons name="chatbubbles" size={26} color="#7C3AED" />
-            </TouchableOpacity>
-          </View>
-          <View style={[styles.infoRow, { marginTop: 16 }]}>
-            <Ionicons name="person-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+        </AdminCard>
+
+        {/* 2) FULL INFORMATION */}
+        <AdminCard style={styles.infoCard}>
+          <Text style={styles.sectionTitle}>Full Information</Text>
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconBox}>
+              <UserIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Name</Text>
               <Text style={styles.infoValue}>{farmer.name || 'N/A'}</Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="mail-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <MailIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Email</Text>
               <Text style={styles.infoValue}>{farmer.email || 'N/A'}</Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <PhoneIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Mobile No.</Text>
               <Text style={styles.infoValue}>{farmer.mobile || 'N/A'}</Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="location-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Address</Text>
               <Text style={styles.infoValue}>{farmer.address || 'N/A'}</Text>
             </View>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="map-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+            <View style={styles.infoIconBox}>
+              <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>State & Village</Text>
-              <Text style={styles.infoValue}>{farmer.state || 'N/A'}, {farmer.village || 'N/A'}</Text>
+              <Text style={styles.infoValue}>
+                {[farmer.village, farmer.state].filter(Boolean).join(', ') || 'N/A'}
+              </Text>
             </View>
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="navigate-circle-outline" size={22} color="#F5C16C" style={styles.infoIcon} />
+
+          <View style={styles.infoRowLast}>
+            <View style={styles.infoIconBox}>
+              <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Postal Code</Text>
               <Text style={styles.infoValue}>{farmer.postalCode || 'N/A'}</Text>
             </View>
           </View>
-        </View>
-        {}
-        <View style={styles.section3D}>
+        </AdminCard>
+
+        {/* 3) SALES STATISTICS */}
+        <AdminCard style={styles.statsCard}>
           <Text style={styles.sectionTitle}>Sales Statistics</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
@@ -270,12 +419,11 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <Text style={styles.statLabel}>Revenue</Text>
             </View>
           </View>
-        </View>
-        {}
-        <View style={styles.section3D}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Products Catalog</Text>
-          </View>
+        </AdminCard>
+
+        {/* 4) PRODUCTS CATALOG */}
+        <AdminCard style={styles.catalogCard}>
+          <Text style={styles.sectionTitle}>Products Catalog</Text>
           {products.length > 0 ? (
             <FlatList
               horizontal
@@ -283,17 +431,16 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               data={products}
               keyExtractor={(item) => item.productId}
               renderItem={renderProductItem}
-              contentContainerStyle={{ paddingVertical: 8 }}
+              contentContainerStyle={{ paddingVertical: 6 }}
             />
           ) : (
             <Text style={styles.emptyTextSmall}>No products listed by this farmer.</Text>
           )}
-        </View>
-        {}
-        <View style={styles.section3D}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Recent Orders</Text>
-          </View>
+        </AdminCard>
+
+        {/* 5) RECENT ORDERS */}
+        <AdminCard style={styles.ordersCard}>
+          <Text style={styles.sectionTitle}>Recent Orders</Text>
           {orders.length > 0 ? (
             orders.slice(0, 5).map((order) => (
               <React.Fragment key={order.orderId}>
@@ -303,287 +450,606 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
           ) : (
             <Text style={styles.emptyTextSmall}>No orders yet.</Text>
           )}
-        </View>
+        </AdminCard>
       </ScrollView>
-      <Modal
-        visible={isBlockModalVisible}
-        transparent={true}
-        animationType="fade"
-      >
-        <KeyboardAvoidingView 
+
+      {/* BLOCK MODAL */}
+      <Modal visible={isBlockModalVisible} transparent={true} animationType="fade">
+        <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
-            <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Block Farmer</Text>
-              <TouchableOpacity onPress={() => setIsBlockModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={styles.modalDescription}>
-              Please provide a reason for blocking {farmer?.name}. This reason will be shown to the farmer.
-            </Text>
+          <ScrollView
+            contentContainerStyle={styles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleRow}>
+                  <View style={styles.modalIconCircle}>
+                    <BanIcon size={20} color="#DC2626" strokeWidth={2.4} />
+                  </View>
+                  <Text style={styles.modalTitle}>Block Farmer</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setIsBlockModalVisible(false)}
+                  style={styles.modalCloseBtn}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
 
-            <TextInput
-              style={styles.reasonInput}
-              placeholder="Enter block reason..."
-              placeholderTextColor="#9CA3AF"
-              multiline
-              numberOfLines={4}
-              value={blockReason}
-              onChangeText={setBlockReason}
-            />
+              <Text style={styles.modalDescription}>
+                Please provide a reason for blocking <Text style={styles.farmerHighlightText}>{farmer?.name}</Text>. This reason will be shown to the farmer.
+              </Text>
 
-            <Text style={styles.inputLabel}>Block Until Date (DD-MM-YYYY)</Text>
-            <TextInput
-              style={styles.dateInput}
-              placeholder="e.g. 31-12-2026"
-              placeholderTextColor="#9CA3AF"
-              value={blockUntilDate}
-              onChangeText={setBlockUntilDate}
-              maxLength={10}
-            />
+              <AdminInput
+                label="Block Reason"
+                required
+                placeholder="Enter block reason..."
+                multiline
+                numberOfLines={4}
+                value={blockReason}
+                onChangeText={setBlockReason}
+              />
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, styles.modalCancelBtn]} 
-                onPress={() => setIsBlockModalVisible(false)}
-              >
-                <Text style={styles.modalCancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalBtn, styles.modalBlockBtn, (!blockReason.trim() || !isValidBlockDate()) && { opacity: 0.5 }]}
-                disabled={!blockReason.trim() || !isValidBlockDate()}
-                onPress={async () => {
-                  if (!farmer || !blockReason.trim() || !isValidBlockDate()) return;
-                  try {
-                    const days = calculateDurationDays();
-                    await api.put(`/admin/farmers/${farmer.farmerId || farmer.id}/block`, { 
-                      reason: blockReason.trim(), 
-                      durationDays: days 
-                    });
-                    setIsBlockModalVisible(false);
-                    fetchFarmerData();
-                  } catch (error) {
-                    import('react-native').then(({ Alert }) => {
+              <AdminInput
+                label="Block Until Date"
+                required
+                placeholder="e.g. 31-12-2026 (DD-MM-YYYY)"
+                value={blockUntilDate}
+                onChangeText={setBlockUntilDate}
+                maxLength={10}
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setIsBlockModalVisible(false)}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.cancelGradient}
+                  >
+                    <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.modalConfirmBtn,
+                    isBlockReady ? styles.modalConfirmBtnActive : styles.modalConfirmBtnFaint,
+                  ]}
+                  disabled={!isBlockReady}
+                  activeOpacity={0.8}
+                  onPress={async () => {
+                    if (!farmer || !isBlockReady) return;
+                    try {
+                      const days = calculateDurationDays();
+                      await api.put(`/admin/farmers/${farmer.farmerId || farmer.id}/block`, {
+                        reason: blockReason.trim(),
+                        durationDays: days,
+                      });
+                      setIsBlockModalVisible(false);
+                      fetchFarmerData();
+                    } catch (error) {
                       Alert.alert('Error', 'Failed to block farmer.');
-                    });
-                  }
-                }}
-              >
-                <Text style={styles.modalBlockBtnText}>Confirm Block</Text>
-              </TouchableOpacity>
+                    }
+                  }}
+                >
+                  <LinearGradient
+                    key={isBlockReady ? 'btn-active' : 'btn-faint'}
+                    colors={
+                      isBlockReady
+                        ? (['#EF4444', '#DC2626'] as const)
+                        : (['#FEE2E2', '#FECACA'] as const)
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[
+                      styles.confirmGradient,
+                      !isBlockReady && styles.confirmGradientFaint,
+                    ]}
+                  >
+                    <BanIcon
+                      size={14}
+                      color={isBlockReady ? '#FFFFFF' : '#DC2626'}
+                      strokeWidth={2.4}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.85}
+                      style={[
+                        styles.modalConfirmBtnText,
+                        !isBlockReady && styles.modalConfirmBtnTextFaint,
+                      ]}
+                    >
+                      Confirm Block
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </AdminPageBackground>
   );
 };
+
+export default AdminFarmerDetailsScreen;
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
-  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' },
-  header: {
-    flexDirection: 'row',
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 16,
-    backgroundColor: '#17212F',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
-    marginBottom: 16,
-    zIndex: 10,
   },
-  backButton: { marginRight: 8, padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5 },
-  scrollContent: { paddingBottom: 40 },
-  profileSection: {
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 24,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 10,
+    padding: 20,
+  },
+  emptyText: {
+    fontFamily: AdminFonts.medium,
+    color: ADMIN_THEME.colors.textSecondary,
+    fontSize: 16,
+  },
+  headerTitle: {
+    fontSize: 19.5,
+    lineHeight: 25,
+  },
+  headerChatBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 40,
+    gap: 14,
+  },
+
+  // 1) Profile Card
+  profileCard: {
+    alignItems: 'center',
+    paddingVertical: 22,
+    paddingHorizontal: 16,
   },
   avatarContainer: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: '#F5C16C',
-    justifyContent: 'center', alignItems: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
     overflow: 'hidden',
+    backgroundColor: ADMIN_THEME.colors.indigoTint,
+    ...ADMIN_THEME.shadows.card,
     marginBottom: 12,
-    borderWidth: 3, borderColor: '#17212F',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8,
   },
-  profileImage: { width: '100%', height: '100%' },
-  farmerName: { fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 4 },
-  farmerEmail: { fontSize: 13, color: '#4B5563', marginBottom: 12, fontWeight: '500' },
-  statusBadgeContainer: { flexDirection: 'row', justifyContent: 'center' },
-  section3D: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#17212F', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 8 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#F9FAFB', padding: 10, borderRadius: 10 },
-  infoIcon: { marginRight: 12 },
-  infoTextContainer: { flex: 1 },
-  infoLabel: { fontSize: 12, color: '#6B7280', marginBottom: 2, fontWeight: '600' },
-  infoValue: { fontSize: 14, color: '#111827', fontWeight: 'bold' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  statBox: {
-    width: '47%', backgroundColor: '#17212F',
-    padding: 14, borderRadius: 14, marginBottom: 12,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 6,
+  farmerName: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 17.5,
+    lineHeight: 23,
+    color: ADMIN_THEME.colors.ink,
+    textAlign: 'center',
   },
-  statValue: { fontSize: 20, fontWeight: '900', color: '#F5C16C', marginBottom: 6 },
-  statLabel: { fontSize: 12, color: '#E5E7EB', fontWeight: '600', textAlign: 'center' },
-  productCard: {
-    width: 120, backgroundColor: '#FFFFFF',
-    borderRadius: 12, marginRight: 12,
-    borderWidth: 1, borderColor: '#F3F4F6',
+  farmerEmail: {
+    marginTop: 3,
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.textSecondary,
+    textAlign: 'center',
+  },
+  farmNameText: {
+    marginTop: 2,
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.indigo,
+    textAlign: 'center',
+  },
+  profileBadgeAndActionRow: {
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    width: '100%',
+    paddingHorizontal: 6,
+  },
+  statusWrapper: {
+    borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 5, elevation: 4,
   },
-  productImage: { width: '100%', height: 90 },
-  productInfo: { padding: 8 },
-  productName: { fontSize: 12, fontWeight: 'bold', color: '#1B2430', marginBottom: 4 },
-  productPrice: { fontSize: 12, color: '#2D983A', fontWeight: '800' },
-  orderCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12, padding: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: '#E5E7EB',
+  activeShadow: {
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  orderHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  orderId: { fontSize: 13, fontWeight: 'bold', color: '#17212F' },
-  orderStatus: { fontSize: 12, fontWeight: 'bold' },
-  customerName: { fontSize: 12, color: '#4B5563', marginBottom: 4, fontWeight: '500' },
-  orderAmount: { fontSize: 13, fontWeight: '800', color: '#1B2430', marginBottom: 2 },
-  orderDate: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
-  emptyText: { textAlign: 'center', color: '#6B7280', marginTop: 40, fontSize: 18, fontWeight: '500' },
-  emptyTextSmall: { textAlign: 'center', color: '#9CA3AF', marginVertical: 16, fontSize: 15, fontStyle: 'italic' },
-  blockBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#FEE2E2',
-    borderWidth: 1,
-    borderColor: '#F87171',
+  pendingShadow: {
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  blockBtnText: {
+  statusIndicatorGradient: {
+    height: 36,
+    paddingHorizontal: 13,
+    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  statusIndicatorDotWhite: {
+    width: 6.5,
+    height: 6.5,
+    borderRadius: 3.25,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+  },
+  statusIndicatorTextWhite: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 11.5,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  actionButtonWrapper: {
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  blockShadow: {
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  unblockShadow: {
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionButtonGradient: {
+    height: 36,
+    paddingHorizontal: 13,
+    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  actionButtonText: {
+    fontFamily: AdminFonts.semiBold,
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#EF4444',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
+  actionBtnCompact: {
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: ADMIN_THEME.radius.pill,
+  },
+
+  // 2) Information Card
+  infoCard: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 18,
+    color: ADMIN_THEME.colors.ink,
+    marginBottom: 14,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: ADMIN_THEME.colors.divider,
+  },
+  infoRowLast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  infoIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: ADMIN_THEME.colors.indigoTint,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoTextContainer: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 11.5,
+    color: ADMIN_THEME.colors.textSecondary,
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 13.5,
+    color: ADMIN_THEME.colors.ink,
+  },
+
+  // 3) Statistics Card
+  statsCard: {
+    padding: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  statBox: {
+    width: '48%',
+    backgroundColor: ADMIN_THEME.colors.inputBg,
+    borderRadius: ADMIN_THEME.radius.input,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 20,
+    color: ADMIN_THEME.colors.ink,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontFamily: AdminFonts.medium,
+    fontSize: 11.5,
+    color: ADMIN_THEME.colors.textSecondary,
+    textAlign: 'center',
+  },
+
+  // 4) Catalog Card
+  catalogCard: {
+    padding: 16,
+  },
+  productCard: {
+    width: 140,
+    marginRight: 12,
+    backgroundColor: ADMIN_THEME.colors.inputBg,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
+  },
+  productImage: {
+    width: '100%',
+    height: 90,
+    backgroundColor: '#E5E7EB',
+  },
+  productInfo: {
+    padding: 8,
+  },
+  productName: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.ink,
+  },
+  productPrice: {
+    marginTop: 2,
+    fontFamily: AdminFonts.bold,
+    fontSize: 12.5,
+    color: ADMIN_THEME.colors.indigo,
+  },
+
+  // 5) Orders Card
+  ordersCard: {
+    padding: 16,
+  },
+  orderCard: {
+    backgroundColor: ADMIN_THEME.colors.inputBg,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  orderId: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.ink,
+  },
+  customerName: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 12,
+    color: ADMIN_THEME.colors.textSecondary,
+    marginBottom: 4,
+  },
+  orderBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  orderAmount: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.ink,
+  },
+  orderDate: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 11,
+    color: ADMIN_THEME.colors.muted,
+  },
+  emptyTextSmall: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.textSecondary,
+    marginVertical: 10,
+  },
+
+  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(11, 19, 38, 0.72)',
+    justifyContent: 'center',
     padding: 20,
   },
-  modalContainer: {
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  modalCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
+    borderRadius: 24,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.18)',
+    ...ADMIN_THEME.shadows.card,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  modalIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalTitle: {
+    fontFamily: AdminFonts.heading,
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
+    color: ADMIN_THEME.colors.ink,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalDescription: {
-    fontSize: 14,
-    color: '#4B5563',
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.textSecondary,
     marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: 19,
   },
-  reasonInput: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 16,
-    height: 100,
-    textAlignVertical: 'top',
-    fontSize: 15,
-    color: '#1F2937',
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginBottom: 8,
-  },
-  dateInput: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 15,
-    color: '#1F2937',
-    marginBottom: 20,
+  farmerHighlightText: {
+    fontFamily: AdminFonts.bold,
+    color: ADMIN_THEME.colors.ink,
   },
   modalActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  modalBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    minWidth: 100,
     alignItems: 'center',
+    gap: 12,
+    marginTop: 14,
   },
   modalCancelBtn: {
-    backgroundColor: '#F3F4F6',
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  cancelGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
   },
   modalCancelBtnText: {
-    color: '#4B5563',
-    fontWeight: '600',
-  },
-  modalBlockBtn: {
-    backgroundColor: '#EF4444',
-  },
-  modalBlockBtnText: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 14,
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    letterSpacing: 0.3,
+  },
+  modalConfirmBtn: {
+    flex: 1.25,
+    height: 48,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  modalConfirmBtnActive: {
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.45,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  modalConfirmBtnFaint: {
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  confirmGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  confirmGradientFaint: {
+    borderWidth: 1.2,
+    borderColor: '#FCA5A5',
+    borderRadius: 14,
+  },
+  modalConfirmBtnText: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 13.5,
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  modalConfirmBtnTextFaint: {
+    color: '#DC2626',
   },
 });
-export default AdminFarmerDetailsScreen;

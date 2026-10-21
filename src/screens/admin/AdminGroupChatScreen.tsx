@@ -1,10 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Keyboard, NativeModules, findNodeHandle } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  NativeModules,
+  findNodeHandle,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { getAdminGroupMessages, sendAdminGroupMessage, getAvailableAdmins, deleteAdminGroupMessage } from '../../services/adminService';
+import {
+  getAdminGroupMessages,
+  sendAdminGroupMessage,
+  getAvailableAdmins,
+  deleteAdminGroupMessage,
+} from '../../services/adminService';
+import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
+import { AdminHeader } from '../../components/admin/AdminHeader';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 
 interface AdminGroupMessage {
   id: string;
@@ -15,6 +39,7 @@ interface AdminGroupMessage {
 
 export const AdminGroupChatScreen = () => {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<AdminGroupMessage[]>([]);
   const [adminsMap, setAdminsMap] = useState<Record<string, string>>({});
   const [inputText, setInputText] = useState('');
@@ -30,17 +55,22 @@ export const AdminGroupChatScreen = () => {
 
   useEffect(() => {
     fetchAdminsAndMessages();
-    
+
     const showSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
+      () => {
+        setKeyboardVisible(true);
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
     );
     const hideSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => setKeyboardVisible(false)
     );
 
-    let interval = setInterval(() => {
+    const interval = setInterval(() => {
       fetchMessages(false);
     }, 5000);
 
@@ -54,7 +84,6 @@ export const AdminGroupChatScreen = () => {
   const fetchAdminsAndMessages = async () => {
     try {
       setLoading(true);
-      // Fetch admins mapping
       const adminRes = await getAvailableAdmins();
       if (adminRes && adminRes.data) {
         const map: Record<string, string> = {};
@@ -63,7 +92,7 @@ export const AdminGroupChatScreen = () => {
         });
         setAdminsMap(map);
       }
-      
+
       await fetchMessages(false);
     } catch (error) {
       console.error('Error fetching admins/messages:', error);
@@ -77,7 +106,6 @@ export const AdminGroupChatScreen = () => {
     try {
       if (showLoader) setLoading(true);
       const response = await getAdminGroupMessages();
-      // The API returns the list directly in the body (ResponseEntity<List<AdminGroupMessage>>)
       if (response && Array.isArray(response)) {
         setMessages(response);
         markAdminGroupAsRead();
@@ -99,7 +127,7 @@ export const AdminGroupChatScreen = () => {
 
   const sendMessage = async () => {
     if (isSendingRef.current) return;
-    
+
     const reactText = (inputTextRef.current || inputText || '').trim();
     let currentInput = reactText;
 
@@ -115,17 +143,17 @@ export const AdminGroupChatScreen = () => {
             }
           }
         } catch (e) {
-          console.warn("Failed to get native text:", e);
+          console.warn('Failed to get native text:', e);
         }
       }
     }
 
     currentInput = currentInput.trim();
     if (!currentInput) {
-      if (Platform.OS === 'android') textInputRef.current?.focus(); 
+      if (Platform.OS === 'android') textInputRef.current?.focus();
       return;
     }
-    
+
     setSending(true);
     isSendingRef.current = true;
 
@@ -134,8 +162,8 @@ export const AdminGroupChatScreen = () => {
 
       if (sendRes && sendRes.id) {
         const newMsg = sendRes;
-        setMessages(prev => {
-          if (prev.some(m => m.id === newMsg.id)) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) {
             return prev;
           }
           return [...prev, newMsg];
@@ -145,7 +173,7 @@ export const AdminGroupChatScreen = () => {
         textInputRef.current?.clear();
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         if (Platform.OS === 'android') {
-          setTimeout(() => textInputRef.current?.focus(), 150); 
+          setTimeout(() => textInputRef.current?.focus(), 150);
         }
       }
     } catch (error) {
@@ -160,149 +188,199 @@ export const AdminGroupChatScreen = () => {
   const handleLongPressMessage = (message: AdminGroupMessage) => {
     const isMe = message.senderAdminId === user?.userId;
     const title = 'Delete message?';
-    const msgText = isMe 
+    const msgText = isMe
       ? 'This message will be deleted for everyone.'
       : 'This message will only be removed from your chat.';
-      
-    Alert.alert(
-      title,
-      msgText,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => deleteMessage(message.id)
-        }
-      ]
-    );
+
+    Alert.alert(title, msgText, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteMessage(message.id),
+      },
+    ]);
   };
 
   const deleteMessage = async (messageId: string) => {
     try {
       await deleteAdminGroupMessage(messageId);
-      setMessages(prev => prev.filter(m => m.id !== messageId));
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
     } catch (error) {
       console.error('Error deleting message:', error);
       Alert.alert('Error', 'Could not delete message.');
     }
   };
 
-  const renderMessage = ({ item }: { item: AdminGroupMessage }) => {
+  const formatDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    if (d.toDateString() === today.toDateString()) return 'Today';
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const renderMessage = ({ item, index }: { item: AdminGroupMessage; index: number }) => {
     const isMe = item.senderAdminId === user?.userId;
-    const senderName = isMe ? 'You' : (adminsMap[item.senderAdminId] || 'Admin');
-    
+    const senderName = isMe ? 'You' : adminsMap[item.senderAdminId] || 'Admin';
+    const prevItem = index > 0 ? messages[index - 1] : null;
+    const isDifferentDay =
+      !prevItem ||
+      new Date(item.createdAt).toDateString() !== new Date(prevItem.createdAt).toDateString();
+
     return (
-      <View style={[styles.messageWrapper, isMe ? styles.myMessageWrapper : styles.adminMessageWrapper]}>
-        {!isMe && (
-          <Text style={styles.senderNameText}>{senderName}</Text>
-        )}
-        <TouchableOpacity 
-          activeOpacity={0.8}
-          onLongPress={() => handleLongPressMessage(item)}
-          style={[
-            styles.messageBubble, 
-            isMe ? styles.myMessage : styles.adminMessage,
-          ]}
-        >
-          <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.adminMessageText]}>
-            {item.message}
-          </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4 }}>
-            <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.adminTimeText]}>
-              {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
+      <View>
+        {isDifferentDay && (
+          <View style={styles.dateSeparatorContainer}>
+            <View style={styles.dateSeparatorChip}>
+              <Text style={styles.dateSeparatorText}>{formatDateLabel(item.createdAt)}</Text>
+            </View>
           </View>
-        </TouchableOpacity>
+        )}
+
+        <View
+          style={[styles.messageWrapper, isMe ? styles.myMessageWrapper : styles.otherMessageWrapper]}
+        >
+          {!isMe && <Text style={styles.senderNameText}>{senderName}</Text>}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onLongPress={() => handleLongPressMessage(item)}
+            style={styles.bubbleTouch}
+          >
+            {isMe ? (
+              <LinearGradient
+                colors={['#1F2F6B', '#0B1326']}
+                start={{ x: 0.1, y: 0 }}
+                end={{ x: 0.9, y: 1 }}
+                style={styles.myBubble}
+              >
+                <Text style={styles.myBubbleText}>{item.message}</Text>
+                <View style={styles.metaTimeRow}>
+                  <Text style={styles.myTimeText}>
+                    {new Date(item.createdAt).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
+              </LinearGradient>
+            ) : (
+              <View style={styles.otherBubble}>
+                <Text style={styles.otherBubbleText}>{item.message}</Text>
+                <View style={styles.metaTimeRow}>
+                  <Text style={styles.otherTimeText}>
+                    {new Date(item.createdAt).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 25}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={styles.headerTitle}>Admin Group</Text>
-        </View>
-      </View>
-
-      {loading && messages.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#17212F" />
-        </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.messageList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-          ListEmptyComponent={
-            <View style={styles.centerContainer}>
-              <Ionicons name="chatbubbles-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>No messages yet.</Text>
-              <Text style={styles.emptySubText}>Start the conversation with other admins.</Text>
-            </View>
-          }
+    <AdminPageBackground>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <AdminHeader
+          variant="inner"
+          title="Admin Group"
+          subtitle="Internal team communication"
+          onBack={() => navigation.goBack()}
         />
-      )}
 
-      <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? 30 : (isKeyboardVisible ? 12 : 45) }]}>
-        <TextInput
-          ref={textInputRef}
-          style={styles.input}
-          value={inputText}
-          placeholder="Type your message..."
-          placeholderTextColor="#9CA3AF"
-          onChangeText={handleTextChange}
-          multiline
-        />
-        <TouchableOpacity 
-          style={[styles.sendButton, sending && styles.sendButtonDisabled]}
-          onPress={sendMessage}
-          disabled={sending}
+        {loading && messages.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#4F5BD5" />
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            renderItem={renderMessage}
+            contentContainerStyle={styles.messageList}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onContentSizeChange={() => {
+              if (messages.length > 0) {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }
+            }}
+            onLayout={() => {
+              if (messages.length > 0) {
+                flatListRef.current?.scrollToEnd({ animated: false });
+              }
+            }}
+            ListEmptyComponent={
+              <View style={styles.centerContainer}>
+                <Ionicons name="chatbubbles-outline" size={48} color="#C9CEF5" />
+                <Text style={styles.emptyText}>No messages yet.</Text>
+                <Text style={styles.emptySubText}>Start the conversation with other admins.</Text>
+              </View>
+            }
+          />
+        )}
+
+        {/* Input Bar above Keyboard */}
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              paddingBottom: isKeyboardVisible
+                ? 10
+                : Math.max(insets.bottom, Platform.OS === 'android' ? 24 : 16) + 10,
+            },
+          ]}
         >
-          {sending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Ionicons name="send" size={20} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <TextInput
+            ref={textInputRef}
+            style={styles.input}
+            value={inputText}
+            placeholder="Type your message..."
+            placeholderTextColor="#8A93AB"
+            onChangeText={handleTextChange}
+            multiline
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, sending && styles.sendButtonDisabled]}
+            onPress={sendMessage}
+            disabled={sending}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={ADMIN_THEME.colors.navyGradient}
+              start={{ x: 0.1, y: 0 }}
+              end={{ x: 0.9, y: 1 }}
+              style={styles.sendGradient}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#E7C06A" />
+              ) : (
+                <Ionicons name="send" size={17} color="#E7C06A" />
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </AdminPageBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F1E6',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    backgroundColor: '#17212F',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   centerContainer: {
     flex: 1,
@@ -312,107 +390,146 @@ const styles = StyleSheet.create({
   },
   messageList: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 20,
+    flexGrow: 1,
+  },
+  dateSeparatorContainer: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  dateSeparatorChip: {
+    backgroundColor: '#E8EBFF',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  dateSeparatorText: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 11,
+    color: '#4F5BD5',
   },
   messageWrapper: {
-    marginBottom: 12,
     maxWidth: '80%',
+    marginBottom: 10,
   },
   myMessageWrapper: {
     alignSelf: 'flex-end',
   },
-  adminMessageWrapper: {
+  otherMessageWrapper: {
     alignSelf: 'flex-start',
   },
   senderNameText: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 11.5,
+    color: '#4F5BD5',
     marginBottom: 4,
-    marginLeft: 4,
-    fontWeight: '600',
+    marginLeft: 6,
   },
-  messageBubble: {
-    padding: 12,
-    borderRadius: 16,
+  bubbleTouch: {
+    width: '100%',
   },
-  myMessage: {
-    backgroundColor: '#17212F',
-    borderBottomRightRadius: 4,
+  myBubble: {
+    borderRadius: 20,
+    borderBottomRightRadius: 6,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
-  adminMessage: {
+  otherBubble: {
     backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#E3E7F2',
+    borderRadius: 20,
+    borderBottomLeftRadius: 6,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
+    ...ADMIN_THEME.shadows.card,
   },
-  messageText: {
-    fontSize: 15,
+  myBubbleText: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 14,
+    color: '#FFFFFF',
     lineHeight: 20,
   },
-  myMessageText: {
-    color: '#FFFFFF',
+  otherBubbleText: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 14,
+    color: '#0B1326',
+    lineHeight: 20,
   },
-  adminMessageText: {
-    color: '#1F2937',
-  },
-  timeText: {
-    fontSize: 11,
-    marginTop: 0,
-    alignSelf: 'flex-end',
+  metaTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 4,
   },
   myTimeText: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 10.5,
     color: 'rgba(255, 255, 255, 0.7)',
   },
-  adminTimeText: {
-    color: '#9CA3AF',
+  otherTimeText: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 10.5,
+    color: '#8A93AB',
   },
   emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginTop: 16,
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 15,
+    color: ADMIN_THEME.colors.ink,
+    marginTop: 12,
   },
   emptySubText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 8,
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.inkMuted,
+    marginTop: 4,
     textAlign: 'center',
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    alignItems: 'flex-end',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: '#E3E7F2',
+    alignItems: 'center',
+    ...ADMIN_THEME.shadows.stickyBar,
   },
   input: {
     flex: 1,
-    backgroundColor: '#F8F1E6',
-    borderRadius: 20,
+    minHeight: 44,
+    maxHeight: 100,
+    borderRadius: 22,
+    backgroundColor: '#F7F8FD',
+    borderWidth: 1.5,
+    borderColor: '#E3E7F2',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    maxHeight: 120,
-    fontSize: 15,
-    color: '#1F2937',
-    borderWidth: 1,
-    borderColor: '#F5C16C',
+    paddingTop: Platform.OS === 'ios' ? 12 : 10,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 10,
+    fontFamily: AdminFonts.regular,
+    fontSize: 14,
+    color: '#0B1326',
   },
   sendButton: {
-    backgroundColor: '#F5C16C',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginLeft: 10,
+    overflow: 'hidden',
+  },
+  sendGradient: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
-    marginLeft: 12,
+    justifyContent: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
   },
 });
 

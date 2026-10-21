@@ -22,6 +22,11 @@ import { NotificationService } from '../services/NotificationService';
 import { NotificationSendRequest } from '../types';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { THEME } from '../constants/theme';
+import { PageBackground } from '../components/ui/PageBackground';
+import { ThemedHeader } from '../components/ui/ThemedHeader';
+import { PrimaryButton } from '../components/ui/Buttons';
+
 export const CustomerMessageFarmerScreen = () => {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
@@ -30,6 +35,7 @@ export const CustomerMessageFarmerScreen = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const route = useRoute<any>();
   const preSelectedId = route.params?.preSelectedFarmerId;
+  const preSelectedName = route.params?.preSelectedFarmerName;
   const [recipient, setRecipient] = useState<'ALL' | 'SPECIFIC'>(preSelectedId ? 'SPECIFIC' : 'ALL');
   const [specificUserId, setSpecificUserId] = useState<string>(preSelectedId || '');
   const [title, setTitle] = useState('');
@@ -134,14 +140,13 @@ export const CustomerMessageFarmerScreen = () => {
     }
   };
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Message Farmer</Text>
-      </View>
+    <PageBackground style={styles.safeArea}>
+      <ThemedHeader
+        variant="inner"
+        title={preSelectedName || 'Message Farmer'}
+        subtitle={preSelectedName ? 'Farmer' : undefined}
+        onBackPress={() => navigation.goBack()}
+      />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -247,79 +252,46 @@ export const CustomerMessageFarmerScreen = () => {
           textAlignVertical="top"
           placeholderTextColor="#9CA3AF"
         />
-        <TouchableOpacity
-          style={[styles.sendButton, loading && styles.sendButtonDisabled]}
+        <PrimaryButton
+          title="Send Message"
+          loading={loading}
           onPress={handleSend}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.sendButtonText}>Send Message</Text>
-          )}
-        </TouchableOpacity>
+          style={{ marginTop: 28, marginBottom: 40 }}
+        />
         </ScrollView>
       </KeyboardAvoidingView>
       <Modal transparent visible={showSuccessModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.successModalContent}>
             <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={60} color="#10B981" />
+              <Ionicons name="checkmark-circle" size={60} color="#2E7D4F" />
             </View>
             <Text style={styles.successModalTitle}>Success!</Text>
             <Text style={styles.successModalMessage}>Message sent successfully</Text>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </PageBackground>
   );
 };
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 16 : 16,
-    paddingBottom: 24,
-    backgroundColor: '#1E3A8A',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginLeft: 16,
   },
   content: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 60,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
+    fontFamily: THEME.fonts.bold,
+    fontSize: 13,
+    color: '#3B1A0E',
     marginBottom: 8,
     marginTop: 16,
+    letterSpacing: 0.5,
   },
   rowSelector: {
     flexDirection: 'row',
@@ -328,53 +300,51 @@ const styles = StyleSheet.create({
   selectorBtn: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFDF8',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
     alignItems: 'center',
   },
   selectorBtnActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#1E3A8A',
+    backgroundColor: '#FFF1E3',
+    borderColor: '#B8470F',
   },
   selectorText: {
+    fontFamily: THEME.fonts.medium,
     fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
+    color: '#8A6F5C',
   },
   selectorTextActive: {
-    color: '#1E3A8A',
-    fontWeight: '700',
+    fontFamily: THEME.fonts.bold,
+    color: '#B8470F',
   },
   readOnlyContainer: {
     marginTop: 8,
   },
   readOnlyBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#FFF1E3',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F2B27D',
   },
   readOnlyBadgeText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    fontFamily: THEME.fonts.bold,
+    color: '#B8470F',
     fontSize: 12,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
+    borderRadius: 16,
     padding: 16,
-    fontSize: 16,
-    color: '#111827',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    fontFamily: THEME.fonts.regular,
+    fontSize: 15,
+    color: '#3B1A0E',
   },
   textArea: {
     height: 140,
@@ -384,19 +354,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   infoText: {
-    color: '#6B7280',
+    fontFamily: THEME.fonts.medium,
+    color: '#8A6F5C',
     fontSize: 14,
     fontStyle: 'italic',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginBottom: 12,
   },
   searchIcon: {
@@ -404,53 +375,34 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    color: '#111827',
+    fontFamily: THEME.fonts.medium,
+    fontSize: 14,
+    color: '#3B1A0E',
     padding: 0,
   },
   usersScroll: {
     flexDirection: 'row',
   },
   userCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
+    borderRadius: 16,
     padding: 12,
     marginRight: 12,
-    width: 100,
+    width: 104,
     alignItems: 'center',
   },
   userCardSelected: {
-    backgroundColor: '#1E3A8A',
-    borderColor: '#1E3A8A',
+    backgroundColor: '#B8470F',
+    borderColor: '#B8470F',
   },
   userName: {
     marginTop: 8,
+    fontFamily: THEME.fonts.semiBold,
     fontSize: 12,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  sendButton: {
-    backgroundColor: '#1E3A8A',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 40,
-    shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  sendButtonDisabled: {
-    opacity: 0.7,
-  },
-  sendButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    color: '#3B1A0E',
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -460,11 +412,13 @@ const styles = StyleSheet.create({
   },
   successModalContent: {
     width: '80%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: '#F0E1CF',
+    shadowColor: 'rgba(90,40,15,0.15)',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 15,
@@ -474,14 +428,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   successModalTitle: {
+    fontFamily: THEME.fonts.serif,
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#111827',
+    color: '#3B1A0E',
     marginBottom: 8,
   },
   successModalMessage: {
-    fontSize: 16,
-    color: '#4B5563',
+    fontFamily: THEME.fonts.regular,
+    fontSize: 15,
+    color: '#7A6350',
     textAlign: 'center',
   },
 });

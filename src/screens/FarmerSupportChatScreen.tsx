@@ -1,8 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal, Keyboard, NativeModules, findNodeHandle } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  NativeModules,
+  findNodeHandle,
+  StatusBar,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotification } from '../context/NotificationContext';
+import { FarmerHeader } from '../components/farmer/FarmerHeader';
+import { FARMER_THEME } from '../constants/farmerTheme';
 import api from '../services/api';
 
 interface SupportMessage {
@@ -14,8 +33,28 @@ interface SupportMessage {
   createdAt: string;
 }
 
+const isSameDay = (d1Str?: string, d2Str?: string) => {
+  if (!d1Str || !d2Str) return false;
+  const d1 = new Date(d1Str);
+  const d2 = new Date(d2Str);
+  return d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
+};
+
+const formatDateLabel = (dateStr: string) => {
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return 'TODAY';
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'YESTERDAY';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+};
+
 export const FarmerSupportChatScreen = () => {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { unreadCount } = useNotification();
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -40,7 +79,12 @@ export const FarmerSupportChatScreen = () => {
     
     const showSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
+      () => {
+        setKeyboardVisible(true);
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 120);
+      }
     );
     const hideSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
@@ -128,7 +172,6 @@ export const FarmerSupportChatScreen = () => {
           const reactTag = findNodeHandle(textInputRef.current);
           if (reactTag) {
             const nativeText = await TextInputCommiter.getAndCommitText(reactTag);
-            // ONLY adopt nativeText if it contains additional uncommitted IME text; NEVER truncate
             if (nativeText && nativeText.trim().length > currentInput.length) {
               currentInput = nativeText.trim();
             }
@@ -141,7 +184,7 @@ export const FarmerSupportChatScreen = () => {
 
     currentInput = currentInput.trim();
     if (!currentInput) {
-      if (Platform.OS === 'android') textInputRef.current?.focus(); // restore focus if empty
+      if (Platform.OS === 'android') textInputRef.current?.focus();
       return;
     }
     
@@ -150,7 +193,6 @@ export const FarmerSupportChatScreen = () => {
     isSendingRef.current = true;
 
     try {
-      // If no active request exists, create one first
       if (!currentReqId) {
         const createRes = await api.post('/support', {
           subject: 'Account Blocked - Admin Support',
@@ -168,7 +210,6 @@ export const FarmerSupportChatScreen = () => {
       const messageToSend = currentInput;
       if (!messageToSend) return;
 
-      // Send the message explicitly as JSON
       const payload = { message: messageToSend };
       const sendRes = await api.post(`/support/${currentReqId}/messages`, payload, {
         headers: {
@@ -189,7 +230,7 @@ export const FarmerSupportChatScreen = () => {
         textInputRef.current?.clear();
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         if (Platform.OS === 'android') {
-          setTimeout(() => textInputRef.current?.focus(), 150); // restore focus after send
+          setTimeout(() => textInputRef.current?.focus(), 150);
         }
       }
     } catch (error) {
@@ -228,40 +269,64 @@ export const FarmerSupportChatScreen = () => {
     }
   };
 
-  const renderMessage = ({ item }: { item: SupportMessage }) => {
+  const renderMessage = ({ item, index }: { item: SupportMessage; index: number }) => {
     const isMe = item.senderType === 'FARMER';
+    const showDateChip = index === 0 || !isSameDay(messages[index - 1]?.createdAt, item.createdAt);
     
     return (
-      <TouchableOpacity 
-        onLongPress={() => toggleSelection(item.supportMessageId)}
-        onPress={() => {
-          if (selectedMessageIds.length > 0) {
-            toggleSelection(item.supportMessageId);
-          }
-        }}
-        activeOpacity={0.9}
-        style={[
-          styles.messageBubble, 
-          isMe ? styles.myMessage : styles.adminMessage,
-          selectedMessageIds.includes(item.supportMessageId) && styles.selectedMessage
-        ]}
-      >
-        <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.adminMessageText]}>
-          {item.message}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4 }}>
-          <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.adminTimeText, { marginTop: 0 }]}>
-            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-          {isMe && (
-            <>
-              <Text style={[styles.statusText, item.isRead ? styles.readStatus : styles.sentStatus]}>
-                {item.isRead ? ' ✓✓' : ' ✓'}
-              </Text>
-            </>
+      <View>
+        {showDateChip && (
+          <View style={styles.dateChip}>
+            <Text style={styles.dateChipText}>{formatDateLabel(item.createdAt)}</Text>
+          </View>
+        )}
+        <TouchableOpacity 
+          onLongPress={() => toggleSelection(item.supportMessageId)}
+          onPress={() => {
+            if (selectedMessageIds.length > 0) {
+              toggleSelection(item.supportMessageId);
+            }
+          }}
+          activeOpacity={0.9}
+          style={{ width: '100%' }}
+        >
+          {isMe ? (
+            <LinearGradient
+              colors={['#2FA66B', '#145238']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.myMessage,
+                selectedMessageIds.includes(item.supportMessageId) && styles.selectedMessage
+              ]}
+            >
+              <Text style={styles.myMessageText}>{item.message}</Text>
+              <View style={styles.timeRow}>
+                <Text style={styles.myTimeText}>
+                  {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <Text style={[styles.statusText, item.isRead ? styles.readStatus : styles.sentStatus]}>
+                  {item.isRead ? ' ✓✓' : ' ✓'}
+                </Text>
+              </View>
+            </LinearGradient>
+          ) : (
+            <View
+              style={[
+                styles.adminMessage,
+                selectedMessageIds.includes(item.supportMessageId) && styles.selectedMessage
+              ]}
+            >
+              <Text style={styles.adminMessageText}>{item.message}</Text>
+              <View style={styles.timeRow}>
+                <Text style={styles.adminTimeText}>
+                  {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            </View>
           )}
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -269,41 +334,43 @@ export const FarmerSupportChatScreen = () => {
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 25}
+      keyboardVerticalOffset={0}
     >
+      <StatusBar barStyle="light-content" backgroundColor="#1F7A4D" />
       {selectedMessageIds.length > 0 ? (
-        <View style={[styles.header, styles.headerSelected]}>
-          <TouchableOpacity onPress={() => setSelectedMessageIds([])} style={styles.backButton}>
+        <LinearGradient
+          colors={['#1F7A4D', '#082419']}
+          style={styles.selectionHeader}
+        >
+          <TouchableOpacity onPress={() => setSelectedMessageIds([])} style={styles.selectionBackButton}>
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{selectedMessageIds.length} Selected</Text>
-          <TouchableOpacity onPress={confirmDeleteSelected} style={{ marginLeft: 'auto', padding: 4 }}>
-            <Ionicons name="trash" size={22} color="#FFFFFF" />
+          <Text style={styles.selectionHeaderTitle}>{selectedMessageIds.length} Selected</Text>
+          <TouchableOpacity onPress={confirmDeleteSelected} style={styles.selectionTrashButton}>
+            <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
       ) : (
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+        <FarmerHeader
+          variant="inner"
+          title="Support Chat"
+          onBackPress={() => navigation.goBack()}
+          rightAction={
+            <TouchableOpacity style={styles.headerIconButton} onPress={() => navigation.navigate('Notifications')}>
+              <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+              {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Contact Admin</Text>
-          </View>
-          <TouchableOpacity style={styles.headerIconButton} onPress={() => navigation.navigate('Notifications')}>
-            <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
-            {unreadCount > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+          }
+        />
       )}
-
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#7C3AED" />
+          <ActivityIndicator size="large" color="#1F7A4D" />
         </View>
       ) : (
         <FlatList
@@ -312,24 +379,37 @@ export const FarmerSupportChatScreen = () => {
           keyExtractor={(item) => item.supportMessageId}
           renderItem={renderMessage}
           contentContainerStyle={styles.messageList}
-          // Removed onContentSizeChange to prevent jumping when selecting messages
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.centerContainer}>
-              <Ionicons name="chatbubbles-outline" size={48} color="#D1D5DB" />
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="chatbubbles-outline" size={38} color="#17663F" />
+              </View>
               <Text style={styles.emptyText}>No previous conversation.</Text>
-              <Text style={styles.emptySubText}>Send a message to start chatting with Admin.</Text>
+              <Text style={styles.emptySubText}>Send a message to start chatting with Admin Support.</Text>
             </View>
           }
         />
       )}
 
-      <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? 30 : (isKeyboardVisible ? 12 : 45) }]}>
+      <View
+        style={[
+          styles.inputContainer,
+          {
+            paddingBottom: isKeyboardVisible
+              ? 10
+              : Math.max(insets.bottom, 20) + 14,
+          },
+        ]}
+      >
         <TextInput
           ref={textInputRef}
           style={styles.input}
           value={inputText}
           placeholder="Type your message..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#7D8D81"
           onChangeText={handleTextChange}
           multiline
         />
@@ -337,12 +417,18 @@ export const FarmerSupportChatScreen = () => {
           style={[styles.sendButton, sending && styles.sendButtonDisabled]}
           onPress={sendMessage}
           disabled={sending}
+          activeOpacity={0.8}
         >
-          {sending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Ionicons name="send" size={20} color="#FFFFFF" />
-          )}
+          <LinearGradient
+            colors={['#2FA66B', '#145238']}
+            style={styles.sendButtonGradient}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="send" size={20} color="#FFFFFF" />
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -352,220 +438,206 @@ export const FarmerSupportChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F1E6',
+    backgroundColor: '#F3F8F0',
   },
-  header: {
+  selectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    backgroundColor: '#7C3AED',
-    borderBottomWidth: 1,
-    borderBottomColor: '#6D28D9',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 12 : 52,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  headerSelected: {
-    backgroundColor: '#6D28D9',
+  selectionBackButton: {
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  selectionHeaderTitle: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 17,
+    color: '#FFFFFF',
+  },
+  selectionTrashButton: {
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   headerIconButton: {
     position: 'relative',
-    padding: 4,
+    padding: 6,
   },
   notificationBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: 2,
+    right: 2,
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#EF4444',
+    backgroundColor: FARMER_THEME.colors.harvestGold,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#7C3AED',
+    borderColor: '#1F7A4D',
   },
   badgeText: {
-    color: '#FFFFFF',
-    fontSize: 8,
-    fontWeight: 'bold',
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  modalIconBox: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#F3E8FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
-  infoPopupText: {
-    color: '#4B5563',
-    fontSize: 18,
-    textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: 24,
-  },
-  modalGotItBtn: {
-    backgroundColor: '#7C3AED',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 24,
-    width: '100%',
-    alignItems: 'center',
-  },
-  modalGotItText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#082419',
+    fontSize: 9,
+    fontFamily: FARMER_THEME.fonts.bold,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#DDF3E4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#0E3B29',
+    marginTop: 6,
+  },
+  emptySubText: {
+    fontSize: 13,
+    color: '#5C6B60',
+    marginTop: 6,
+    textAlign: 'center',
   },
   messageList: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 20,
+    flexGrow: 1,
   },
-  messageBubble: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
+  dateChip: {
+    alignSelf: 'center',
+    backgroundColor: '#DDF3E4',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 14,
+    marginVertical: 10,
+  },
+  dateChipText: {
+    color: '#17663F',
+    fontSize: 11,
+    fontFamily: FARMER_THEME.fonts.bold,
+    letterSpacing: 0.5,
   },
   myMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#7C3AED',
-    borderBottomRightRadius: 4,
+    maxWidth: '82%',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderBottomRightRadius: 6,
+    marginBottom: 8,
   },
   selectedMessage: {
-    backgroundColor: '#4C1D95', // Darker purple for high contrast
-    opacity: 0.7,               // Noticeable opacity change
+    opacity: 0.75,
+    borderWidth: 1.5,
+    borderColor: FARMER_THEME.colors.harvestGold,
   },
   adminMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 20,
+    maxWidth: '82%',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#FBFEF9',
+    borderWidth: 1,
+    borderColor: '#DCE8DF',
+    borderRadius: 20,
+    borderBottomLeftRadius: 6,
+    marginBottom: 8,
   },
   myMessageText: {
     color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: FARMER_THEME.fonts.regular,
   },
   adminMessageText: {
-    color: '#1F2937',
+    color: '#1B2A22',
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: FARMER_THEME.fonts.regular,
   },
-  timeText: {
-    fontSize: 11,
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
     marginTop: 4,
-    alignSelf: 'flex-end',
   },
   myTimeText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 10.5,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontFamily: FARMER_THEME.fonts.regular,
   },
   adminTimeText: {
-    color: '#9CA3AF',
+    fontSize: 10.5,
+    color: '#7D8D81',
+    fontFamily: FARMER_THEME.fonts.regular,
   },
   statusText: {
     fontSize: 11,
     marginLeft: 4,
   },
   sentStatus: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.75)',
   },
   readStatus: {
-    color: '#34D399', // A distinct color for read, or just white
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginTop: 16,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 8,
-    textAlign: 'center',
+    color: '#F5C84B',
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 12,
-    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: '#FBFEF9',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    alignItems: 'flex-end',
+    borderColor: '#DCE8DF',
   },
   input: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
+    minHeight: 48,
     maxHeight: 120,
-    fontSize: 15,
-    color: '#1F2937',
-    borderWidth: 1,
-    borderColor: '#7C3AED',
+    borderRadius: 24,
+    backgroundColor: '#F5FBF7',
+    borderWidth: 1.5,
+    borderColor: '#D3E5D8',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1B2A22',
+    marginRight: 10,
   },
   sendButton: {
-    backgroundColor: '#7C3AED',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
   sendButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
+  },
+  sendButtonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

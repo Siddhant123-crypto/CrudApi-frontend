@@ -1,64 +1,105 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
   TextInput,
   ActivityIndicator,
   Alert,
   Platform,
-  StatusBar,
-  Modal,
-  KeyboardAvoidingView,
+  Keyboard,
   NativeModules,
-  findNodeHandle
+  findNodeHandle,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  KeyboardAwareScrollView,
+  KeyboardStickyView,
+} from 'react-native-keyboard-controller';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NotificationService } from '../../services/NotificationService';
 import { NotificationSendRequest } from '../../types';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-export const AdminMessageScreen = () => {
+import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
+import { AdminHeader } from '../../components/admin/AdminHeader';
+import { AdminCard } from '../../components/admin/AdminCard';
+import { AdminInput } from '../../components/admin/AdminInput';
+import { AdminChip } from '../../components/admin/AdminChip';
+import { AdminBadge } from '../../components/admin/StatusBadge';
+import { AdminListRow } from '../../components/admin/AdminListRow';
+import { AdminPrimaryButton } from '../../components/admin/AdminButtons';
+import { AdminStickyBar } from '../../components/admin/AdminStickyBar';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import { CheckIcon, SearchIcon } from '../../components/admin/AdminIcons';
+
+export const AdminMessageScreen: React.FC = () => {
+  console.log('MSG_SCREEN_V3 mount');
+
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [fetchingUsers, setFetchingUsers] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const route = useRoute<any>();
   const preSelectedId = route.params?.preSelectedUserId;
   const preSelectedName = route.params?.preSelectedUserName;
-  const [recipient, setRecipient] = useState<'ALL' | 'SPECIFIC'>(preSelectedId ? 'SPECIFIC' : 'ALL');
+  const preSelectedRole = route.params?.preSelectedRole;
+  const preSelectedEmail = route.params?.preSelectedUserEmail;
+
+  // Render counter
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+  console.log(`[MSG_SCREEN] render count: ${renderCount.current}`);
+
+  useEffect(() => {
+    console.log('[MSG_SCREEN] mounted successfully');
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      console.log(`[KEYBOARD] keyboardDidShow height: ${e.endCoordinates.height}`);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      console.log('[KEYBOARD] keyboardDidHide');
+    });
+    return () => {
+      console.log('MSG_SCREEN_V3 unmount');
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const [recipient, setRecipient] = useState<'ALL' | 'SPECIFIC'>(
+    preSelectedId ? 'SPECIFIC' : 'ALL'
+  );
   const [specificUserId, setSpecificUserId] = useState<string>(preSelectedId || '');
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
+
+  // Consolidated form state with functional updater
+  const [form, setForm] = useState({ title: '', message: '' });
 
   const titleInputRef = useRef<TextInput>(null);
   const messageInputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState(preSelectedName || '');
   const [customersList, setCustomersList] = useState<any[]>([]);
-  const preSelectedRole = route.params?.preSelectedRole;
-  const preSelectedEmail = route.params?.preSelectedUserEmail;
+
   useEffect(() => {
     if (recipient === 'SPECIFIC') {
       fetchCustomers();
     }
   }, [recipient]);
+
   const fetchCustomers = async () => {
     setFetchingUsers(true);
     try {
       const response = await api.get('/user/getAll');
-      const allUsers = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      const allUsers = Array.isArray(response.data)
+        ? response.data
+        : response.data?.data || [];
       const validUsers = allUsers.filter((u: any) => {
         if (preSelectedRole) return u.role === preSelectedRole;
         return u.role === 'CUSTOMER' || u.role === 'FARMER';
       });
       setCustomersList(validUsers);
-      
+
       if (preSelectedEmail) {
         const matchedUser = validUsers.find((u: any) => u.email === preSelectedEmail);
         if (matchedUser) {
@@ -73,22 +114,43 @@ export const AdminMessageScreen = () => {
       setFetchingUsers(false);
     }
   };
-  const titleRef = useRef(title);
-  const messageRef = useRef(message);
 
-  const handleTitleChange = (t: string) => {
-    setTitle(t);
+  const titleRef = useRef(form.title);
+  const messageRef = useRef(form.message);
+
+  const handleTitleChange = useCallback((t: string) => {
+    setForm((prev) => (prev.title === t ? prev : { ...prev, title: t }));
     titleRef.current = t;
-  };
-  const handleMessageChange = (m: string) => {
-    setMessage(m);
+  }, []);
+
+  const handleMessageChange = useCallback((m: string) => {
+    setForm((prev) => (prev.message === m ? prev : { ...prev, message: m }));
     messageRef.current = m;
-  };
+  }, []);
+
+  const handleRecipientAll = useCallback(() => {
+    Keyboard.dismiss();
+    setRecipient('ALL');
+  }, []);
+
+  const handleRecipientSpecific = useCallback(() => {
+    Keyboard.dismiss();
+    setRecipient('SPECIFIC');
+  }, []);
+
+  const handleTitleSubmit = useCallback(() => {
+    messageInputRef.current?.focus();
+  }, []);
+
+  const handleSelectUser = useCallback((uId: string) => {
+    Keyboard.dismiss();
+    setSpecificUserId(uId);
+  }, []);
 
   const handleSend = async () => {
-    const reactTitle = (titleRef.current || title || '').trim();
+    const reactTitle = (titleRef.current || form.title || '').trim();
     let currentTitle = reactTitle;
-    const reactMessage = (messageRef.current || message || '').trim();
+    const reactMessage = (messageRef.current || form.message || '').trim();
     let currentMessage = reactMessage;
 
     if (Platform.OS === 'android') {
@@ -110,7 +172,7 @@ export const AdminMessageScreen = () => {
             }
           }
         } catch (e) {
-          console.warn("Failed to get native text:", e);
+          console.warn('Failed to get native text:', e);
         }
       }
     }
@@ -123,22 +185,26 @@ export const AdminMessageScreen = () => {
       Alert.alert('Error', 'Please select a specific customer.');
       return;
     }
+
     setLoading(true);
     try {
-      const senderName = user?.name || user?.email || 'A Farmer';
+      const senderName = user?.name || user?.email || 'Admin Support';
       const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
       const payload: NotificationSendRequest = {
         receiverType: specificUserId
-          ? (customersList.find(u => (u.userId || u.id) === specificUserId)?.role || preSelectedRole || 'CUSTOMER')
-          : (preSelectedRole || 'CUSTOMER'),
+          ? customersList.find((u) => (u.userId || u.id) === specificUserId)?.role ||
+            preSelectedRole ||
+            'CUSTOMER'
+          : preSelectedRole || 'CUSTOMER',
         receiverId: recipient === 'ALL' ? undefined : specificUserId,
         title: currentTitle.trim(),
         message: formattedMessage,
         notificationType: 'ADMIN',
       };
+
       await NotificationService.sendNotification(payload);
-      Alert.alert('Success', 'Your message send successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert('Success', 'Your message was sent successfully.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
       console.error('Send message error:', error);
@@ -149,358 +215,317 @@ export const AdminMessageScreen = () => {
       setLoading(false);
     }
   };
-  const filteredCustomers = customersList.filter(u => {
-    const nameMatch = (u.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const emailMatch = (u.email || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return nameMatch || emailMatch;
-  });
+
+  const filteredCustomers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return customersList;
+    return customersList.filter((u) => {
+      const nameMatch = (u.name || '').toLowerCase().includes(q);
+      const emailMatch = (u.email || '').toLowerCase().includes(q);
+      return nameMatch || emailMatch;
+    });
+  }, [customersList, searchQuery]);
+
+  const screenTitle =
+    preSelectedRole === 'FARMER'
+      ? 'Message Farmer'
+      : preSelectedRole === 'CUSTOMER'
+      ? 'Message Customer'
+      : 'Message User';
+
+  const audienceAllLabel = `All ${
+    preSelectedRole === 'FARMER'
+      ? 'Farmers'
+      : preSelectedRole === 'CUSTOMER'
+      ? 'Customers'
+      : 'Users'
+  }`;
+
+  const audienceSpecificLabel = `Select ${
+    preSelectedRole === 'FARMER'
+      ? 'Farmer'
+      : preSelectedRole === 'CUSTOMER'
+      ? 'Customer'
+      : 'User'
+  }`;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#17212F" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {preSelectedRole === 'FARMER' ? 'Message Farmer' : preSelectedRole === 'CUSTOMER' ? 'Message Customer' : 'Message User'}
-        </Text>
-      </View>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <AdminPageBackground>
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={40}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-        <Text style={styles.label}>Receiver</Text>
-        {preSelectedId ? (
-          <View style={[styles.input, { backgroundColor: '#F3F4F6' }]}>
-            <Text style={{ color: '#111827', fontWeight: '500' }}>
-              {preSelectedName || 'Selected User'} ({preSelectedRole || 'USER'})
-            </Text>
+        <AdminHeader
+          variant="inner"
+          title={screenTitle}
+          titleAlign="left"
+          titleSize={25}
+          onBack={() => navigation.goBack()}
+        />
+
+        <View style={styles.formBody}>
+          {/* Receiver Section */}
+          <View style={styles.sectionHeaderWrapper}>
+            <Text style={styles.sectionHeaderTitle}>RECIPIENT AUDIENCE</Text>
+            <View style={styles.sectionHeaderDivider} />
           </View>
-        ) : (
-          <>
-            <View style={styles.rowSelector}>
-              <TouchableOpacity
-                style={[styles.selectorBtn, recipient === 'ALL' && styles.selectorBtnActive]}
-                onPress={() => setRecipient('ALL')}
-              >
-                <Text style={[styles.selectorText, recipient === 'ALL' && styles.selectorTextActive]}>
-                  All {preSelectedRole === 'FARMER' ? 'Farmers' : preSelectedRole === 'CUSTOMER' ? 'Customers' : 'Users'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.selectorBtn, recipient === 'SPECIFIC' && styles.selectorBtnActive]}
-                onPress={() => setRecipient('SPECIFIC')}
-              >
-                <Text style={[styles.selectorText, recipient === 'SPECIFIC' && styles.selectorTextActive]}>
-                  Select {preSelectedRole === 'FARMER' ? 'Farmer' : preSelectedRole === 'CUSTOMER' ? 'Customer' : 'User'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {recipient === 'SPECIFIC' && (
-              <View style={styles.specificUserContainer}>
-                <View style={styles.searchContainer}>
-                  <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search by name or email..."
-                    placeholderTextColor="#6B7280"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
+
+          <AdminCard style={styles.card}>
+            {preSelectedId ? (
+              <View style={styles.preSelectedRow}>
+                <View style={styles.preSelectedInfo}>
+                  <Text style={styles.preSelectedLabel}>Target Recipient</Text>
+                  <Text style={styles.preSelectedName}>
+                    {preSelectedName || 'Selected User'}
+                  </Text>
+                </View>
+                <AdminBadge label={preSelectedRole || 'USER'} variant="info" size="small" />
+              </View>
+            ) : (
+              <>
+                <View style={styles.chipsRow}>
+                  <AdminChip
+                    label={audienceAllLabel}
+                    active={recipient === 'ALL'}
+                    onPress={handleRecipientAll}
+                    style={styles.flex1}
+                  />
+                  <AdminChip
+                    label={audienceSpecificLabel}
+                    active={recipient === 'SPECIFIC'}
+                    onPress={handleRecipientSpecific}
+                    style={styles.flex1}
                   />
                 </View>
-                {fetchingUsers ? (
-                  <ActivityIndicator size="small" color="#17212F" />
-                ) : filteredCustomers.length === 0 ? (
-                  <Text style={styles.infoText}>No customers found.</Text>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll}>
-                    {filteredCustomers.map((user) => {
-                      const uId = user.userId || user.id;
-                      const isSelected = specificUserId === uId;
-                      return (
-                        <TouchableOpacity
-                          key={uId}
-                          style={[styles.userCard, isSelected && styles.userCardSelected]}
-                          onPress={() => setSpecificUserId(uId)}
-                        >
-                          <Ionicons name="person-circle-outline" size={32} color={isSelected ? "#FFF" : "#6B7280"} />
-                          <Text style={[styles.userName, isSelected && { color: '#FFF' }]} numberOfLines={1}>
-                            {user.name || user.email || 'Unknown'}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
+
+                {recipient === 'SPECIFIC' && (
+                  <View style={styles.userSelectionContainer}>
+                    <AdminInput
+                      placeholder="Search recipient by name or email..."
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      leftIcon={<SearchIcon size={16} color="#8A93AB" />}
+                      containerStyle={styles.searchContainer}
+                    />
+
+                    {fetchingUsers ? (
+                      <ActivityIndicator size="small" color="#4F5BD5" style={styles.loaderSpacing} />
+                    ) : filteredCustomers.length === 0 ? (
+                      <Text style={styles.noUsersText}>No matching recipients found.</Text>
+                    ) : (
+                      <View style={styles.usersList}>
+                        {filteredCustomers.slice(0, 10).map((cust) => {
+                          const uId = cust.userId || cust.id;
+                          const isSelected = specificUserId === uId;
+                          return (
+                            <AdminListRow
+                              key={uId}
+                              title={cust.name || 'Unnamed User'}
+                              subtitle={cust.email}
+                              avatarText={cust.name || cust.email || 'U'}
+                              badgeLabel={cust.role}
+                              showChevron={false}
+                              onPress={() => handleSelectUser(uId)}
+                              rightElement={
+                                isSelected ? (
+                                  <View style={styles.selectedRadioActive}>
+                                    <CheckIcon size={12} color="#FFFFFF" strokeWidth={2.4} />
+                                  </View>
+                                ) : (
+                                  <View style={styles.selectedRadioInactive} />
+                                )
+                              }
+                              style={[
+                                styles.userRow,
+                                isSelected && styles.userRowSelected,
+                              ]}
+                            />
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
                 )}
-              </View>
+              </>
             )}
-          </>
-        )}
-        <View style={styles.readOnlyContainer}>
-          <Text style={styles.label}>Notification Type</Text>
-          <View style={styles.readOnlyBadge}>
-            <Text style={styles.readOnlyBadgeText}>ADMIN</Text>
+          </AdminCard>
+
+          {/* Message Content Section */}
+          <View style={styles.sectionHeaderWrapper}>
+            <Text style={styles.sectionHeaderTitle}>MESSAGE DETAILS</Text>
+            <View style={styles.sectionHeaderDivider} />
           </View>
-        </View>
-        <Text style={styles.label}>Title</Text>
-        <TextInput
-          ref={titleInputRef}
-          style={styles.input}
-          placeholder="e.g., Fresh Produce Available"
-          value={title}
-          onChangeText={handleTitleChange}
-          placeholderTextColor="#9CA3AF"
-        />
-        <Text style={styles.label}>Message</Text>
-        <TextInput
-          ref={messageInputRef}
-          style={[styles.input, styles.textArea]}
-          placeholder="Enter your message here..."
-          value={message}
-          onChangeText={handleMessageChange}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-          placeholderTextColor="#9CA3AF"
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, loading && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.sendButtonText}>Send Message</Text>
-          )}
-        </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-      <Modal transparent visible={showSuccessModal} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.successModalContent}>
-            <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={60} color="#10B981" />
+
+          <AdminCard style={styles.card}>
+            <View style={styles.typeBadgeRow}>
+              <Text style={styles.fieldLabel}>Notification Channel</Text>
+              <AdminBadge label="ADMIN" variant="info" size="small" />
             </View>
-            <Text style={styles.successModalTitle}>Success!</Text>
-            <Text style={styles.successModalMessage}>Message sent successfully</Text>
-          </View>
+
+            <AdminInput
+              ref={titleInputRef}
+              label="Subject / Title"
+              required
+              placeholder="e.g. Important Account Update"
+              value={form.title}
+              onChangeText={handleTitleChange}
+              returnKeyType="next"
+              onSubmitEditing={handleTitleSubmit}
+              autoCapitalize="sentences"
+            />
+
+            <AdminInput
+              ref={messageInputRef}
+              label="Message Body"
+              required
+              placeholder="Type your message to the recipient(s)..."
+              value={form.message}
+              onChangeText={handleMessageChange}
+              multiline
+              blurOnSubmit={false}
+              returnKeyType="default"
+              autoCapitalize="sentences"
+              containerStyle={styles.messageInputContainer}
+            />
+          </AdminCard>
         </View>
-      </Modal>
-    </SafeAreaView>
+      </KeyboardAwareScrollView>
+
+      {/* Sticky bar that rides smoothly on top of keyboard with KeyboardStickyView */}
+      <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
+        <AdminStickyBar>
+          <AdminPrimaryButton
+            title="Send Message"
+            onPress={handleSend}
+            loading={loading}
+          />
+        </AdminStickyBar>
+      </KeyboardStickyView>
+    </AdminPageBackground>
   );
 };
+
+export default AdminMessageScreen;
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F5F7F5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 16 : 16,
-    paddingBottom: 24,
-    backgroundColor: '#7C3AED',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  backButton: {
-    padding: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 10,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginLeft: 16,
-  },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingBottom: 160,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
+  formBody: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  sectionHeaderWrapper: {
     marginBottom: 8,
-    marginTop: 16,
+    marginTop: 6,
   },
-  rowSelector: {
-    flexDirection: 'row',
-    gap: 12,
+  sectionHeaderTitle: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    color: '#4F5BD5',
+    marginBottom: 6,
   },
-  selectorBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-  },
-  selectorBtnActive: {
-    backgroundColor: '#F3E8FF',
-    borderColor: '#7C3AED',
-  },
-  selectorText: {
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  selectorTextActive: {
-    color: '#7C3AED',
-    fontWeight: '700',
-  },
-  readOnlyContainer: {
-    marginTop: 8,
-  },
-  readOnlyBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  readOnlyBadgeText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#111827',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  textArea: {
-    height: 140,
-  },
-  specificUserContainer: {
-    marginTop: 12,
+  sectionHeaderDivider: {
+    height: 1,
+    backgroundColor: '#EEF0F7',
     marginBottom: 4,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 44,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#374151',
-  },
-  infoText: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  usersScroll: {
-    flexDirection: 'row',
-  },
-  userCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    padding: 12,
-    marginRight: 12,
-    width: 100,
-    alignItems: 'center',
-  },
-  userCardSelected: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
-  },
-  userName: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  sendButton: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 40,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  sendButtonDisabled: {
-    opacity: 0.7,
-  },
-  sendButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  successModalContent: {
-    width: '80%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  successIconContainer: {
+  card: {
     marginBottom: 16,
+    padding: 16,
   },
-  successModalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#111827',
+  preSelectedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  preSelectedInfo: {
+    flex: 1,
+  },
+  preSelectedLabel: {
+    fontFamily: AdminFonts.medium,
+    fontSize: 11.5,
+    color: ADMIN_THEME.colors.inkMuted,
+    marginBottom: 2,
+  },
+  preSelectedName: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 15,
+    color: ADMIN_THEME.colors.ink,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginBottom: 8,
   },
-  successModalMessage: {
-    fontSize: 16,
-    color: '#4B5563',
+  flex1: {
+    flex: 1,
+  },
+  userSelectionContainer: {
+    marginTop: 12,
+  },
+  searchContainer: {
+    marginBottom: 12,
+  },
+  loaderSpacing: {
+    marginVertical: 12,
+  },
+  noUsersText: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.inkMuted,
     textAlign: 'center',
+    paddingVertical: 12,
+  },
+  usersList: {
+    maxHeight: 280,
+  },
+  userRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  userRowSelected: {
+    backgroundColor: '#E8EBFF',
+  },
+  selectedRadioActive: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#4F5BD5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedRadioInactive: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#C9CEF5',
+  },
+  typeBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0F7',
+  },
+  fieldLabel: {
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.ink,
+  },
+  messageInputContainer: {
+    marginBottom: 0,
   },
 });
-export default AdminMessageScreen;

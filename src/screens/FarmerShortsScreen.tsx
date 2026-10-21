@@ -15,6 +15,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import api, { BASE_URL } from '../services/api';
 
+import { LinearGradient } from 'expo-linear-gradient';
+import { FARMER_THEME } from '../constants/farmerTheme';
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface ProductItem {
@@ -101,12 +104,15 @@ const ShortItem = ({
         </View>
       )}
 
-      {/* Dark gradient overlay */}
-      <View style={styles.overlay} />
+      {/* Dark gradient overlay (transparent -> dark emerald) */}
+      <LinearGradient
+        colors={['transparent', 'rgba(8,36,25,0.35)', 'rgba(8,36,25,0.85)']}
+        style={styles.overlay}
+      />
 
       {/* Top Shorts badge */}
       <View style={styles.topBadge}>
-        <Ionicons name="videocam" size={12} color="#FF0000" />
+        <Ionicons name="videocam" size={13} color="#F5C84B" />
         <Text style={styles.topBadgeText}> Shorts</Text>
       </View>
 
@@ -138,7 +144,7 @@ const ShortItem = ({
       <View style={styles.bottomInfo}>
         <View style={styles.farmerRow}>
           <View style={styles.farmerAvatar}>
-            <Ionicons name="person" size={15} color="#FFFFFF" />
+            <Ionicons name="person" size={14} color="#FFFFFF" />
           </View>
           <Text style={styles.farmerName} numberOfLines={1}>
             {product.farmerName || 'Farmer'}
@@ -184,7 +190,7 @@ const FarmerShortsScreen = ({ navigation }: any) => {
         videos.map(async (p) => {
           try {
             if (p.farmerId) {
-              const farmerRes = await api.get(`/farmer/${p.farmerId}`);
+              const farmerRes = await api.get(`/farmer/getById/${p.farmerId}`);
               const f = farmerRes.data;
               return {
                 ...p,
@@ -231,8 +237,8 @@ const FarmerShortsScreen = ({ navigation }: any) => {
     return (
       <SafeAreaView style={styles.emptyContainer}>
         <StatusBar barStyle="light-content" backgroundColor="#000000" />
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Ionicons name="videocam-off-outline" size={64} color="rgba(255,255,255,0.3)" />
         <Text style={styles.emptyTitle}>No Farmer Shorts Yet</Text>
@@ -253,7 +259,7 @@ const FarmerShortsScreen = ({ navigation }: any) => {
         onPress={() => navigation.goBack()}
         activeOpacity={0.8}
       >
-        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
       </TouchableOpacity>
 
       {/* Header title */}
@@ -299,9 +305,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
+    fontFamily: FARMER_THEME.fonts.bold,
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
@@ -312,13 +318,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyTitle: {
+    fontFamily: FARMER_THEME.fonts.bold,
     color: '#FFFFFF',
     fontSize: 22,
-    fontWeight: '800',
     marginTop: 12,
   },
   emptySub: {
-    color: 'rgba(255,255,255,0.6)',
+    fontFamily: FARMER_THEME.fonts.regular,
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 22,
@@ -326,21 +333,21 @@ const styles = StyleSheet.create({
   header: {
     position: 'absolute',
     top: 56,
-    left: 62,
+    left: 64,
     zIndex: 99,
   },
   headerTitle: {
+    fontFamily: FARMER_THEME.fonts.bold,
     color: '#FFFFFF',
     fontSize: 17,
-    fontWeight: '800',
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
   headerSub: {
-    color: 'rgba(255,255,255,0.65)',
+    fontFamily: FARMER_THEME.fonts.medium,
+    color: '#F5D77A',
     fontSize: 11,
-    fontWeight: '600',
     marginTop: 1,
   },
   backBtn: {
@@ -348,10 +355,12 @@ const styles = StyleSheet.create({
     top: 50,
     left: 14,
     zIndex: 100,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -368,34 +377,36 @@ const styles = StyleSheet.create({
     left: 0,
   },
   noVideoPlaceholder: {
-    backgroundColor: '#1A1A2E',
+    backgroundColor: '#082419',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
   },
   noVideoText: {
-    color: 'rgba(255,255,255,0.4)',
+    fontFamily: FARMER_THEME.fonts.medium,
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 14,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.22)',
   },
   topBadge: {
     position: 'absolute',
     top: 110,
     right: 16,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    borderRadius: 10,
+    backgroundColor: 'rgba(8,36,25,0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,203,156,0.4)',
+    borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 5,
     flexDirection: 'row',
     alignItems: 'center',
   },
   topBadgeText: {
+    fontFamily: FARMER_THEME.fonts.bold,
     color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '700',
   },
   sideActions: {
     position: 'absolute',
@@ -408,7 +419,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -421,9 +434,9 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -437,46 +450,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    backgroundColor: 'rgba(8,36,25,0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,203,156,0.35)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
   },
   farmerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1E3A8A',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#17663F',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
-    borderWidth: 2,
+    marginRight: 6,
+    borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
   farmerName: {
+    fontFamily: FARMER_THEME.fonts.bold,
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
   productTitle: {
+    fontFamily: FARMER_THEME.fonts.bold,
     color: '#FFFFFF',
-    fontSize: 19,
-    fontWeight: '800',
-    lineHeight: 25,
+    fontSize: 18,
+    lineHeight: 24,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
     marginBottom: 8,
   },
   categoryPill: {
-    backgroundColor: 'rgba(30,58,138,0.75)',
+    backgroundColor: 'rgba(23,102,63,0.85)',
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(124,203,156,0.4)',
   },
   categoryPillText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#FFFFFF',
+    fontSize: 11.5,
   },
 });

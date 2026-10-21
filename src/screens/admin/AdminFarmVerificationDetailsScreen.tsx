@@ -1,20 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Modal, TextInput, Alert, Linking, SafeAreaView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Alert,
+  Linking,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { getAdminFarmDetails, getAdminFarmGallery, verifyFarmer, requestFarmerAdditionalInfo } from '../../services/adminService';
+import {
+  getAdminFarmDetails,
+  getAdminFarmGallery,
+  verifyFarmer,
+  requestFarmerAdditionalInfo,
+} from '../../services/adminService';
 import { BASE_URL } from '../../services/api';
-
-const VideoCard = ({ style }: { style: any }) => (
-  <View style={[style, { backgroundColor: '#0F3320', justifyContent: 'center', alignItems: 'center' }]}>
-    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.20)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.70)', justifyContent: 'center', alignItems: 'center', marginBottom: 6 }}>
-      <Ionicons name="play" size={20} color="#FFFFFF" style={{ marginLeft: 2 }} />
-    </View>
-    <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>VIDEO</Text>
-    </View>
-  </View>
-);
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import {
+  AdminPageBackground,
+  AdminHeader,
+  AdminCard,
+  AdminBadge,
+  AdminStickyBar,
+  AdminPrimaryButton,
+  AdminDangerButton,
+  AdminOutlineButton,
+  AdminInput,
+  ShieldCheckIcon,
+  PhoneIcon,
+  LocationIcon,
+} from '../../components/admin';
 
 export const AdminFarmVerificationDetailsScreen: React.FC = () => {
   const route = useRoute<any>();
@@ -24,7 +44,7 @@ export const AdminFarmVerificationDetailsScreen: React.FC = () => {
   const [farmData, setFarmData] = useState<any>(null);
   const [gallery, setGallery] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [actionLoading, setActionLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -42,7 +62,7 @@ export const AdminFarmVerificationDetailsScreen: React.FC = () => {
       setLoading(true);
       const [farmRes, galleryRes] = await Promise.all([
         getAdminFarmDetails(verificationId),
-        getAdminFarmGallery(verificationId).catch(() => ({ data: [] }))
+        getAdminFarmGallery(verificationId).catch(() => ({ data: [] })),
       ]);
       if (farmRes && farmRes.data) {
         setFarmData(farmRes.data);
@@ -95,553 +115,472 @@ export const AdminFarmVerificationDetailsScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 50 }} />
-      </SafeAreaView>
+      <AdminPageBackground>
+        <AdminHeader variant="inner" title="Farm Verification" />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={ADMIN_THEME.colors.indigo} />
+        </View>
+      </AdminPageBackground>
     );
   }
 
   if (!farmData) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <Text style={{ textAlign: 'center', marginTop: 50, color: '#6B7280' }}>Farm details not found.</Text>
-      </SafeAreaView>
+      <AdminPageBackground>
+        <AdminHeader variant="inner" title="Farm Verification" />
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Farm details not found.</Text>
+        </View>
+      </AdminPageBackground>
     );
   }
 
-  const profilePhotoUri = farmData.profilePhoto 
-    ? `${BASE_URL}/user/image/${farmData.profilePhoto}` 
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(farmData.name || 'F')}&background=10B981&color=fff`;
+  const profilePhotoUri = farmData.profilePhoto
+    ? `${BASE_URL}/user/image/${farmData.profilePhoto}`
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(farmData.name || 'F')}&background=E8EBFF&color=4F5BD5`;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.customHeader, { backgroundColor: '#17212F' }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>Farm Verification</Text>
-        <View style={[styles.badgePending, farmData.verified && { backgroundColor: '#10B981', shadowColor: '#10B981' }]}>
-          <Text style={styles.badgePendingText}>
-            {farmData.verified ? 'VERIFIED' : 'PENDING'}
-          </Text>
-        </View>
-      </View>
+    <AdminPageBackground>
+      <AdminHeader
+        variant="inner"
+        title="Farm Verification"
+        rightAction={<AdminBadge status={farmData.verified ? 'Verified' : 'Pending'} />}
+      />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        
-        {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <Image source={{ uri: profilePhotoUri }} style={styles.profileImage} />
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{farmData.name}</Text>
-            
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* 1) FARMER PROFILE CARD (72px avatar, 3px white ring) */}
+        <AdminCard style={styles.profileCard}>
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: profilePhotoUri }} style={styles.profileImage} />
+          </View>
+          <Text style={styles.farmerName}>{farmData.name}</Text>
+
+          <View style={styles.profileRow}>
+            <PhoneIcon size={16} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
+            <Text style={styles.profileDetail}>{farmData.mobile || 'No mobile'}</Text>
+          </View>
+
+          {farmData.email ? (
             <View style={styles.profileRow}>
-              <Ionicons name="call" size={14} color="#10B981" />
-              <Text style={styles.profileDetail}>{farmData.mobile}</Text>
+              <Text style={styles.profileDetail}>{farmData.email}</Text>
             </View>
-            
-            <View style={styles.profileRow}>
-              <Ionicons name="mail-outline" size={14} color="#6B7280" />
-              <Text style={styles.profileDetail}>{farmData.email || 'N/A'}</Text>
-            </View>
-            
-            <View style={styles.profileRow}>
-              <Ionicons name="location" size={14} color="#10B981" />
-              <Text style={styles.profileDetail}>{farmData.location || 'N/A'}</Text>
-            </View>
-          </View>
-        </View>
+          ) : null}
+        </AdminCard>
 
-        {/* Farmer Information */}
-        <View style={styles.sectionContainer}>
-          <View style={[styles.sectionHeader, { justifyContent: 'flex-start' }]}>
-            <Text style={styles.sectionTitle}>Farmer Information</Text>
-          </View>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>Farmer Name : </Text>{farmData.name}</Text>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>Mobile : </Text>{farmData.mobile}</Text>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>Email : </Text>{farmData.email || 'N/A'}</Text>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>Village : </Text>{farmData.village || 'N/A'}</Text>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>State : </Text>{farmData.state || 'N/A'}</Text>
-          </View>
-        </View>
+        {/* 2) FARM INFORMATION TABLE */}
+        <AdminCard style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Farm Information</Text>
 
-        {/* Farm Information */}
-        <View style={styles.sectionContainer}>
-          <View style={[styles.sectionHeader, { justifyContent: 'flex-start' }]}>
-            <Text style={styles.sectionTitle}>Farm Information</Text>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Farm Name</Text>
+            <Text style={styles.tableValue}>{farmData.farmName || 'N/A'}</Text>
           </View>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>Farm Name : </Text>{farmData.farmName || 'N/A'}</Text>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>Farm Area : </Text>{farmData.farmArea ? `${farmData.farmArea} ${farmData.farmAreaUnit}` : 'N/A'}</Text>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>Farm Type : </Text>{farmData.farmingType || 'N/A'}</Text>
-            <Text style={styles.infoText}><Text style={styles.infoLabel}>Location : </Text>{farmData.location || 'N/A'}</Text>
-            <View style={{ marginTop: 8 }}>
-              <Text style={styles.infoLabel}>About Farm : </Text>
-              <Text style={[styles.infoText, { marginTop: 4, lineHeight: 20 }]}>{farmData.aboutFarm || 'N/A'}</Text>
-            </View>
-          </View>
-        </View>
 
-        {/* Farm Gallery */}
-        <View style={styles.sectionContainer}>
-          <View style={[styles.sectionHeader, { justifyContent: 'flex-start' }]}>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Farm Size</Text>
+            <Text style={styles.tableValue}>{farmData.farmSize ? `${farmData.farmSize} Acres` : 'N/A'}</Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Farming Type</Text>
+            <Text style={styles.tableValue}>{farmData.farmingType || 'Organic'}</Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Experience</Text>
+            <Text style={styles.tableValue}>{farmData.farmingExperience ? `${farmData.farmingExperience} Years` : 'N/A'}</Text>
+          </View>
+
+          <View style={styles.tableRowLast}>
+            <Text style={styles.tableLabel}>Location</Text>
+            <Text style={styles.tableValue}>
+              {[farmData.village, farmData.state].filter(Boolean).join(', ') || 'N/A'}
+            </Text>
+          </View>
+        </AdminCard>
+
+        {/* 3) FARM GALLERY */}
+        {gallery.length > 0 && (
+          <AdminCard style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Farm Gallery</Text>
-          </View>
-          {gallery.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-              {gallery.map(img => {
-                const isVideo = img.fileType === 'VIDEO';
-                const fileUrl = `${BASE_URL}/${img.filePath ? img.filePath.replace(/\\/g, '/') : ''}`;
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryScroll}>
+              {gallery.map((item, idx) => {
+                const imgUri = item.imageUrl?.startsWith('http')
+                  ? item.imageUrl
+                  : `${BASE_URL}/farm/image/${item.imageUrl}`;
                 return (
-                  <TouchableOpacity
-                    key={img.id}
-                    onPress={() => {
-                      if (isVideo) {
-                        Linking.openURL(fileUrl).catch(() => Alert.alert('Error', 'Could not open video.'));
-                      }
-                    }}
-                    activeOpacity={isVideo ? 0.7 : 1}
-                  >
-                    {isVideo ? (
-                      <VideoCard style={styles.galleryImage} />
-                    ) : (
-                      <Image source={{ uri: fileUrl }} style={styles.galleryImage} />
-                    )}
-                  </TouchableOpacity>
+                  <Image key={idx} source={{ uri: imgUri }} style={styles.galleryImage} />
                 );
               })}
             </ScrollView>
-          ) : (
-            <Text style={{ color: '#6B7280', fontSize: 14, marginLeft: 8 }}>No gallery available.</Text>
-          )}
-        </View>
+          </AdminCard>
+        )}
 
-        {/* Certificate */}
-        {farmData.certificateFile && (
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="document-text" size={20} color="#3B82F6" style={{ marginRight: 6 }} />
-              <Text style={[styles.sectionTitle, { color: '#1B2430' }]}>Certificate</Text>
-            </View>
-            
-            <View style={styles.certificateCard}>
+        {/* 4) CERTIFICATE / DOCUMENT */}
+        {farmData.certificateUrl && (
+          <AdminCard style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Certificate & Documents</Text>
+            <View style={styles.certificateRow}>
               <View style={styles.pdfIconBox}>
                 <Text style={styles.pdfIconText}>PDF</Text>
               </View>
               <View style={styles.certInfo}>
-                <Text style={styles.certName}>Farm Certificate.pdf</Text>
-                <Text style={styles.certSize}>1.2 MB</Text>
+                <Text style={styles.certName} numberOfLines={1}>
+                  Farm Certificate
+                </Text>
+                <Text style={styles.certSize}>Official Verification Document</Text>
               </View>
-              <TouchableOpacity 
-                style={styles.viewBtn} 
-                onPress={() => Linking.openURL(`${BASE_URL}/${farmData.certificateFile.replace(/\\/g, '/')}`)}
-              >
-                <Text style={styles.viewBtnText}>View Certificate</Text>
-              </TouchableOpacity>
+              <AdminOutlineButton
+                title="View"
+                style={styles.viewDocBtn}
+                onPress={() => {
+                  const url = farmData.certificateUrl.startsWith('http')
+                    ? farmData.certificateUrl
+                    : `${BASE_URL}/farm/certificate/${farmData.certificateUrl}`;
+                  Linking.openURL(url).catch(() => Alert.alert('Error', 'Unable to open certificate document.'));
+                }}
+              />
             </View>
-          </View>
+          </AdminCard>
         )}
-
-        <View style={{ height: 120 }} />
       </ScrollView>
 
+      {/* 5) STICKY BOTTOM ACTIONS */}
       {!farmData.verified && (
-        <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.rejectBtn} onPress={() => setShowRejectModal(true)} disabled={actionLoading}>
-            <Ionicons name="close" size={20} color="#EF4444" />
-            <Text style={styles.rejectBtnText}>Reject Farm</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.approveBtn} onPress={handleApprove} disabled={actionLoading}>
-            <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-            <Text style={styles.approveBtnText}>Approve Farm</Text>
-          </TouchableOpacity>
-        </View>
+        <AdminStickyBar>
+          <View style={styles.bottomBarRow}>
+            <AdminDangerButton
+              title="Reject"
+              onPress={() => setShowRejectModal(true)}
+              style={styles.bottomRejectBtn}
+            />
+            <AdminPrimaryButton
+              title="Approve Farm"
+              onPress={handleApprove}
+              style={styles.bottomApproveBtn}
+            />
+          </View>
+        </AdminStickyBar>
       )}
 
-      {/* Reject Modal */}
-      <Modal visible={showRejectModal} transparent animationType="fade">
+      {/* REJECT MODAL */}
+      <Modal visible={showRejectModal} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Reject Verification</Text>
-            <Text style={styles.modalSub}>Please provide a reason so the farmer can fix the issue.</Text>
-            <TextInput
-              style={styles.reasonInput}
-              placeholder="e.g. Certificate is blurry"
+            <Text style={styles.modalDescription}>
+              Please provide a clear reason for rejecting the farm verification request.
+            </Text>
+
+            <AdminInput
+              label="Reason for Rejection"
+              required
+              multiline
+              numberOfLines={4}
+              placeholder="State what documents or information are missing..."
               value={rejectReason}
               onChangeText={setRejectReason}
-              multiline
             />
+
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowRejectModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.submitBtn} onPress={handleRejectSubmit} disabled={actionLoading}>
-                <Text style={styles.submitBtnText}>{actionLoading ? 'Sending...' : 'Submit'}</Text>
-              </TouchableOpacity>
+              <AdminOutlineButton
+                title="Cancel"
+                onPress={() => setShowRejectModal(false)}
+                style={styles.modalActionBtn}
+              />
+              <AdminDangerButton
+                title="Send Reason"
+                loading={actionLoading}
+                onPress={handleRejectSubmit}
+                style={styles.modalActionBtn}
+              />
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Approve Modal */}
-      <Modal visible={showApproveModal} transparent animationType="fade">
+      {/* APPROVE CONFIRM MODAL */}
+      <Modal visible={showApproveModal} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.approveIconContainer}>
-              <Ionicons name="shield-checkmark" size={60} color="#10B981" />
+          <View style={styles.modalCard}>
+            <View style={styles.approveIconCircle}>
+              <ShieldCheckIcon size={36} color={ADMIN_THEME.colors.statusSuccess} strokeWidth={2} />
             </View>
-            <Text style={[styles.modalTitle, { textAlign: 'center', fontSize: 24, marginTop: 10 }]}>Verify Farm</Text>
-            <Text style={[styles.modalSub, { textAlign: 'center', marginBottom: 28, fontSize: 16, lineHeight: 24 }]}>
-              Are you sure you want to approve and verify this farm? The farmer will be notified.
+            <Text style={styles.modalTitleCenter}>Approve Farm?</Text>
+            <Text style={styles.modalDescriptionCenter}>
+              This will officially grant verified status to {farmData.farmName || farmData.name}.
             </Text>
-            
-            <View style={styles.modalActionsFull}>
-              <TouchableOpacity style={styles.cancelBtnFull} onPress={() => setShowApproveModal(false)} disabled={actionLoading}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.approveBtnFull} onPress={confirmApprove} disabled={actionLoading}>
-                <Text style={styles.approveBtnTextFull}>{actionLoading ? 'Verifying...' : 'Yes, Verify Farm'}</Text>
-              </TouchableOpacity>
+
+            <View style={styles.modalActions}>
+              <AdminOutlineButton
+                title="Cancel"
+                onPress={() => setShowApproveModal(false)}
+                style={styles.modalActionBtn}
+              />
+              <AdminPrimaryButton
+                title="Confirm Approve"
+                loading={actionLoading}
+                onPress={confirmApprove}
+                style={styles.modalActionBtn}
+              />
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Success Modal */}
-      <Modal visible={showSuccessModal} transparent animationType="fade">
-        <View style={styles.successModalOverlay}>
-          <View style={styles.successModalContainer}>
-            <View style={styles.successIconWrapper}>
-              <Ionicons name="checkmark-circle" size={90} color="#10B981" />
+      {/* SUCCESS MODAL */}
+      <Modal visible={showSuccessModal} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.approveIconCircle}>
+              <Ionicons name="checkmark-circle" size={48} color={ADMIN_THEME.colors.statusSuccess} />
             </View>
-            <Text style={styles.successTitle}>Farm Verified Successfully!</Text>
-            <Text style={styles.successMessage}>
-              {farmData?.name}'s farm has been verified and moved to the Verified list.
+            <Text style={styles.modalTitleCenter}>Verification Approved!</Text>
+            <Text style={styles.modalDescriptionCenter}>
+              The farmer's account and farm have been successfully verified.
             </Text>
-            <TouchableOpacity 
-              style={styles.successOkBtn}
+            <AdminPrimaryButton
+              title="Done"
               onPress={() => {
                 setShowSuccessModal(false);
                 navigation.goBack();
               }}
-            >
-              <Text style={styles.successOkBtnText}>OK</Text>
-            </TouchableOpacity>
+              style={{ width: '100%', marginTop: 8 }}
+            />
           </View>
         </View>
       </Modal>
-
-    </SafeAreaView>
+    </AdminPageBackground>
   );
 };
 
+export default AdminFarmVerificationDetailsScreen;
+
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F6FCF8', paddingTop: Platform.OS === 'android' ? 0 : 0 },
-  
-  customHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingTop: Platform.OS === 'android' ? 48 : 45,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+  loaderContainer: {
     flex: 1,
-    marginLeft: 0,
-  },
-  badgePending: {
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 16,
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  badgePendingText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-  },
-
-  content: { padding: 16, backgroundColor: '#F6FCF8' },
-
-  profileSection: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1FAE5',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontFamily: AdminFonts.medium,
+    color: ADMIN_THEME.colors.textSecondary,
+    fontSize: 16,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 100,
+    gap: 14,
+  },
+
+  // Profile Card
+  profileCard: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  avatarContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    overflow: 'hidden',
+    backgroundColor: ADMIN_THEME.colors.indigoTint,
+    ...ADMIN_THEME.shadows.card,
+    marginBottom: 12,
   },
   profileImage: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    marginRight: 18,
-    borderWidth: 2,
-    borderColor: '#10B981',
+    width: '100%',
+    height: '100%',
   },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#1B2430',
+  farmerName: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 22,
+    color: ADMIN_THEME.colors.ink,
+    textAlign: 'center',
     marginBottom: 6,
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 5,
+    gap: 6,
+    marginTop: 4,
   },
   profileDetail: {
-    fontSize: 14,
-    color: '#4B5563',
-    marginLeft: 8,
-    fontWeight: '600',
+    fontFamily: AdminFonts.medium,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.textSecondary,
   },
 
-  sectionContainer: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 10,
+  // Section Card
+  sectionCard: {
+    padding: 16,
   },
   sectionTitle: {
+    fontFamily: AdminFonts.heading,
     fontSize: 18,
-    fontWeight: '900',
-    color: '#10B981',
-  },
-  
-  infoCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#ECFDF5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  infoText: {
-    fontSize: 15,
-    color: '#1B2430',
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-
-  tableBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#ECFDF5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    color: ADMIN_THEME.colors.ink,
+    marginBottom: 14,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: ADMIN_THEME.colors.divider,
+  },
+  tableRowLast: {
+    flexDirection: 'row',
+    paddingVertical: 12,
   },
   tableLabel: {
     width: 120,
-    fontSize: 15,
-    color: '#6B7280',
-    fontWeight: '700',
+    fontFamily: AdminFonts.medium,
+    fontSize: 13.5,
+    color: ADMIN_THEME.colors.textSecondary,
   },
   tableValue: {
     flex: 1,
-    fontSize: 15,
-    color: '#1B2430',
-    fontWeight: '700',
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 13.5,
+    color: ADMIN_THEME.colors.ink,
   },
 
+  // Gallery
+  galleryScroll: {
+    gap: 10,
+    paddingVertical: 4,
+  },
   galleryImage: {
     width: 120,
-    height: 80,
-    borderRadius: 12,
-    marginRight: 12,
-    backgroundColor: '#E5E7EB',
+    height: 85,
+    borderRadius: 14,
+    backgroundColor: ADMIN_THEME.colors.inputBg,
+    borderWidth: 1,
+    borderColor: ADMIN_THEME.colors.cardBorder,
   },
 
-  certificateCard: {
+  // Certificate
+  certificateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ADMIN_THEME.colors.inputBg,
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: ADMIN_THEME.colors.cardBorder,
   },
   pdfIconBox: {
-    width: 40,
+    width: 42,
     height: 48,
-    backgroundColor: '#EF4444',
-    borderRadius: 8,
+    backgroundColor: ADMIN_THEME.colors.statusError,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   pdfIconText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: AdminFonts.bold,
+    fontSize: 13,
   },
   certInfo: {
     flex: 1,
   },
   certName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1B2430',
+    fontFamily: AdminFonts.bold,
+    fontSize: 13.5,
+    color: ADMIN_THEME.colors.ink,
   },
   certSize: {
-    fontSize: 12,
-    color: '#9CA3AF',
     marginTop: 2,
+    fontFamily: AdminFonts.regular,
+    fontSize: 11.5,
+    color: ADMIN_THEME.colors.textSecondary,
   },
-  viewBtn: {
+  viewDocBtn: {
+    height: 38,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  viewBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 14,
   },
 
-  bottomBar: { 
-    position: 'absolute', 
-    bottom: 0, left: 0, right: 0, 
-    backgroundColor: '#FFFFFF', 
-    flexDirection: 'row', 
-    padding: 16, paddingBottom: 32, 
-    borderTopWidth: 1, borderTopColor: '#E5E7EB',
-    justifyContent: 'center',
+  // Sticky Bottom Bar
+  bottomBarRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  rejectBtn: { 
-    flex: 1, flexDirection: 'row', 
-    backgroundColor: '#FFFFFF', 
-    borderWidth: 1.5, borderColor: '#EF4444',
-    height: 48, borderRadius: 12, 
-    justifyContent: 'center', alignItems: 'center', 
-    marginRight: 8,
-  },
-  rejectBtnText: { color: '#EF4444', fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
-  
-  approveBtn: { 
-    flex: 1, flexDirection: 'row', 
-    backgroundColor: '#10B981', 
-    height: 48, borderRadius: 12, 
-    justifyContent: 'center', alignItems: 'center', 
-    marginLeft: 8,
-  },
-  approveBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContainer: { width: '100%', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 10 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1B2430', marginBottom: 10 },
-  modalSub: { fontSize: 16, color: '#6B7280', marginBottom: 20 },
-  reasonInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 12, padding: 16, minHeight: 120, textAlignVertical: 'top', fontSize: 16, color: '#1B2430', marginBottom: 24 },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
-  cancelBtn: { paddingVertical: 12, paddingHorizontal: 20 },
-  cancelBtnText: { color: '#6B7280', fontWeight: '700', fontSize: 16 },
-  submitBtn: { backgroundColor: '#EF4444', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14, marginLeft: 12 },
-  submitBtnText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
-  
-  approveIconContainer: { alignItems: 'center', justifyContent: 'center', width: 90, height: 90, borderRadius: 45, backgroundColor: '#ECFDF5', alignSelf: 'center', marginBottom: 10 },
-  modalActionsFull: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  
-  successModalOverlay: {
+  bottomRejectBtn: {
     flex: 1,
-    backgroundColor: '#F3FBF6',
+  },
+  bottomApproveBtn: {
+    flex: 1.4,
+  },
+
+  // Modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: ADMIN_THEME.colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
   },
-  successModalContainer: {
-    alignItems: 'center',
+  modalCard: {
     width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: ADMIN_THEME.radius.dialog,
+    padding: 24,
+    ...ADMIN_THEME.shadows.card,
   },
-  successIconWrapper: {
-    marginBottom: 24,
+  modalTitle: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 20,
+    color: ADMIN_THEME.colors.ink,
+    marginBottom: 8,
   },
-  successTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#065F46',
-    marginBottom: 12,
+  modalTitleCenter: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 20,
+    color: ADMIN_THEME.colors.ink,
     textAlign: 'center',
+    marginBottom: 8,
   },
-  successMessage: {
-    fontSize: 15,
-    color: '#4B5563',
+  modalDescription: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  modalDescriptionCenter: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 13.5,
+    color: ADMIN_THEME.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 40,
-    lineHeight: 24,
-    paddingHorizontal: 20,
+    marginBottom: 20,
+    lineHeight: 19,
   },
-  successOkBtn: {
-    backgroundColor: '#10B981',
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 12,
-    width: '60%',
+  approveIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: ADMIN_THEME.colors.statusSuccessBg,
+    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    alignSelf: 'center',
+    marginBottom: 14,
   },
-  successOkBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
   },
-  cancelBtnFull: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  approveBtnFull: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' },
-  approveBtnTextFull: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 }
+  modalActionBtn: {
+    flex: 1,
+    height: 48,
+  },
 });

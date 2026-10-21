@@ -5,6 +5,7 @@ export interface User {
   role: 'USER' | 'FARMER' | 'ADMIN';
   farmerId?: string;
   profilePhoto?: string;
+  mobile?: string;
 }
 export interface Farmer {
   farmerId: string;
@@ -38,6 +39,8 @@ export interface Product {
   averageRating?: number;
   reviewCount?: number;
   harvestDate?: string;
+  createdOn?: string;
+  addedTime?: string;
 }
 export interface ReviewMedia {
   mediaId: string;
@@ -138,3 +141,75 @@ export interface NotificationSendRequest {
 }
 
 export type NotificationType = 'ORDER' | 'SYSTEM' | 'MESSAGE' | 'ALERT' | 'PRODUCT' | 'FARMER' | 'CUSTOMER' | 'ADMIN';
+
+export type PaymentMethod = 'COD' | 'ONLINE' | 'CARD' | 'UPI' | 'NET_BANKING';
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+
+export interface CreatePaymentOrderResponse {
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+}
+
+export interface VerifyPaymentPayload {
+  orderId: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+export interface PaymentFlowResult {
+  success: boolean;
+  orderId: string;
+  orderNumber?: string;
+  totalAmount?: number;
+  status?: 'SUCCESS' | 'CANCELLED' | 'FAILED' | 'PAYMENT_FAILED' | 'VERIFY_FAILED';
+  reason?: 'CANCELLED' | 'PAYMENT_FAILED' | 'VERIFY_FAILED';
+  message?: string;
+  error?: any;
+  isTestMode?: boolean;
+  paymentId?: string;
+}
+
+export interface SyncPaymentResponse {
+  orderId: string;
+  paymentStatus: PaymentStatus;
+  razorpayPaymentId: string | null;
+  paid: boolean;
+}
+
+export interface OrderItemResponse {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  subtotal: number;
+  imageUrl?: string;
+  harvestDate?: string;
+  status?: string;
+  farmerName?: string;
+}
+
+export interface OrderResponse {
+  orderId: string;
+  orderNumber: string;
+  customerId?: string;
+  farmerId?: string;
+  customerName?: string;
+  customerMobile?: string;
+  deliveryAddress: string;
+  village: string;
+  postalCode: string;
+  state: string;
+  totalAmount: number;
+  status: string;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
+  transactionId?: string;
+  cancellationReason?: string;
+  createdOn?: string;
+  updatedOn?: string;
+  items: OrderItemResponse[];
+}

@@ -13,7 +13,12 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api, { BASE_URL } from '../services/api';
+import { THEME } from '../constants/theme';
+import { PageBackground } from '../components/ui/PageBackground';
+import { ThemedHeader } from '../components/ui/ThemedHeader';
+
 const { width } = Dimensions.get('window');
+
 interface FarmDetailsResponse {
   id: string;
   farmerId: string;
@@ -36,42 +41,26 @@ interface FarmDetailsResponse {
   farmVideo: string | null;
   verified: boolean;
 }
+
 interface FarmGalleryResponse {
   id: string;
   farmerId: string;
   filePath: string;
   fileType: string;
 }
+
 export default function CustomerFarmDetailScreen({ route, navigation }: any) {
   const { farm }: { farm: FarmDetailsResponse } = route.params;
   const [gallery, setGallery] = useState<FarmGalleryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: farm.farmName || 'Farm Details',
-      headerStyle: {
-        backgroundColor: '#1E3A8A',
-        elevation: 0,
-        shadowOpacity: 0,
-      },
-      headerTintColor: '#FFFFFF',
-      headerTitleStyle: {
-        fontSize: 20,
-        fontWeight: '800',
-      },
-      headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: 12 }}>
-          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, farm.farmName]);
+
   useFocusEffect(
     useCallback(() => {
       fetchGallery();
     }, [farm.farmerId])
   );
+
   const fetchGallery = async () => {
     try {
       setLoading(true);
@@ -85,38 +74,44 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
       setLoading(false);
     }
   };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <PageBackground style={styles.safeArea}>
+      <ThemedHeader
+        variant="inner"
+        title={farm.farmName || 'Farm Details'}
+        onBackPress={() => navigation.goBack()}
+      />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
           <View style={styles.headerTitleRow}>
             <Text style={styles.titleText}>{farm.farmName || 'Unnamed Farm'}</Text>
-            {farm.verified && <Ionicons name="checkmark-circle" size={24} color="#16A34A" style={styles.verifiedIcon} />}
+            {farm.verified && <Ionicons name="checkmark-circle" size={24} color="#2E7D4F" style={styles.verifiedIcon} />}
           </View>
           <Text style={styles.taglineText}>🌿 {farm.tagline || 'Fresh from the root'}</Text>
           <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={16} color="#6B7280" />
+            <Ionicons name="location-outline" size={16} color="#B8470F" />
             <Text style={styles.locationText}>{farm.location}</Text>
           </View>
         </View>
         <View style={styles.statsContainer}>
           <View style={styles.statBox}>
-            <Ionicons name="map-outline" size={24} color="#1E3A8A" />
+            <Ionicons name="map-outline" size={24} color="#B8470F" />
             <Text style={styles.statValue}>{farm.farmArea}</Text>
             <Text style={styles.statLabel}>{farm.farmAreaUnit}</Text>
           </View>
           <View style={styles.statBox}>
-            <Ionicons name="leaf-outline" size={24} color="#1E3A8A" />
+            <Ionicons name="leaf-outline" size={24} color="#B8470F" />
             <Text style={styles.statValue}>{farm.farmingType}</Text>
             <Text style={styles.statLabel}>Farming</Text>
           </View>
           <View style={styles.statBox}>
-            <Ionicons name="calendar-outline" size={24} color="#1E3A8A" />
+            <Ionicons name="calendar-outline" size={24} color="#B8470F" />
             <Text style={styles.statValue}>{farm.yearsExperience}+</Text>
             <Text style={styles.statLabel}>Years</Text>
           </View>
           <View style={styles.statBox}>
-            <Ionicons name="people-outline" size={24} color="#1E3A8A" />
+            <Ionicons name="people-outline" size={24} color="#B8470F" />
             <Text style={styles.statValue}>{farm.happyCustomersCount}+</Text>
             <Text style={styles.statLabel}>Happy Users</Text>
           </View>
@@ -126,28 +121,28 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
           <View style={styles.detailGrid}>
             <View style={styles.detailItem}>
               <View style={styles.detailHeader}>
-                <Ionicons name="person-outline" size={16} color="#16A34A" />
+                <Ionicons name="person-outline" size={16} color="#B8470F" />
                 <Text style={styles.detailLabel}>Farmer Name</Text>
               </View>
               <Text style={styles.detailValue}>{farm.farmerName}</Text>
             </View>
             <View style={styles.detailItem}>
               <View style={styles.detailHeader}>
-                <Ionicons name="basket-outline" size={16} color="#16A34A" />
+                <Ionicons name="basket-outline" size={16} color="#B8470F" />
                 <Text style={styles.detailLabel}>Main Crops</Text>
               </View>
               <Text style={styles.detailValue}>{farm.mainCrops}</Text>
             </View>
             <View style={styles.detailItem}>
               <View style={styles.detailHeader}>
-                <Ionicons name="water-outline" size={16} color="#16A34A" />
+                <Ionicons name="water-outline" size={16} color="#B8470F" />
                 <Text style={styles.detailLabel}>Irrigation</Text>
               </View>
               <Text style={styles.detailValue}>{farm.irrigationSource}</Text>
             </View>
             <View style={styles.detailItem}>
               <View style={styles.detailHeader}>
-                <Ionicons name="earth-outline" size={16} color="#16A34A" />
+                <Ionicons name="earth-outline" size={16} color="#B8470F" />
                 <Text style={styles.detailLabel}>Soil Type</Text>
               </View>
               <Text style={styles.detailValue}>{farm.soilType}</Text>
@@ -156,8 +151,8 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
           {farm.aboutFarm && (
             <View style={styles.aboutBox}>
               <View style={styles.detailHeader}>
-                <Ionicons name="information-circle-outline" size={18} color="#16A34A" />
-                <Text style={[styles.detailLabel, { fontSize: 16, fontWeight: '700' }]}>About My Farm</Text>
+                <Ionicons name="information-circle-outline" size={18} color="#B8470F" />
+                <Text style={[styles.detailLabel, { fontSize: 16, fontFamily: THEME.fonts.bold, color: '#3B1A0E' }]}>About My Farm</Text>
               </View>
               <Text style={styles.aboutText}>{farm.aboutFarm}</Text>
             </View>
@@ -166,7 +161,7 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
         <View style={styles.gallerySection}>
           <Text style={styles.sectionTitle}>Farm Gallery</Text>
           {loading ? (
-            <ActivityIndicator size="small" color="#1E3A8A" style={{ marginTop: 20 }} />
+            <ActivityIndicator size="small" color="#B8470F" style={{ marginTop: 20 }} />
           ) : gallery.length === 0 && (!farm.farmVideo || farm.farmVideo === 'null') ? (
             <View style={styles.emptyGallery}>
               <Ionicons name="images-outline" size={40} color="#D1D5DB" />
@@ -211,28 +206,30 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </PageBackground>
   );
 }
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
   },
   scrollContent: {
     paddingBottom: 40,
   },
   headerSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFDF8',
     padding: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
+    shadowColor: 'rgba(90,40,15,0.08)',
+    shadowOpacity: 0.1,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-    marginBottom: 20,
+    elevation: 3,
+    marginBottom: 16,
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -240,17 +237,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   titleText: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#111827',
+    fontFamily: THEME.fonts.serif,
+    fontSize: 24,
+    color: '#3B1A0E',
   },
   verifiedIcon: {
     marginLeft: 8,
   },
   taglineText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#10B981',
+    fontFamily: THEME.fonts.medium,
+    fontSize: 14,
+    color: '#8A6F5C',
     marginBottom: 12,
   },
   locationRow: {
@@ -258,57 +255,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   locationText: {
-    fontSize: 14,
-    color: '#4B5563',
+    fontFamily: THEME.fonts.regular,
+    fontSize: 13.5,
+    color: '#5C4433',
     marginLeft: 6,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   statBox: {
-    backgroundColor: '#FFFFFF',
-    width: (width - 70) / 4,
-    paddingVertical: 16,
-    borderRadius: 16,
+    backgroundColor: '#FFFDF8',
+    width: (width - 64) / 4,
+    paddingVertical: 14,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
     alignItems: 'center',
-    shadowColor: '#1E3A8A',
-    shadowOpacity: 0.06,
+    shadowColor: 'rgba(90,40,15,0.06)',
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 2,
   },
   statValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#111827',
-    marginTop: 8,
+    fontFamily: THEME.fonts.bold,
+    fontSize: 14,
+    color: '#3B1A0E',
+    marginTop: 6,
     marginBottom: 2,
   },
   statLabel: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontFamily: THEME.fonts.medium,
+    fontSize: 10.5,
+    color: '#8A6F5C',
     textAlign: 'center',
   },
   detailsSection: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    borderRadius: 20,
+    backgroundColor: '#FFFDF8',
+    marginHorizontal: 16,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
     padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
+    shadowColor: 'rgba(90,40,15,0.06)',
+    shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-    marginBottom: 20,
+    elevation: 2,
+    marginBottom: 16,
   },
   sectionTitle: {
+    fontFamily: THEME.fonts.serif,
     fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
+    color: '#3B1A0E',
     marginBottom: 16,
   },
   detailGrid: {
@@ -318,7 +320,7 @@ const styles = StyleSheet.create({
   },
   detailItem: {
     width: '48%',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   detailHeader: {
     flexDirection: 'row',
@@ -326,39 +328,45 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailLabel: {
-    fontSize: 13,
-    color: '#6B7280',
+    fontFamily: THEME.fonts.medium,
+    fontSize: 12.5,
+    color: '#8A6F5C',
     marginLeft: 6,
-    fontWeight: '500',
   },
   detailValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontFamily: THEME.fonts.bold,
+    fontSize: 14,
+    color: '#3B1A0E',
     paddingLeft: 22,
   },
   aboutBox: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
+    borderWidth: 1,
+    borderColor: '#F1DCC6',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     marginTop: 10,
   },
   aboutText: {
-    fontSize: 14,
-    color: '#4B5563',
+    fontFamily: THEME.fonts.regular,
+    fontSize: 13.5,
+    color: '#5C4433',
     lineHeight: 22,
     marginTop: 8,
   },
   gallerySection: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    borderRadius: 20,
+    backgroundColor: '#FFFDF8',
+    marginHorizontal: 16,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
     padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
+    shadowColor: 'rgba(90,40,15,0.06)',
+    shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 2,
+    marginBottom: 20,
   },
   galleryScroll: {
     gap: 12,
@@ -366,9 +374,11 @@ const styles = StyleSheet.create({
   galleryItem: {
     width: 220,
     height: 160,
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFF9F2',
+    borderWidth: 1,
+    borderColor: '#F0E1CF',
     position: 'relative',
   },
   galleryMedia: {
@@ -389,8 +399,9 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
   },
   emptyGalleryText: {
+    fontFamily: THEME.fonts.medium,
     marginTop: 10,
-    color: '#9CA3AF',
+    color: '#8A6F5C',
     fontSize: 14,
   },
 });

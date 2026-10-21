@@ -3,6 +3,7 @@ import {ActivityIndicator, View, StyleSheet, Platform} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {useAuth} from '../context/AuthContext';
+import {useNotification} from '../context/NotificationContext';
 import {Product} from '../types';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import WelcomeScreen from '../screens/WelcomeScreen';
@@ -11,6 +12,7 @@ import NewUserLoginScreen from '../screens/NewUserLoginScreen';
 import CustomerRegisterScreen from '../screens/CustomerRegisterScreen';
 import FarmerRegisterScreen from '../screens/FarmerRegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import FarmerProductDetailScreen from '../screens/FarmerProductDetailScreen';
@@ -30,6 +32,7 @@ import MyFarmScreen from '../screens/MyFarmScreen';
 import EditFarmDetailsScreen from '../screens/EditFarmDetailsScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import OrderSuccessScreen from '../screens/OrderSuccessScreen';
+import PaymentSuccessScreen from '../screens/PaymentSuccessScreen';
 import CustomerOrdersScreen from '../screens/CustomerOrdersScreen';
 import CustomerOrderDetailsScreen from '../screens/CustomerOrderDetailsScreen';
 import FarmerOrdersScreen from '../screens/FarmerOrdersScreen';
@@ -52,6 +55,7 @@ import AdminFarmerDetailsScreen from '../screens/admin/AdminFarmerDetailsScreen'
 import AdminMarketsScreen from '../screens/admin/AdminMarketsScreen';
 import AdminAddEditMarketScreen from '../screens/admin/AdminAddEditMarketScreen';
 import AdminMenuScreen from '../screens/admin/AdminMenuScreen';
+import { AdminTabBar } from '../components/admin/AdminTabBar';
 import CustomerMenuScreen from '../screens/CustomerMenuScreen';
 import FarmerMenuScreen from '../screens/FarmerMenuScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
@@ -73,7 +77,6 @@ import AdminGroupChatScreen from '../screens/admin/AdminGroupChatScreen';
 import AdminSupportInboxScreen from '../screens/admin/AdminSupportInboxScreen';
 import FarmerShortsScreen from '../screens/FarmerShortsScreen';
 import FarmerWeatherDetailsScreen from '../screens/FarmerWeatherDetailsScreen';
-import GiftedChatTestScreen from '../screens/chat/GiftedChatTestScreen';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -82,6 +85,7 @@ export type AuthStackParamList = {
   CustomerRegister: undefined;
   FarmerRegister: undefined;
   ForgotPassword: undefined;
+  ResetPassword?: { email?: string; token?: string } | undefined;
 };
 export type MainStackParamList = {
   AdminMain: undefined;
@@ -95,7 +99,16 @@ export type MainStackParamList = {
   FarmerCategoryDashboard: { category: string };
   Checkout: { orderItems: any[]; totalAmount: number };
   OrderSuccess: { orderNumber: string; totalAmount: number };
+  PaymentSuccess: {
+    orderId: string;
+    orderNumber?: string;
+    totalAmount?: number;
+    paymentId?: string;
+    paidAt?: string;
+    isTestMode?: boolean;
+  };
   CustomerOrderDetails: { orderId: string };
+  CustomerOrderTracking: { orderId: string };
   FarmerOrderDetails: { orderId: string };
   FarmerProductReviews: { product?: any } | undefined;
   Cart: undefined;
@@ -140,7 +153,6 @@ export type MainStackParamList = {
   FarmerShorts: undefined;
   FarmCertificate: undefined;
   FarmerWeatherDetails: { weatherData?: any, initialLatitude?: number, initialLongitude?: number };
-  GiftedChatTest: undefined;
 };
 export type CustomerTabParamList = {
   Home: undefined;
@@ -173,50 +185,17 @@ const COLORS = {
   white: '#FFFFFF',
   grey: '#757575',
 };
+import CustomerTabBar from '../components/CustomerTabBar';
+import FarmerTabBar from '../components/farmer/FarmerTabBar';
+
 const CustomerTabs = () => {
   return (
     <CustomerTab.Navigator
-      screenOptions={({ route }) => ({
+      tabBar={props => <CustomerTabBar {...props} />}
+      screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#1E3A8A',
-        tabBarInactiveTintColor: '#333333',
-        tabBarStyle: route.name !== 'Home' ? { display: 'none' } : {
-          position: 'absolute',
-          backgroundColor: 'rgba(255, 255, 255, 0.65)',
-          borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 120 : 110,
-          paddingBottom: Platform.OS === 'ios' ? 55 : 45,
-          paddingTop: 8,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          elevation: 16,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -6 },
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '700',
-        },
-        tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => {
-          let iconName: any;
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Categories') {
-            iconName = focused ? 'grid' : 'grid-outline';
-          } else if (route.name === 'Wishlist') {
-            iconName = focused ? 'heart' : 'heart-outline';
-          } else if (route.name === 'Orders') {
-            iconName = focused ? 'receipt' : 'receipt-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
-          } else {
-            iconName = 'help-circle-outline';
-          }
-          return <Ionicons name={iconName} size={focused ? 26 : 24} color={color} />;
-        },
-      })}>
+      }}
+    >
       <CustomerTab.Screen
         name="Home"
         component={HomeScreen as any}
@@ -230,7 +209,7 @@ const CustomerTabs = () => {
       <CustomerTab.Screen
         name="Wishlist"
         component={WishlistScreen as any}
-        options={{tabBarLabel: 'WishList'}}
+        options={{tabBarLabel: 'Wishlist'}}
       />
       <CustomerTab.Screen
         name="Orders"
@@ -248,46 +227,11 @@ const CustomerTabs = () => {
 const FarmerTabs = () => {
   return (
     <FarmerTab.Navigator
-      screenOptions={({ route }) => ({
+      tabBar={props => <FarmerTabBar {...props} />}
+      screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: '#333333',
-        tabBarStyle: route.name !== 'Home' ? { display: 'none' } : {
-          position: 'absolute',
-          backgroundColor: 'rgba(255, 255, 255, 0.65)',
-          borderTopWidth: 1,
-          borderTopColor: '#E0E0E0',
-          height: Platform.OS === 'ios' ? 120 : 110,
-          paddingBottom: Platform.OS === 'ios' ? 55 : 45,
-          paddingTop: 8,
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.1,
-          shadowRadius: 3,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-        tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => {
-          let iconName: any;
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'MyFarm') {
-            iconName = focused ? 'leaf' : 'leaf-outline';
-          } else if (route.name === 'Market') {
-            iconName = focused ? 'storefront' : 'storefront-outline';
-          } else if (route.name === 'Orders') {
-            iconName = focused ? 'receipt' : 'receipt-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
-          } else {
-            iconName = 'help-circle-outline';
-          }
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-      })}>
+      }}
+    >
       <FarmerTab.Screen
         name="Home"
         component={FarmerDashboardScreen as any}
@@ -319,51 +263,10 @@ const FarmerTabs = () => {
 const AdminTabs = () => {
   return (
     <AdminTab.Navigator
-      screenOptions={({ route }) => ({
+      tabBar={(props) => <AdminTabBar {...props} />}
+      screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#F5C16C',
-        tabBarInactiveTintColor: '#9CA3AF',
-        tabBarStyle: route.name !== 'Home' ? { display: 'none' } : {
-          backgroundColor: 'rgba(23, 33, 47, 0.65)',
-          borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 120 : 110,
-          paddingBottom: Platform.OS === 'ios' ? 55 : 45,
-          paddingTop: 8,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          elevation: 16,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -6 },
-          shadowOpacity: 0.15,
-          shadowRadius: 8,
-          position: 'absolute',
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '700',
-        },
-        tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => {
-          let iconName: any;
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Users') {
-            iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'Products') {
-            iconName = focused ? 'cube' : 'cube-outline';
-          } else if (route.name === 'Markets') {
-            iconName = focused ? 'storefront' : 'storefront-outline';
-          } else {
-            iconName = 'help-circle-outline';
-          }
-          return <Ionicons name={iconName} size={focused ? 24 : 22} color={color} />;
-        },
-        tabBarItemStyle: ({ focused }: any) => ({
-          backgroundColor: focused ? '#1F2B3A' : 'transparent',
-          borderRadius: 16,
-          margin: 4,
-          padding: 2,
-        }),
-      }) as any}>
+      }}>
       <AdminTab.Screen
         name="Home"
         component={AdminDashboardScreen as any}
@@ -395,6 +298,7 @@ const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection' | 
     <Stack.Screen name="CustomerRegister" component={CustomerRegisterScreen as any} />
     <Stack.Screen name="FarmerRegister" component={FarmerRegisterScreen as any} />
     <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen as any} />
+    <Stack.Screen name="ResetPassword" component={ResetPasswordScreen as any} />
   </Stack.Navigator>
 );
 const MainStack: React.FC<{role?: string}> = ({role}) => (
@@ -410,10 +314,7 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
       name="ProductDetail"
       component={ProductDetailScreen as any}
       options={{
-        headerShown: true,
-        headerTitle: 'Product Details',
-        headerStyle: {backgroundColor: '#1E3A8A'},
-        headerTintColor: COLORS.white,
+        headerShown: false,
       }}
     />
     <Stack.Screen
@@ -427,10 +328,7 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
       name="AddProduct"
       component={AddProductScreen as any}
       options={{
-        headerShown: true,
-        headerTitle: 'Add Product',
-        headerStyle: {backgroundColor: COLORS.primary},
-        headerTintColor: COLORS.white,
+        headerShown: false,
       }}
     />
     <Stack.Screen
@@ -441,7 +339,7 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
     <Stack.Screen
       name="FarmerCategoryDashboard"
       component={FarmerCategoryDashboardScreen as any}
-      options={{headerShown: true, headerBackTitleVisible: false}}
+      options={{headerShown: false}}
     />
     <Stack.Screen
       name="FarmerCategories"
@@ -474,8 +372,18 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
       options={{headerShown: false}}
     />
     <Stack.Screen
+      name="PaymentSuccess"
+      component={PaymentSuccessScreen as any}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
       name="CustomerOrderDetails"
       component={CustomerOrderDetailsScreen as any}
+      options={{headerShown: false}}
+    />
+    <Stack.Screen
+      name="CustomerOrderTracking"
+      component={require('../screens/CustomerOrderTrackingScreen').default}
       options={{headerShown: false}}
     />
     <Stack.Screen
@@ -536,7 +444,6 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
     <Stack.Screen name="AdminMessageHistoryDetail" component={AdminMessageHistoryDetailScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="AdminSendNotification" component={AdminSendNotificationScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="FarmerShorts" component={FarmerShortsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="GiftedChatTest" component={GiftedChatTestScreen} options={{headerShown: true, title: 'Chat Test'}} />
   </Stack.Navigator>
 );
 const AppNavigator: React.FC = () => {

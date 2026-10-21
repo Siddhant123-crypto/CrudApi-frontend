@@ -1,7 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Dimensions,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../services/api';
+import { FARMER_THEME } from '../constants/farmerTheme';
+import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
+import { FarmerHeader } from '../components/farmer/FarmerHeader';
+import { FarmerCard } from '../components/farmer/FarmerCard';
+import { FarmerEmptyState } from '../components/farmer/FarmerUI';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 48) / 2;
 
 const FarmerCategoriesScreen = ({ navigation }: any) => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -25,133 +41,173 @@ const FarmerCategoriesScreen = ({ navigation }: any) => {
     }
   };
 
-  const getCategoryStyles = (name: string) => {
+  const getCategoryTheme = (name: string) => {
     const n = name.toLowerCase();
-    if (n.includes('veg')) return { icon: 'leaf', color: '#1E8E3E', bg: '#E6F4EA' };
-    if (n.includes('fruit')) return { icon: 'nutrition', color: '#D93025', bg: '#FCE8E6' };
-    if (n.includes('root')) return { icon: 'rose', color: '#E8710A', bg: '#FCEFE2' };
-    if (n.includes('grain')) return { icon: 'basket', color: '#F9AB00', bg: '#FFF0D4' };
-    if (n.includes('dairy') || n.includes('milk')) return { icon: 'water', color: '#1A73E8', bg: '#E8F0FE' };
-    if (n.includes('spice')) return { icon: 'flame', color: '#EA4335', bg: '#FCE8E6' };
-    return { icon: 'grid', color: '#9334E6', bg: '#F3E8FD' };
+    if (n.includes('root') || n.includes('tuber')) {
+      return { icon: 'nutrition-outline', color: '#C2410C', bg: '#FFEDD5' };
+    }
+    if (n.includes('wild') || n.includes('forest')) {
+      return { icon: 'leaf-outline', color: '#047857', bg: '#D1FAE5' };
+    }
+    if (n.includes('veg')) {
+      return { icon: 'leaf', color: FARMER_THEME.colors.forestGreen, bg: FARMER_THEME.colors.pastelGreen };
+    }
+    if (n.includes('fruit')) {
+      return { icon: 'nutrition', color: '#B91C1C', bg: '#FEE2E2' };
+    }
+    if (n.includes('grain') || n.includes('pulse')) {
+      return { icon: 'basket', color: '#B45309', bg: FARMER_THEME.colors.pastelGold };
+    }
+    if (n.includes('dairy') || n.includes('milk')) {
+      return { icon: 'water', color: '#0369A1', bg: '#E0F2FE' };
+    }
+    if (n.includes('spice') || n.includes('herb')) {
+      return { icon: 'flame', color: '#DC2626', bg: '#FFE4E6' };
+    }
+    return { icon: 'grid', color: FARMER_THEME.colors.forestGreen, bg: FARMER_THEME.colors.pastelMint };
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Farm Categories</Text>
-        <View style={{ width: 32 }} />
-      </View>
+    <FarmerPageBackground>
+      {/* Inner FarmerHeader */}
+      <FarmerHeader
+        variant="inner"
+        title="Farm Categories"
+        titleAlign="left"
+        onBackPress={() => navigation.goBack()}
+      />
+
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#1E5631" />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={FARMER_THEME.colors.emeraldPrimary} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.subtitle}>Choose a category to manage your products</Text>
-          <View style={styles.grid}>
-            {categories.map((category) => {
-              const stylesObj = getCategoryStyles(category.name);
-              return (
-                <TouchableOpacity
-                  key={category.categoryId || category.name}
-                  style={styles.card}
-                  onPress={() => navigation.navigate('FarmerCategoryDashboard', { category: category.name })}
-                  activeOpacity={0.7}
-                >
-                  <View
-                    style={[
-                      styles.iconBox,
-                      {
-                        backgroundColor: stylesObj.bg,
-                        borderColor: stylesObj.color,
-                        borderWidth: 2,
-                      }
-                    ]}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.guideText}>
+            Select a category to view and manage your farm products
+          </Text>
+
+          {categories.length === 0 ? (
+            <FarmerEmptyState
+              icon={<Ionicons name="grid-outline" size={48} color={FARMER_THEME.colors.sageText} />}
+              title="No Categories Available"
+              subtitle="Categories configured on the marketplace will appear here."
+              style={{ marginTop: 40 }}
+            />
+          ) : (
+            <View style={styles.grid}>
+              {categories.map((category) => {
+                const theme = getCategoryTheme(category.name);
+                return (
+                  <TouchableOpacity
+                    key={category.categoryId || category.name}
+                    style={styles.cardTouchable}
+                    onPress={() =>
+                      navigation.navigate('FarmerCategoryDashboard', { category: category.name })
+                    }
+                    activeOpacity={0.8}
                   >
-                    <Ionicons name={stylesObj.icon as any} size={32} color={stylesObj.color} />
-                  </View>
-                  <Text style={styles.name}>{category.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                    <FarmerCard style={styles.categoryCard}>
+                      <View style={[styles.iconBox, { backgroundColor: theme.bg }]}>
+                        <Ionicons name={theme.icon as any} size={24} color={theme.color} />
+                      </View>
+                      <View style={styles.nameContainer}>
+                        <Text style={styles.categoryName} numberOfLines={2}>
+                          {category.name}
+                        </Text>
+                      </View>
+                      <View style={styles.viewBadge}>
+                        <Text style={styles.viewBadgeText}>Browse</Text>
+                        <Ionicons name="chevron-forward" size={11} color={FARMER_THEME.colors.forestGreen} />
+                      </View>
+                    </FarmerCard>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </FarmerPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  safeArea: {
+  loaderContainer: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
-  header: {
-    backgroundColor: '#1E5631',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 20,
+    alignItems: 'center',
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
+    paddingBottom: 40,
+  },
+  guideText: {
+    fontFamily: FARMER_THEME.typography.fontFamilyRegular,
+    fontSize: 13,
+    color: FARMER_THEME.colors.sageText,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    width: '47%',
-    height: 150,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  iconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cardTouchable: {
+    width: CARD_WIDTH,
     marginBottom: 12,
   },
-  name: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
+  categoryCard: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 18,
+  },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: FARMER_THEME.colors.cardBorder,
+  },
+  nameContainer: {
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    width: '100%',
+    paddingHorizontal: 2,
+  },
+  categoryName: {
+    fontFamily: FARMER_THEME.typography.fontFamilyBold,
+    fontSize: 13,
+    lineHeight: 17,
+    color: FARMER_THEME.colors.forestGreen,
     textAlign: 'center',
   },
+  viewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: FARMER_THEME.colors.pastelGreen,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: FARMER_THEME.colors.cardBorder,
+  },
+  viewBadgeText: {
+    fontFamily: FARMER_THEME.typography.fontFamilyMedium,
+    fontSize: 10.5,
+    color: FARMER_THEME.colors.forestGreen,
+    marginRight: 2,
+  },
 });
+
 export default FarmerCategoriesScreen;

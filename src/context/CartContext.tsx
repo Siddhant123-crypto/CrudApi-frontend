@@ -7,7 +7,7 @@ interface CartContextType {
   cart: CartResponse | null;
   isLoading: boolean;
   refreshCart: () => Promise<void>;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
+  addToCart: (productId: string, quantity?: number, showNotification?: boolean) => Promise<boolean>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
   removeFromCart: (productId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -43,19 +43,25 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     refreshCart();
   }, [refreshCart]);
-  const addToCart = async (productId: string, quantity: number = 1) => {
+  const addToCart = async (productId: string, quantity: number = 1, showNotification: boolean = true): Promise<boolean> => {
     try {
       if (!isLoggedIn) {
         Alert.alert('Login Required', 'Please login to add items to cart.');
-        return;
+        return false;
       }
       setIsLoading(true);
       const updatedCart = await cartService.addToCart(productId, quantity);
       setCart(updatedCart);
-      Alert.alert('Success', 'Product added to cart!');
+      if (showNotification) {
+        Alert.alert('Success', 'Product added to cart!');
+      }
+      return true;
     } catch (error: any) {
       console.log('Error adding to cart:', error);
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to add product to cart');
+      if (showNotification) {
+        Alert.alert('Error', error?.response?.data?.message || 'Failed to add product to cart');
+      }
+      return false;
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -10,8 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
-  Platform,
-  Dimensions
+  Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -21,41 +19,78 @@ import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../services/api';
 import { getFarmDetails } from '../services/farmDetailsService';
 import { getFarmerById } from '../services/farmerService';
+
+import { FARMER_THEME } from '../constants/farmerTheme';
+import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
+import { FarmerHeader } from '../components/farmer/FarmerHeader';
+import { FarmerCard } from '../components/farmer/FarmerCard';
+import { FarmerSectionHeader } from '../components/farmer/FarmerSectionHeader';
+import { FarmerStatCard, FarmerEmptyState } from '../components/farmer/FarmerUI';
+import {
+  FarmerDeepButton,
+  FarmerOutlineButton,
+  FarmerGoldButton,
+} from '../components/farmer/FarmerButtons';
+import {
+  PinIcon,
+  CheckmarkIcon,
+  TrashIcon,
+  EditIcon,
+} from '../components/farmer/FarmerIcons';
+
 const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
-  <View style={[style, { backgroundColor: '#0F3320', justifyContent: 'center', alignItems: 'center', opacity: blurred ? 0.6 : 1 }]}>
-    <View style={{
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: 'rgba(255,255,255,0.20)',
-      borderWidth: 2,
-      borderColor: 'rgba(255,255,255,0.70)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 6,
-    }}>
+  <View
+    style={[
+      style,
+      {
+        backgroundColor: '#0E3B29',
+        justifyContent: 'center',
+        alignItems: 'center',
+        opacity: blurred ? 0.6 : 1,
+      },
+    ]}
+  >
+    <View
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.20)',
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.70)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 6,
+      }}
+    >
       <Ionicons name="play" size={20} color="#FFFFFF" style={{ marginLeft: 2 }} />
     </View>
-    <View style={{
-      backgroundColor: 'rgba(255,255,255,0.15)',
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 6,
-    }}>
-      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>VIDEO</Text>
+    <View
+      style={{
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+      }}
+    >
+      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>
+        VIDEO
+      </Text>
     </View>
   </View>
 );
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 const MyFarmScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [farmDetails, setFarmDetails] = useState<any>(null);
   const [gallery, setGallery] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedGalleryIds, setSelectedGalleryIds] = useState<string[]>([]);
+
   const fetchData = async () => {
     if (!user?.farmerId) {
       setLoading(false);
@@ -66,9 +101,9 @@ const MyFarmScreen = ({ navigation }: any) => {
       const [detailsResponse, galleryResponse, farmerDetails] = await Promise.all([
         getFarmDetails(user.farmerId).catch(() => null),
         getMyGallery().catch(() => ({ data: [] })),
-        getFarmerById(user.farmerId).catch(() => null)
+        getFarmerById(user.farmerId).catch(() => null),
       ]);
-      
+
       if (farmerDetails) {
         if (farmerDetails.status === 'INACTIVE' && farmerDetails.blockReason) {
           Alert.alert(
@@ -92,11 +127,13 @@ const MyFarmScreen = ({ navigation }: any) => {
       setLoading(false);
     }
   };
+
   useFocusEffect(
     useCallback(() => {
       fetchData();
     }, [user?.farmerId])
   );
+
   const handleAddPhoto = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -116,6 +153,7 @@ const MyFarmScreen = ({ navigation }: any) => {
       console.log('Image picker error:', error);
     }
   };
+
   const uploadFile = async (uri: string) => {
     if (!user?.farmerId) return;
     try {
@@ -140,11 +178,13 @@ const MyFarmScreen = ({ navigation }: any) => {
       setUploading(false);
     }
   };
+
   const toggleSelection = (id: string) => {
-    setSelectedGalleryIds(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    setSelectedGalleryIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
+
   const handleDeleteSelected = () => {
     if (selectedGalleryIds.length === 0) return;
     Alert.alert(
@@ -159,9 +199,11 @@ const MyFarmScreen = ({ navigation }: any) => {
             try {
               setLoading(true);
               for (const id of selectedGalleryIds) {
-                await deleteGalleryFile(id).catch(err => console.log('Failed to delete', id, err));
+                await deleteGalleryFile(id).catch((err) =>
+                  console.log('Failed to delete', id, err)
+                );
               }
-              setGallery(prev => prev.filter(item => !selectedGalleryIds.includes(item.id)));
+              setGallery((prev) => prev.filter((item) => !selectedGalleryIds.includes(item.id)));
               setIsSelectionMode(false);
               setSelectedGalleryIds([]);
               Alert.alert('Success', 'Selected items deleted successfully');
@@ -171,229 +213,333 @@ const MyFarmScreen = ({ navigation }: any) => {
             } finally {
               setLoading(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
+
   const handlePlayVideo = (filePath: string) => {
     const videoUrl = `${BASE_URL}/${filePath}`;
     Linking.openURL(videoUrl).catch(() =>
       Alert.alert('Error', 'Could not open video.')
     );
   };
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#176B2C" />
-      </View>
+      <FarmerPageBackground style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={FARMER_THEME.colors.primaryGreen} />
+      </FarmerPageBackground>
     );
   }
+
   const fd = farmDetails || {};
   const isVerified = true;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {}
-          <View style={styles.headerBlock}>
-            <View style={styles.headerTopRow}>
-              <View style={styles.headerLeft}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <Ionicons name="chevron-back" size={32} color="#FFFFFF" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>My Farm</Text>
+    <FarmerPageBackground>
+      {/* Header */}
+      <FarmerHeader
+        variant="tab"
+        title="My Farm"
+        subtitle="Farm overview, details & gallery"
+        onNotificationPress={() => navigation.navigate('Notifications')}
+      />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.contentWrapper}>
+          {/* Farm Profile Card */}
+          <FarmerCard style={styles.farmProfileCard}>
+            <View style={styles.profileRow}>
+              <View style={styles.profileLeft}>
+                <View style={styles.farmNameRow}>
+                  <Text
+                    style={styles.farmNameText}
+                    numberOfLines={2}
+                    maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                  >
+                    {fd.farmName || fd.farmerName || user?.name || 'Your Farm Name'}
+                  </Text>
+                  {isVerified && (
+                    <View style={styles.verifiedCheckCircle}>
+                      <CheckmarkIcon size={12} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                  )}
+                </View>
+
+                {fd.tagline ? (
+                  <View style={styles.taglineRow}>
+                    <Ionicons name="leaf-outline" size={13} color={FARMER_THEME.colors.primaryGreen} />
+                    <Text
+                      style={styles.taglineText}
+                      numberOfLines={2}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      {fd.tagline}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.locationRow}>
+                  <PinIcon size={14} color={FARMER_THEME.colors.primaryGreen} strokeWidth={2} />
+                  <Text
+                    style={styles.locationText}
+                    numberOfLines={2}
+                    maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                  >
+                    {fd.location || 'Location not set'}
+                  </Text>
+                </View>
+
+                <Text
+                  style={styles.farmDescText}
+                  numberOfLines={4}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  {fd.aboutFarm ||
+                    'Update your farm details to add a description about your farming practices and produce.'}
+                </Text>
               </View>
 
+              <View style={styles.profileDivider} />
+
+              <View style={styles.profileRight}>
+                <View style={styles.infoBlock}>
+                  <View style={[styles.infoIconBox, { backgroundColor: FARMER_THEME.colors.pastelYellow }]}>
+                    <Ionicons name="calendar-outline" size={18} color={FARMER_THEME.colors.warning} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={styles.infoValue}
+                      numberOfLines={1}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      Since {fd.farmingSince || '-'}
+                    </Text>
+                    <Text
+                      style={styles.infoLabel}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      Farming Since
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoBlock}>
+                  <View style={[styles.infoIconBox, { backgroundColor: FARMER_THEME.colors.pastelGreen }]}>
+                    <Ionicons name="leaf-outline" size={18} color={FARMER_THEME.colors.primaryGreen} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={styles.infoValue}
+                      numberOfLines={1}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      {fd.farmingType || '-'}
+                    </Text>
+                    <Text
+                      style={styles.infoLabel}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      Farming Type
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </View>
+          </FarmerCard>
+
+          {/* Stats Container */}
+          <View style={styles.statsContainer}>
+            <FarmerStatCard
+              value={fd.farmArea || '0'}
+              subLabel={fd.farmAreaUnit === 'ACRE' ? 'Acres' : 'Hectares'}
+              label="Farm Area"
+              icon={<Ionicons name="map-outline" size={17} color={FARMER_THEME.colors.primaryGreen} />}
+              iconBg={FARMER_THEME.colors.pastelGreen}
+              style={styles.statItem}
+              iconBoxStyle={styles.statIconBox}
+              valueStyle={styles.statValueText}
+              subLabelStyle={styles.statSubLabelText}
+              labelStyle={styles.statLabelText}
+            />
+            <FarmerStatCard
+              value={`${fd.cropsGrownCount || '0'}+`}
+              subLabel="Crops"
+              label="Grown"
+              icon={<Ionicons name="flower-outline" size={17} color={FARMER_THEME.colors.warning} />}
+              iconBg={FARMER_THEME.colors.pastelYellow}
+              style={styles.statItem}
+              iconBoxStyle={styles.statIconBox}
+              valueStyle={styles.statValueText}
+              subLabelStyle={styles.statSubLabelText}
+              labelStyle={styles.statLabelText}
+            />
+            <FarmerStatCard
+              value={`${fd.yearsExperience || '0'}+`}
+              subLabel="Years"
+              label="Experience"
+              icon={<Ionicons name="ribbon-outline" size={17} color={FARMER_THEME.colors.tealGreen} />}
+              iconBg={FARMER_THEME.colors.pastelTeal}
+              style={styles.statItem}
+              iconBoxStyle={styles.statIconBox}
+              valueStyle={styles.statValueText}
+              subLabelStyle={styles.statSubLabelText}
+              labelStyle={styles.statLabelText}
+            />
+            <FarmerStatCard
+              value={`${fd.happyCustomersCount || '0'}+`}
+              subLabel="Happy"
+              label="Customers"
+              icon={<Ionicons name="people-outline" size={17} color="#D9651B" />}
+              iconBg={FARMER_THEME.colors.pastelRed}
+              style={styles.statItem}
+              iconBoxStyle={styles.statIconBox}
+              valueStyle={styles.statValueText}
+              subLabelStyle={styles.statSubLabelText}
+              labelStyle={styles.statLabelText}
+            />
           </View>
-          {}
-          <View style={styles.mainContentCard}>
-            {}
-            <View style={styles.farmProfileCard}>
-              <View style={styles.profileRow}>
-                <View style={styles.profileLeft}>
-                  <View style={styles.farmNameRow}>
-                    <Text style={styles.farmNameText}>{fd.farmName || 'Your Farm Name'}</Text>
-                    {isVerified && <Ionicons name="checkmark-circle" size={18} color="#176B2C" style={styles.verifiedIcon} />}
+
+          {/* Farm Details Card */}
+          <FarmerCard style={styles.detailsCard}>
+            <Text
+              style={styles.sectionTitle}
+              maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+            >
+              Farm Details
+            </Text>
+
+            <View style={styles.detailsGrid}>
+              <View style={styles.detailsCol}>
+                <View style={styles.detailItem}>
+                  <Ionicons name="person-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Farmer Name</Text>
+                    <Text style={styles.detailValue}>{fd.farmerName || user?.name || '-'}</Text>
                   </View>
-                  <View style={styles.taglineRow}>
-                    <Ionicons name="leaf-outline" size={14} color="#176B2C" />
-                    <Text style={styles.taglineText} numberOfLines={1}>{fd.tagline || 'Add a tagline'}</Text>
-                  </View>
-                  <View style={styles.locationRow}>
-                    <Ionicons name="location-outline" size={14} color="#647064" />
-                    <Text style={styles.locationText} numberOfLines={1}>{fd.location || 'Location not set'}</Text>
-                  </View>
-                  <Text style={styles.farmDescText} numberOfLines={4}>
-                    {fd.aboutFarm || 'Update your farm details to add a description about your farming practices and produce.'}
-                  </Text>
                 </View>
-                <View style={styles.profileDivider} />
-                <View style={styles.profileRight}>
-                  <View style={styles.infoBlock}>
-                    <View style={styles.infoIconBox}>
-                      <Ionicons name="calendar-outline" size={20} color="#176B2C" />
-                    </View>
-                    <View>
-                      <Text style={styles.infoValue}>Since {fd.farmingSince || '-'}</Text>
-                      <Text style={styles.infoLabel}>Farming Since</Text>
-                    </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="location-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Location</Text>
+                    <Text style={styles.detailValue}>{fd.location || '-'}</Text>
                   </View>
-                  <View style={styles.infoBlock}>
-                    <View style={styles.infoIconBox}>
-                      <Ionicons name="leaf-outline" size={20} color="#176B2C" />
-                    </View>
-                    <View>
-                      <Text style={styles.infoValue}>{fd.farmingType || '-'}</Text>
-                      <Text style={styles.infoLabel}>Farming Type</Text>
-                    </View>
+                </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="expand-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Farm Size</Text>
+                    <Text style={styles.detailValue}>
+                      {fd.farmArea ? `${fd.farmArea} ${fd.farmAreaUnit}` : '-'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="water-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Irrigation Source</Text>
+                    <Text style={styles.detailValue}>{fd.irrigationSource || '-'}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.detailsCol}>
+                <View style={styles.detailItem}>
+                  <Ionicons name="leaf-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Farming Type</Text>
+                    <Text style={styles.detailValue}>{fd.farmingType || '-'}</Text>
+                  </View>
+                </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="basket-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Main Crops</Text>
+                    <Text style={styles.detailValue}>{fd.mainCrops || '-'}</Text>
+                  </View>
+                </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="time-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Experience</Text>
+                    <Text style={styles.detailValue}>
+                      {fd.yearsExperience ? `${fd.yearsExperience}+ Years` : '-'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="triangle-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Soil Type</Text>
+                    <Text style={styles.detailValue}>{fd.soilType || '-'}</Text>
                   </View>
                 </View>
               </View>
             </View>
-            {}
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <View style={styles.statIconBox}>
-                  <Ionicons name="map-outline" size={26} color="#176B2C" />
-                </View>
-                <View style={styles.statTexts}>
-                  <Text style={styles.statVal}>{fd.farmArea || '0'}</Text>
-                  <Text style={styles.statSubVal}>{fd.farmAreaUnit === 'ACRE' ? 'Acres' : 'Hectares'}</Text>
-                  <Text style={styles.statDesc}>Farm Area</Text>
-                </View>
+
+            {/* About Box */}
+            <View style={styles.aboutBox}>
+              <View style={styles.aboutHeader}>
+                <Ionicons name="leaf" size={18} color={FARMER_THEME.colors.primaryGreen} />
+                <Text
+                  style={styles.aboutTitle}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  About My Farm
+                </Text>
               </View>
-              <View style={styles.statItem}>
-                <View style={styles.statIconBox}>
-                  <Ionicons name="flower-outline" size={26} color="#176B2C" />
-                </View>
-                <View style={styles.statTexts}>
-                  <Text style={styles.statVal}>{fd.cropsGrownCount || '0'}+</Text>
-                  <Text style={styles.statSubVal}>Crops</Text>
-                  <Text style={styles.statDesc}>Grown</Text>
-                </View>
-              </View>
-              <View style={styles.statItem}>
-                <View style={styles.statIconBox}>
-                  <Ionicons name="ribbon-outline" size={26} color="#176B2C" />
-                </View>
-                <View style={styles.statTexts}>
-                  <Text style={styles.statVal}>{fd.yearsExperience || '0'}+</Text>
-                  <Text style={styles.statSubVal}>Years</Text>
-                  <Text style={styles.statDesc}>Experience</Text>
-                </View>
-              </View>
-              <View style={styles.statItem}>
-                <View style={styles.statIconBox}>
-                  <Ionicons name="people-outline" size={26} color="#176B2C" />
-                </View>
-                <View style={styles.statTexts}>
-                  <Text style={styles.statVal}>{fd.happyCustomersCount || '0'}+</Text>
-                  <Text style={styles.statSubVal}>Happy</Text>
-                  <Text style={styles.statDesc}>Customers</Text>
-                </View>
+              <View style={styles.aboutContentRow}>
+                <Text
+                  style={styles.aboutText}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  {fd.aboutFarm || 'Details about your farming approach will appear here.'}
+                </Text>
+                <Ionicons
+                  name="home-outline"
+                  size={56}
+                  color={FARMER_THEME.colors.primaryGreen}
+                  style={{ opacity: 0.15 }}
+                />
               </View>
             </View>
-            {}
-            <View style={styles.detailsCard}>
-              <Text style={styles.sectionTitle}>Farm Details</Text>
-              <View style={styles.detailsGrid}>
-                {}
-                <View style={styles.detailsCol}>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="person-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Farmer Name</Text>
-                      <Text style={styles.detailValue}>{fd.farmerName || user?.name || '-'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="location-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Location</Text>
-                      <Text style={styles.detailValue}>{fd.location || '-'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="expand-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Farm Size</Text>
-                      <Text style={styles.detailValue}>{fd.farmArea ? `${fd.farmArea} ${fd.farmAreaUnit}` : '-'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="water-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Irrigation Source</Text>
-                      <Text style={styles.detailValue}>{fd.irrigationSource || '-'}</Text>
-                    </View>
-                  </View>
-                </View>
-                {}
-                <View style={styles.detailsCol}>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="leaf-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Farming Type</Text>
-                      <Text style={styles.detailValue}>{fd.farmingType || '-'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="basket-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Main Crops</Text>
-                      <Text style={styles.detailValue}>{fd.mainCrops || '-'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="time-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View>
-                      <Text style={styles.detailLabel}>Experience</Text>
-                      <Text style={styles.detailValue}>{fd.yearsExperience ? `${fd.yearsExperience}+ Years` : '-'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="triangle-outline" size={22} color="#176B2C" style={styles.detailIcon} />
-                    <View>
-                      <Text style={styles.detailLabel}>Soil Type</Text>
-                      <Text style={styles.detailValue}>{fd.soilType || '-'}</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-              {}
-              {}
-              <View style={styles.aboutBox}>
-                <View style={styles.aboutHeader}>
-                  <Ionicons name="leaf" size={20} color="#176B2C" />
-                  <Text style={styles.aboutTitle}>About My Farm</Text>
-                </View>
-                <View style={styles.aboutContentRow}>
-                  <Text style={styles.aboutText}>
-                    {fd.aboutFarm || 'Details about your farming approach will appear here.'}
-                  </Text>
-                  <Ionicons name="home-outline" size={68} color="#176B2C" style={{ opacity: 0.2 }} />
-                </View>
-              </View>
-            </View>
-            {}
-            <View style={styles.gallerySection}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#176B2C' }}>Farm Photos</Text>
-                <View style={styles.actionButtonsRow}>
+          </FarmerCard>
+
+          {/* Farm Photos Section */}
+          <View style={styles.galleryCardWrapper}>
+            <FarmerCard style={styles.galleryCard}>
+              <View style={styles.galleryHeaderRow}>
+                <Text
+                  style={styles.galleryTitle}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  Farm Photos & Videos
+                </Text>
+
+                <View style={styles.galleryActionsRow}>
                   {isSelectionMode ? (
                     <>
                       <TouchableOpacity
-                        style={[styles.actionBtn, styles.deleteActionBtn, selectedGalleryIds.length === 0 && styles.disabledBtn]}
+                        style={[
+                          styles.actionSmallBtn,
+                          styles.deleteActionBtn,
+                          selectedGalleryIds.length === 0 && styles.disabledBtn,
+                        ]}
                         onPress={handleDeleteSelected}
                         disabled={selectedGalleryIds.length === 0}
                       >
-                        <Ionicons name="trash" size={16} color="#FFFFFF" />
-                        <Text style={styles.deleteActionText}>Delete ({selectedGalleryIds.length})</Text>
+                        <TrashIcon size={14} color="#FFFFFF" strokeWidth={2} />
+                        <Text style={styles.deleteActionText}>
+                          Delete ({selectedGalleryIds.length})
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.actionBtn, styles.cancelActionBtn]}
+                        style={[styles.actionSmallBtn, styles.cancelActionBtn]}
                         onPress={() => {
                           setIsSelectionMode(false);
                           setSelectedGalleryIds([]);
@@ -404,42 +550,62 @@ const MyFarmScreen = ({ navigation }: any) => {
                     </>
                   ) : (
                     <>
-                      <TouchableOpacity style={[styles.actionBtn, styles.addPhotoBtn]} onPress={handleAddPhoto} disabled={uploading}>
+                      <TouchableOpacity
+                        style={[styles.actionSmallBtn, styles.addPhotoBtn]}
+                        onPress={handleAddPhoto}
+                        disabled={uploading}
+                      >
                         {uploading ? (
-                          <ActivityIndicator size="small" color="#176B2C" />
+                          <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
                           <>
-                            <Ionicons name="add" size={16} color="#176B2C" />
-                            <Text style={styles.actionText}>Add Photo</Text>
+                            <Ionicons name="add" size={16} color="#FFFFFF" />
+                            <Text style={styles.addPhotoText}>Add</Text>
                           </>
                         )}
                       </TouchableOpacity>
+
                       {gallery.length > 0 && (
-                        <TouchableOpacity style={[styles.actionBtn, styles.selectBtn]} onPress={() => setIsSelectionMode(true)}>
-                          <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                          <Text style={[styles.actionText, { color: '#EF4444' }]}>Delete</Text>
+                        <TouchableOpacity
+                          style={[styles.actionSmallBtn, styles.selectBtn]}
+                          onPress={() => setIsSelectionMode(true)}
+                        >
+                          <TrashIcon size={14} color={FARMER_THEME.colors.error} strokeWidth={2} />
+                          <Text style={styles.selectBtnText}>Select</Text>
                         </TouchableOpacity>
                       )}
                     </>
                   )}
                 </View>
               </View>
+
               {gallery.length === 0 ? (
                 <View style={styles.emptyGalleryBox}>
-                  <Ionicons name="image-outline" size={32} color="#B8DDBB" />
-                  <Text style={styles.emptyGalleryText}>No farm photos yet</Text>
+                  <Ionicons name="images-outline" size={40} color={FARMER_THEME.colors.placeholder} />
+                  <Text style={styles.emptyGalleryText}>No farm media uploaded yet</Text>
+                  <Text style={styles.emptyGallerySubtext}>
+                    Tap Add above to upload photos or videos of your farm
+                  </Text>
                 </View>
               ) : (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryScroll}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.galleryScroll}
+                >
                   {gallery.map((item) => {
                     const isSelected = selectedGalleryIds.includes(item.id);
                     const sanitizedPath = item.filePath ? item.filePath.replace(/\\/g, '/') : '';
                     const mediaUrl = `${BASE_URL}/${sanitizedPath}`;
                     const isVideo = item.fileType === 'VIDEO';
+
                     return (
                       <TouchableOpacity
                         key={item.id}
-                        style={styles.galleryItem}
+                        style={[
+                          styles.galleryItem,
+                          isSelected && styles.galleryItemSelected,
+                        ]}
                         onLongPress={() => {
                           if (!isSelectionMode) {
                             setIsSelectionMode(true);
@@ -454,7 +620,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                           }
                         }}
                         delayLongPress={300}
-                        activeOpacity={isSelectionMode ? 0.8 : 0.5}
+                        activeOpacity={isSelectionMode ? 0.8 : 0.6}
                       >
                         {isVideo ? (
                           <VideoCard
@@ -464,22 +630,25 @@ const MyFarmScreen = ({ navigation }: any) => {
                         ) : (
                           <Image
                             source={{ uri: mediaUrl }}
-                            style={[styles.galleryImage, isSelectionMode && styles.galleryImageBlurred]}
+                            style={[
+                              styles.galleryImage,
+                              isSelectionMode && styles.galleryImageBlurred,
+                            ]}
                             resizeMode="cover"
                           />
                         )}
-                        {}
+
                         {!isSelectionMode && isVideo && (
                           <View style={styles.videoOverlay}>
-                            <Ionicons name="play-circle" size={36} color="#FFFFFF" />
+                            <Ionicons name="play-circle" size={32} color="#FFFFFF" />
                           </View>
                         )}
-                        {}
+
                         {isSelectionMode && (
                           <View style={styles.selectionOverlay}>
                             {isSelected ? (
                               <View style={styles.circleSelected}>
-                                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                                <CheckmarkIcon size={14} color="#FFFFFF" strokeWidth={2.6} />
                               </View>
                             ) : (
                               <View style={styles.circleUnselected} />
@@ -491,547 +660,462 @@ const MyFarmScreen = ({ navigation }: any) => {
                   })}
                 </ScrollView>
               )}
-            </View>
-            {}
-            <View style={styles.verifiedCard}>
+            </FarmerCard>
+          </View>
+
+          {/* Farm Verified Card */}
+          <FarmerCard style={styles.verifiedCard}>
+            <View style={styles.verifiedHeaderRow}>
               <View style={styles.verifiedIconWrap}>
-                <Ionicons name="shield-checkmark" size={32} color="#176B2C" />
+                <Ionicons name="shield-checkmark" size={28} color={FARMER_THEME.colors.primaryGreen} />
               </View>
               <View style={styles.verifiedTexts}>
-                <Text style={styles.verifiedTitle}>Farm Verified</Text>
-                <Text style={styles.verifiedDesc}>Your farm has been verified by our team.</Text>
-                <Text style={styles.verifiedDate}>Verified on 12 Jan 2025</Text>
+                <Text
+                  style={styles.verifiedTitle}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  Farm Verified
+                </Text>
+                <Text
+                  style={styles.verifiedDesc}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  Your farm has been officially verified by our team.
+                </Text>
               </View>
-              <TouchableOpacity style={styles.certBtn} onPress={() => navigation.navigate('FarmCertificate', { farmDetails: fd })}>
-                <Ionicons name="document-text-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.certBtnText}>View Certificate</Text>
-              </TouchableOpacity>
             </View>
-            {}
-            <TouchableOpacity
-              style={styles.editBtn}
+
+            <FarmerGoldButton
+              title="View Certificate"
+              onPress={() => navigation.navigate('FarmCertificate', { farmDetails: fd })}
+              compact
+              style={{ marginTop: 12 }}
+              icon={<Ionicons name="document-text-outline" size={16} color={FARMER_THEME.colors.headings} />}
+            />
+          </FarmerCard>
+
+          {/* Edit Farm Details Button */}
+          <View style={styles.bottomActionContainer}>
+            <FarmerDeepButton
+              title="Edit Farm Details"
               onPress={() => navigation.navigate('EditFarmDetails', { farmDetails: fd })}
-            >
-              <Ionicons name="pencil-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.editBtnText}>Edit Farm Details</Text>
-            </TouchableOpacity>
+              icon={<EditIcon size={20} color="#FFFFFF" strokeWidth={2} />}
+            />
           </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+        </View>
+      </ScrollView>
+    </FarmerPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#1E5631',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 24,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
   },
-  headerBlock: {
-    backgroundColor: '#1E5631',
-    paddingTop: Platform.OS === 'android' ? 50 : 30,
-    paddingHorizontal: 20,
-    paddingBottom: 70,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: FARMER_THEME.spacing.tabBottomPadding,
   },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    paddingRight: 6,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  headerIconButton: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#1E5631',
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 7,
-    fontWeight: 'bold',
-  },
-  mainContentCard: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 16,
-    marginTop: -30,
+  contentWrapper: {
+    paddingHorizontal: FARMER_THEME.spacing.pagePadding,
+    paddingTop: 16,
+    gap: FARMER_THEME.spacing.cardGap,
   },
   farmProfileCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
     padding: 16,
-    marginTop: -20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    borderWidth: 1,
-    borderColor: '#EAF6D8',
   },
   profileRow: {
     flexDirection: 'row',
   },
   profileLeft: {
-    flex: 1.1,
+    flex: 1.3,
     paddingRight: 6,
   },
   farmNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
+    gap: 6,
   },
   farmNameText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#176B2C',
-    marginRight: 6,
+    fontFamily: FARMER_THEME.fonts.serif,
+    fontSize: 19,
+    lineHeight: 24,
+    color: FARMER_THEME.colors.headings,
     flexShrink: 1,
   },
-  verifiedIcon: {
-    marginTop: 2,
+  verifiedCheckCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: FARMER_THEME.colors.primaryGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   taglineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
+    gap: 6,
   },
   taglineText: {
-    fontSize: 14,
-    color: '#647064',
-    marginLeft: 6,
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 13,
+    color: FARMER_THEME.colors.primaryGreen,
     flexShrink: 1,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
+    gap: 4,
   },
   locationText: {
-    fontSize: 14,
-    color: '#647064',
-    marginLeft: 6,
+    fontFamily: FARMER_THEME.fonts.regular,
+    fontSize: 13,
+    color: FARMER_THEME.colors.textSecondary,
     flexShrink: 1,
   },
   farmDescText: {
-    fontSize: 14,
-    color: '#172117',
-    lineHeight: 20,
+    fontFamily: FARMER_THEME.fonts.regular,
+    fontSize: 13,
+    color: FARMER_THEME.colors.bodyText,
+    lineHeight: 18,
   },
   profileDivider: {
     width: 1,
-    backgroundColor: '#EAF6D8',
-    marginHorizontal: 10,
+    backgroundColor: FARMER_THEME.colors.divider,
+    marginHorizontal: 8,
   },
   profileRight: {
-    flex: 1.0,
+    flex: 0.85,
     justifyContent: 'center',
     gap: 12,
   },
   infoBlock: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   infoIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#F1FAF2',
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
   },
   infoValue: {
+    fontFamily: FARMER_THEME.fonts.bold,
     fontSize: 12,
-    fontWeight: '800',
-    color: '#172117',
-    flexShrink: 1,
+    color: FARMER_THEME.colors.headings,
   },
   infoLabel: {
+    fontFamily: FARMER_THEME.fonts.regular,
     fontSize: 10,
-    color: '#647064',
-    marginTop: 2,
-    flexShrink: 1,
+    color: FARMER_THEME.colors.textSecondary,
+    marginTop: 1,
   },
   statsContainer: {
     flexDirection: 'row',
-    marginTop: 16,
     justifyContent: 'space-between',
-    paddingHorizontal: 2,
+    gap: 6,
   },
   statItem: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 2,
-    paddingVertical: 12,
+    minWidth: 0,
+    paddingVertical: 9,
     paddingHorizontal: 2,
     alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#176B2C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    borderWidth: 1,
-    borderColor: '#EAF6D8',
+    justifyContent: 'center',
   },
   statIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F1FAF2',
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  statTexts: {
-    alignItems: 'center',
-  },
-  statVal: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#172117',
+  statValueText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 16.5,
+    lineHeight: 20,
+    color: FARMER_THEME.colors.headings,
     textAlign: 'center',
   },
-  statSubVal: {
+  statSubLabelText: {
+    fontFamily: FARMER_THEME.fonts.semiBold,
+    fontSize: 10.5,
+    lineHeight: 13,
+    color: FARMER_THEME.colors.primaryGreen,
+    marginTop: 1,
+    textAlign: 'center',
+  },
+  statLabelText: {
+    fontFamily: FARMER_THEME.fonts.medium,
     fontSize: 10,
-    color: '#647064',
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  statDesc: {
-    fontSize: 9,
-    color: '#647064',
-    marginTop: 2,
+    lineHeight: 12,
+    color: FARMER_THEME.colors.textSecondary,
+    marginTop: 1,
     textAlign: 'center',
   },
   detailsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginTop: 16,
-    padding: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    borderWidth: 1,
-    borderColor: '#EAF6D8',
+    padding: 18,
   },
   sectionTitle: {
+    fontFamily: FARMER_THEME.fonts.serif,
     fontSize: 20,
-    fontWeight: '800',
-    color: '#176B2C',
-    marginBottom: 20,
+    color: FARMER_THEME.colors.headings,
+    marginBottom: 14,
   },
   detailsGrid: {
     flexDirection: 'row',
+    gap: 12,
   },
   detailsCol: {
     flex: 1,
-    gap: 20,
+    gap: 12,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 8,
   },
   detailIcon: {
-    marginRight: 10,
     marginTop: 2,
   },
   detailLabel: {
-    fontSize: 12,
-    color: '#647064',
-    marginBottom: 2,
+    fontFamily: FARMER_THEME.fonts.regular,
+    fontSize: 11,
+    color: FARMER_THEME.colors.textSecondary,
   },
   detailValue: {
+    fontFamily: FARMER_THEME.fonts.bold,
     fontSize: 13,
-    fontWeight: '700',
-    color: '#172117',
-    paddingRight: 4,
-    flexShrink: 1,
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  addPhotoBtn: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#B8DDBB',
-  },
-  selectBtn: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FCA5A5',
-  },
-  deleteActionBtn: {
-    backgroundColor: '#EF4444',
-    borderColor: '#EF4444',
-  },
-  cancelActionBtn: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#D1D5DB',
-  },
-  disabledBtn: {
-    opacity: 0.5,
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#176B2C',
-    marginLeft: 4,
-  },
-  deleteActionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginLeft: 4,
-  },
-  cancelActionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#4B5563',
-  },
-  galleryImageBlurred: {
-    opacity: 0.6,
-  },
-  selectionOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  circleSelected: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#176B2C',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  circleUnselected: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    color: FARMER_THEME.colors.headings,
+    marginTop: 2,
   },
   aboutBox: {
-    backgroundColor: '#F1FAF2',
+    marginTop: 18,
+    padding: 14,
     borderRadius: 16,
-    padding: 16,
-    marginTop: 24,
+    backgroundColor: FARMER_THEME.colors.inputBg,
+    borderWidth: 1,
+    borderColor: FARMER_THEME.colors.inputBorder,
   },
   aboutHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    gap: 6,
+    marginBottom: 8,
   },
   aboutTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#176B2C',
-    marginLeft: 8,
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 13,
+    color: FARMER_THEME.colors.headings,
   },
   aboutContentRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   aboutText: {
     flex: 1,
-    fontSize: 14,
-    color: '#172117',
-    lineHeight: 22,
-    marginRight: 16,
+    fontFamily: FARMER_THEME.fonts.regular,
+    fontSize: 13,
+    color: FARMER_THEME.colors.bodyText,
+    lineHeight: 19,
   },
-  gallerySection: {
-    marginTop: 20,
+  galleryCardWrapper: {
+    marginTop: 4,
   },
-  sectionHeaderRow: {
+  galleryCard: {
+    padding: 16,
+  },
+  galleryHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-
+  galleryTitle: {
+    fontFamily: FARMER_THEME.fonts.serif,
+    fontSize: 16.5,
+    color: FARMER_THEME.colors.headings,
+    flexShrink: 1,
+    marginRight: 6,
+  },
+  galleryActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  actionSmallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  addPhotoBtn: {
+    backgroundColor: '#17663F',
+    borderWidth: 0,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+  },
   addPhotoText: {
+    fontFamily: FARMER_THEME.fonts.bold,
     fontSize: 12,
-    fontWeight: '700',
-    color: '#176B2C',
-    marginLeft: 4,
+    color: '#FFFFFF',
+  },
+  selectBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: FARMER_THEME.colors.cardBorder,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    gap: 3,
+  },
+  selectBtnText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 11.5,
+    color: FARMER_THEME.colors.error,
+  },
+  deleteActionBtn: {
+    backgroundColor: FARMER_THEME.colors.error,
+  },
+  deleteActionText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 12,
+    color: '#FFFFFF',
+  },
+  cancelActionBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: FARMER_THEME.colors.cardBorder,
+  },
+  cancelActionText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 12,
+    color: FARMER_THEME.colors.textSecondary,
+  },
+  disabledBtn: {
+    opacity: 0.5,
   },
   emptyGalleryBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    height: 100,
+    paddingVertical: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#EAF6D8',
-    borderStyle: 'dashed',
   },
   emptyGalleryText: {
-    color: '#647064',
-    fontSize: 13,
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 14,
+    color: FARMER_THEME.colors.headings,
     marginTop: 8,
   },
+  emptyGallerySubtext: {
+    fontFamily: FARMER_THEME.fonts.regular,
+    fontSize: 12,
+    color: FARMER_THEME.colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
   galleryScroll: {
-    gap: 12,
-    paddingRight: 16,
+    gap: 10,
+    paddingVertical: 4,
   },
   galleryItem: {
-    width: 110,
-    height: 110,
-    borderRadius: 16,
+    width: 105,
+    height: 105,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: '#EAF6D8',
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#D1E6D3',
+    borderWidth: 1.5,
+    borderColor: FARMER_THEME.colors.cardBorder,
+  },
+  galleryItemSelected: {
+    borderColor: FARMER_THEME.colors.chipBorderActive,
+    borderWidth: 2,
   },
   galleryImage: {
     width: '100%',
     height: '100%',
   },
-  videoPlaceholder: {
-    backgroundColor: '#EAF6D8',
-    justifyContent: 'center',
-    alignItems: 'center',
+  galleryImageBlurred: {
+    opacity: 0.6,
   },
   videoOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)',
   },
-  deletingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    justifyContent: 'center',
+  selectionOverlay: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+  },
+  circleSelected: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: FARMER_THEME.colors.primaryGreen,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circleUnselected: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   verifiedCard: {
+    padding: 16,
+  },
+  verifiedHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1FAF2',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#B8DDBB',
+    gap: 12,
   },
   verifiedIconWrap: {
-    marginRight: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: FARMER_THEME.colors.pastelGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   verifiedTexts: {
     flex: 1,
   },
   verifiedTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#176B2C',
+    fontFamily: FARMER_THEME.fonts.serif,
+    fontSize: 17,
+    color: FARMER_THEME.colors.headings,
   },
   verifiedDesc: {
-    fontSize: 11,
-    color: '#172117',
+    fontFamily: FARMER_THEME.fonts.regular,
+    fontSize: 12.5,
+    color: FARMER_THEME.colors.textSecondary,
     marginTop: 2,
-    marginBottom: 4,
   },
-  verifiedDate: {
-    fontSize: 10,
-    color: '#647064',
-  },
-  certBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#176B2C',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    shadowColor: '#176B2C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  certBtnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginLeft: 6,
-  },
-  editBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#176B2C',
-    borderRadius: 16,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
+  bottomActionContainer: {
+    marginTop: 10,
     marginBottom: 16,
-    elevation: 4,
-    shadowColor: '#176B2C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
-  editBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-    marginLeft: 8,
-  }
 });
+
 export default MyFarmScreen;

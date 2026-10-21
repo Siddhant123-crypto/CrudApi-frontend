@@ -6,7 +6,7 @@ import {
   FlatList,
   SafeAreaView,
   TouchableOpacity,
-  Platform
+  Platform,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -16,80 +16,103 @@ import { NotificationService } from '../services/NotificationService';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { NotificationResponse } from '../types';
+
+// Admin theme imports
+import { AdminPageBackground } from '../components/admin/AdminPageBackground';
+import { AdminHeader } from '../components/admin/AdminHeader';
+import { AdminEmptyState } from '../components/admin/AdminEmptyState';
+
 const NotificationThreadScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { user } = useAuth();
   const { refreshUnreadCount } = useNotification();
   const group = route.params?.group as NotificationGroup;
-  const [notifications, setNotifications] = useState<NotificationResponse[]>(group?.notifications || []);
+  const [notifications, setNotifications] = useState<NotificationResponse[]>(
+    group?.notifications || []
+  );
+
   useEffect(() => {
     if (group && group.unreadCount > 0) {
       markThreadAsRead();
     }
   }, []);
+
   const markThreadAsRead = async () => {
     try {
-      const unreadNotifs = notifications.filter(n => !n.isRead);
+      const unreadNotifs = notifications.filter((n) => !n.isRead);
       if (unreadNotifs.length > 0) {
-        await Promise.all(unreadNotifs.map(n => NotificationService.markAsRead(n.notificationId)));
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        await Promise.all(unreadNotifs.map((n) => NotificationService.markAsRead(n.notificationId)));
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
         refreshUnreadCount();
       }
     } catch (error) {
       console.log('Failed to mark thread as read:', error);
     }
   };
+
   const isAdmin = user?.role === 'ADMIN';
 
   const handleNotificationPress = (notification: NotificationResponse) => {
-    if (isAdmin && notification.type === 'ADMIN' && notification.senderType === 'FARMER' && notification.senderId) {
-      navigation.navigate('AdminSupportChatScreen', { farmerId: notification.senderId, farmerName: 'Farmer' });
-    } else if (!isAdmin && notification.type === 'ADMIN' && notification.title === 'Admin Support Reply') {
+    if (
+      isAdmin &&
+      notification.type === 'ADMIN' &&
+      notification.senderType === 'FARMER' &&
+      notification.senderId
+    ) {
+      navigation.navigate('AdminSupportChatScreen', {
+        farmerId: notification.senderId,
+        farmerName: 'Farmer',
+      });
+    } else if (
+      !isAdmin &&
+      notification.type === 'ADMIN' &&
+      notification.title === 'Admin Support Reply'
+    ) {
       navigation.navigate('FarmerSupportChatScreen');
     } else {
       navigation.navigate('NotificationDetail', { notification });
     }
   };
+
   const handleNotificationDelete = (notification: NotificationResponse) => {
     import('react-native').then(({ Alert }) => {
-      Alert.alert(
-        'Delete Message',
-        'Are you sure you want to delete this message?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                setNotifications(prev => prev.filter(n => n.notificationId !== notification.notificationId));
-                  const api = (await import('../services/api')).default;
-                await api.delete(`/notifications/${notification.notificationId}`);
-              } catch (error) {
-                console.log('Failed to delete notification:', error);
-              }
+      Alert.alert('Delete Message', 'Are you sure you want to delete this message?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setNotifications((prev) =>
+                prev.filter((n) => n.notificationId !== notification.notificationId)
+              );
+              const api = (await import('../services/api')).default;
+              await api.delete(`/notifications/${notification.notificationId}`);
+            } catch (error) {
+              console.log('Failed to delete notification:', error);
             }
-          }
-        ]
-      );
+          },
+        },
+      ]);
     });
   };
+
   if (!group) return null;
   const isFarmer = user?.role === 'FARMER';
-  const headerBgColor = isAdmin ? '#17212F' : (isFarmer ? '#1E5631' : '#1E3A8A');
-  const headerTextColor = '#FFFFFF';
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: headerBgColor }]}>
-      <View style={[styles.header, { backgroundColor: headerBgColor }]}>
-        <View style={styles.headerLeftContainer}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color={headerTextColor} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: headerTextColor }]}>{group.senderName}</Text>
-        </View>
-      </View>
-      <View style={styles.mainContent}>
+
+  // Customer Theme View (100% UNTOUCHED)
+  if (!isFarmer && !isAdmin) {
+    const { PageBackground } = require('../components/ui/PageBackground');
+    const { ThemedHeader } = require('../components/ui/ThemedHeader');
+
+    return (
+      <PageBackground style={{ flex: 1 }}>
+        <ThemedHeader
+          variant="inner"
+          title={group.senderName}
+          onBackPress={() => navigation.goBack()}
+        />
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.notificationId}
@@ -98,14 +121,88 @@ const NotificationThreadScreen = () => {
               notification={item}
               onPress={handleNotificationPress}
               onDelete={handleNotificationDelete}
+              variant="customer"
             />
           )}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ padding: 16, paddingBottom: 130 }}
+        />
+      </PageBackground>
+    );
+  }
+
+  // Farmer Theme View (100% UNTOUCHED)
+  if (isFarmer) {
+    const { FarmerPageBackground } = require('../components/farmer/FarmerPageBackground');
+    const { FarmerHeader } = require('../components/farmer/FarmerHeader');
+    const { FarmerEmptyState } = require('../components/farmer/FarmerUI');
+
+    return (
+      <FarmerPageBackground>
+        <FarmerHeader
+          variant="inner"
+          title={group.senderName}
+          subtitle="Conversation History"
+          onBackPress={() => navigation.goBack()}
+        />
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.notificationId}
+          renderItem={({ item }) => (
+            <NotificationCard
+              notification={item}
+              onPress={handleNotificationPress}
+              onDelete={handleNotificationDelete}
+              variant="farmer"
+            />
+          )}
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          ListEmptyComponent={
+            <FarmerEmptyState
+              title="No messages"
+              subtitle="No messages in this thread yet."
+            />
+          }
+        />
+      </FarmerPageBackground>
+    );
+  }
+
+  // Admin screen path (Restyled to Admin Theme)
+  return (
+    <AdminPageBackground>
+      <AdminHeader
+        variant="inner"
+        title={group.senderName}
+        subtitle="Notification Conversation"
+        onBack={() => navigation.goBack()}
+      />
+      <View style={styles.adminMainContent}>
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.notificationId}
+          renderItem={({ item }) => (
+            <NotificationCard
+              notification={item}
+              onPress={handleNotificationPress}
+              onDelete={handleNotificationDelete}
+              variant="admin"
+            />
+          )}
+          contentContainerStyle={styles.adminListContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <AdminEmptyState
+              title="No messages"
+              message="No messages in this thread yet."
+              icon={<Ionicons name="chatbubbles-outline" size={40} color="#4F5BD5" />}
+            />
+          }
         />
       </View>
-    </SafeAreaView>
+    </AdminPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -139,5 +236,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 24,
   },
+  adminMainContent: {
+    flex: 1,
+  },
+  adminListContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
 });
+
 export default NotificationThreadScreen;

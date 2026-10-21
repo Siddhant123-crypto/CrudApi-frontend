@@ -1,6 +1,19 @@
-import React, {useState} from 'react';
-import {View, TextInput, Text, StyleSheet, TouchableOpacity, KeyboardTypeOptions, ViewStyle, TextStyle, StyleProp} from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardTypeOptions,
+  ViewStyle,
+  TextStyle,
+  StyleProp,
+  Platform,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { THEME } from '../constants/theme';
+
 interface CustomInputProps {
   label?: string;
   value: string;
@@ -8,13 +21,17 @@ interface CustomInputProps {
   placeholder?: string;
   secureTextEntry?: boolean;
   keyboardType?: KeyboardTypeOptions;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string | null;
   multiline?: boolean;
   editable?: boolean;
+  required?: boolean;
   style?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
   leftIcon?: React.ReactNode;
+  testID?: string;
 }
+
 const CustomInput: React.FC<CustomInputProps> = ({
   label,
   value,
@@ -22,25 +39,36 @@ const CustomInput: React.FC<CustomInputProps> = ({
   placeholder,
   secureTextEntry = false,
   keyboardType = 'default',
+  autoCapitalize = 'none',
   error,
   multiline = false,
   editable = true,
+  required = false,
   style,
   inputStyle,
   leftIcon,
+  testID,
 }) => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
+
   return (
     <View style={[styles.container, style]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>{label}</Text>
+          {required && <Text style={styles.requiredStar}> *</Text>}
+        </View>
+      )}
       <View
         style={[
           styles.inputWrapper,
+          multiline && styles.multilineWrapper,
           isFocused && styles.focusedInput,
           !!error && styles.errorInput,
           !editable && styles.disabledInput,
-        ]}>
+        ]}
+      >
         {leftIcon && <View style={styles.leftIconWrapper}>{leftIcon}</View>}
         <TextInput
           style={[
@@ -51,22 +79,27 @@ const CustomInput: React.FC<CustomInputProps> = ({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#9E9E9E"
+          placeholderTextColor={THEME.colors.placeholder}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
           keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
           multiline={multiline}
           editable={editable}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          testID={testID}
+          accessibilityLabel={testID}
         />
         {secureTextEntry && (
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            style={styles.eyeButton}>
+            style={styles.eyeButton}
+            activeOpacity={0.7}
+          >
             <Ionicons
               name={isPasswordVisible ? 'eye' : 'eye-off'}
-              size={22}
-              color="#1B5E20"
+              size={20}
+              color={THEME.colors.accent}
             />
           </TouchableOpacity>
         )}
@@ -75,62 +108,89 @@ const CustomInput: React.FC<CustomInputProps> = ({
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     marginVertical: 8,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 6,
-    letterSpacing: 0.3,
-  },
-  inputWrapper: {
+  labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#C8C8C8',
+    marginBottom: 8,
+  },
+  label: {
+    fontFamily: THEME.fonts.semiBold,
+    fontSize: 13,
+    color: THEME.colors.textHeading,
+  },
+  requiredStar: {
+    fontFamily: THEME.fonts.bold,
+    fontSize: 13,
+    color: '#D9651B',
+  },
+  inputWrapper: {
+    height: 54,
+    borderRadius: THEME.radius.inputs,
+    borderWidth: 1.5,
+    borderColor: THEME.colors.inputBorder,
+    backgroundColor: THEME.colors.inputBg,
     paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  multilineWrapper: {
+    height: 100,
+    alignItems: 'flex-start',
+    paddingVertical: 12,
   },
   focusedInput: {
-    borderColor: '#1B5E20',
+    borderColor: THEME.colors.inputBorderFocused,
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(224,123,57,1)',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   errorInput: {
-    borderColor: '#D32F2F',
+    borderColor: THEME.colors.error,
   },
   disabledInput: {
-    backgroundColor: '#EEEEEE',
+    backgroundColor: '#F7EFE4',
     opacity: 0.7,
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
+    height: '100%',
+    fontFamily: THEME.fonts.medium,
     fontSize: 15,
-    color: '#212121',
-  },
-  leftIconWrapper: {
-    marginRight: 10,
+    color: THEME.colors.textBase,
   },
   multilineInput: {
-    minHeight: 100,
     textAlignVertical: 'top',
   },
-  eyeButton: {
-    padding: 8,
+  leftIconWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  eyeText: {
-    color: '#1B5E20',
-    fontSize: 13,
-    fontWeight: '600',
+  eyeButton: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorText: {
-    color: '#D32F2F',
+    fontFamily: THEME.fonts.medium,
     fontSize: 12,
-    marginTop: 4,
+    color: THEME.colors.error,
+    marginTop: 6,
     marginLeft: 4,
   },
 });
-export default CustomInput;
+
+export default React.memo(CustomInput);

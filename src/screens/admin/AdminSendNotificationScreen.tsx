@@ -3,27 +3,42 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   Alert,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { NotificationService } from '../../services/NotificationService';
 import { NotificationType, NotificationSendRequest } from '../../types';
 import api from '../../services/api';
-const NOTIFICATION_TYPES: NotificationType[] = ['SYSTEM', 'ORDER', 'PRODUCT', 'CUSTOMER', 'FARMER', 'ADMIN'];
-const RECEIVER_TYPES = ['CUSTOMER', 'FARMER'];
+import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
+import { AdminHeader } from '../../components/admin/AdminHeader';
+import { AdminCard } from '../../components/admin/AdminCard';
+import { AdminInput } from '../../components/admin/AdminInput';
+import { AdminChip } from '../../components/admin/AdminChip';
+import { AdminListRow } from '../../components/admin/AdminListRow';
+import { AdminPrimaryButton } from '../../components/admin/AdminButtons';
+import { AdminStickyBar } from '../../components/admin/AdminStickyBar';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import { CheckIcon, SearchIcon } from '../../components/admin/AdminIcons';
+
+const NOTIFICATION_TYPES: NotificationType[] = [
+  'SYSTEM',
+  'ORDER',
+  'PRODUCT',
+  'CUSTOMER',
+  'FARMER',
+  'ADMIN',
+];
+const RECEIVER_TYPES: Array<'CUSTOMER' | 'FARMER'> = ['CUSTOMER', 'FARMER'];
+
 export const AdminSendNotificationScreen = () => {
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
   const [fetchingUsers, setFetchingUsers] = useState(false);
-  const [receiverType, setReceiverType] = useState<'CUSTOMER'|'FARMER'>('CUSTOMER');
+  const [receiverType, setReceiverType] = useState<'CUSTOMER' | 'FARMER'>('CUSTOMER');
   const [recipient, setRecipient] = useState<'ALL' | 'SPECIFIC'>('ALL');
   const [specificUserId, setSpecificUserId] = useState<string>('');
   const [title, setTitle] = useState('');
@@ -31,17 +46,19 @@ export const AdminSendNotificationScreen = () => {
   const [type, setType] = useState<NotificationType>('SYSTEM');
   const [usersList, setUsersList] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
   useEffect(() => {
     if (recipient === 'SPECIFIC') {
       fetchUsers();
     }
   }, [recipient, receiverType]);
+
   const fetchUsers = async () => {
     setFetchingUsers(true);
     try {
       const endpoint = receiverType === 'CUSTOMER' ? '/admin/customers' : '/admin/farmers';
       const response = await api.get(endpoint);
-      setUsersList(Array.isArray(response.data) ? response.data : (response.data?.data || []));
+      setUsersList(Array.isArray(response.data) ? response.data : response.data?.data || []);
     } catch (error) {
       console.log('Failed to fetch users:', error);
       Alert.alert('Error', `Failed to load ${receiverType.toLowerCase()}s list.`);
@@ -49,6 +66,7 @@ export const AdminSendNotificationScreen = () => {
       setFetchingUsers(false);
     }
   };
+
   const handleSend = async () => {
     if (!title.trim() || !message.trim()) {
       Alert.alert('Error', 'Title and message are required.');
@@ -58,6 +76,7 @@ export const AdminSendNotificationScreen = () => {
       Alert.alert('Error', `Please select a specific ${receiverType.toLowerCase()}.`);
       return;
     }
+
     setLoading(true);
     try {
       const payload: NotificationSendRequest = {
@@ -67,9 +86,10 @@ export const AdminSendNotificationScreen = () => {
         message: message.trim(),
         type,
       };
+
       await NotificationService.sendNotification(payload);
       Alert.alert('Success', 'Notification sent successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
       console.error('Send notification error:', error);
@@ -78,330 +98,261 @@ export const AdminSendNotificationScreen = () => {
       setLoading(false);
     }
   };
+
+  const filteredUsers = usersList.filter((u) => {
+    const nameMatch = (u.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const emailMatch = (u.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return nameMatch || emailMatch;
+  });
+
+  const renderSectionHeader = (label: string) => (
+    <View style={styles.sectionHeaderWrapper}>
+      <Text style={styles.sectionHeaderTitle}>{label}</Text>
+      <View style={styles.sectionHeaderDivider} />
+    </View>
+  );
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.header, { backgroundColor: '#17212F', borderBottomColor: '#17212F' }]}>
-        <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>Send Notification</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <AdminPageBackground>
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#F9FAFB' }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <AdminHeader
+          variant="inner"
+          title="Send Notification"
+          subtitle="System & push alerts dispatch"
+          onBack={() => navigation.goBack()}
+        />
+
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <Text style={styles.label}>Send To (Role)</Text>
-        <View style={styles.rowSelector}>
-          {RECEIVER_TYPES.map(rt => {
-            const isActive = receiverType === rt;
-            const isCustomer = rt === 'CUSTOMER';
-            const activeBtnStyle = isCustomer ? styles.selectorBtnActiveCustomer : styles.selectorBtnActiveFarmer;
-            const activeTextStyle = isCustomer ? styles.selectorTextActiveCustomer : styles.selectorTextActiveFarmer;
-            return (
-              <TouchableOpacity
-                key={rt}
-                style={[styles.selectorBtn, isActive && activeBtnStyle]}
-                onPress={() => {
-                  setReceiverType(rt as any);
-                  setSpecificUserId('');
-                }}
-              >
-                <Text style={[styles.selectorText, isActive && activeTextStyle]}>
-                  {rt}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <Text style={styles.label}>Recipient</Text>
-        <View style={styles.rowSelector}>
-          <TouchableOpacity
-            style={[styles.selectorBtn, recipient === 'ALL' && (receiverType === 'CUSTOMER' ? styles.selectorBtnActiveCustomer : styles.selectorBtnActiveFarmer)]}
-            onPress={() => setRecipient('ALL')}
-          >
-            <Text style={[styles.selectorText, recipient === 'ALL' && (receiverType === 'CUSTOMER' ? styles.selectorTextActiveCustomer : styles.selectorTextActiveFarmer)]}>
-              All {receiverType}s
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.selectorBtn, recipient === 'SPECIFIC' && (receiverType === 'CUSTOMER' ? styles.selectorBtnActiveCustomer : styles.selectorBtnActiveFarmer)]}
-            onPress={() => setRecipient('SPECIFIC')}
-          >
-            <Text style={[styles.selectorText, recipient === 'SPECIFIC' && (receiverType === 'CUSTOMER' ? styles.selectorTextActiveCustomer : styles.selectorTextActiveFarmer)]}>
-              Specific {receiverType}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {recipient === 'SPECIFIC' && (
-          <View style={styles.specificUserContainer}>
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#6B7280" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder={`Search ${receiverType.toLowerCase()}s...`}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholderTextColor="#9CA3AF"
+          {/* Target Audience Section */}
+          {renderSectionHeader('TARGET AUDIENCE')}
+          <AdminCard style={styles.card}>
+            <Text style={styles.fieldLabel}>Receiver Role</Text>
+            <View style={styles.chipsRow}>
+              {RECEIVER_TYPES.map((rt) => (
+                <AdminChip
+                  key={rt}
+                  label={rt === 'CUSTOMER' ? 'Customers' : 'Farmers'}
+                  active={receiverType === rt}
+                  onPress={() => {
+                    setReceiverType(rt);
+                    setSpecificUserId('');
+                  }}
+                  style={styles.flex1}
+                />
+              ))}
+            </View>
+
+            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Audience Scope</Text>
+            <View style={styles.chipsRow}>
+              <AdminChip
+                label={`All ${receiverType === 'CUSTOMER' ? 'Customers' : 'Farmers'}`}
+                active={recipient === 'ALL'}
+                onPress={() => setRecipient('ALL')}
+                style={styles.flex1}
+              />
+              <AdminChip
+                label={`Specific ${receiverType === 'CUSTOMER' ? 'Customer' : 'Farmer'}`}
+                active={recipient === 'SPECIFIC'}
+                onPress={() => setRecipient('SPECIFIC')}
+                style={styles.flex1}
               />
             </View>
-            {fetchingUsers ? (
-              <ActivityIndicator size="small" color="#2D983A" style={{ marginTop: 16 }} />
-            ) : usersList.length === 0 ? (
-              <Text style={styles.infoText}>No {receiverType.toLowerCase()}s found.</Text>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll} keyboardShouldPersistTaps="always">
-                {usersList.filter(user => {
-                  if (!searchQuery) return true;
-                  const nameStr = (user.name || user.email || 'Unknown').toLowerCase();
-                  return nameStr.includes(searchQuery.toLowerCase());
-                }).map((user) => {
-                  const uId = user.customerId || user.farmerId || user.userId || user.id;
-                  const isSelected = specificUserId === uId;
-                  return (
-                    <TouchableOpacity
-                      key={uId}
-                      style={[styles.userCard, isSelected && styles.userCardSelected]}
-                      onPress={() => setSpecificUserId(uId)}
-                    >
-                      <Ionicons name="person-circle-outline" size={32} color={isSelected ? "#FFF" : "#6B7280"} />
-                      <Text style={[styles.userName, isSelected && { color: '#FFF' }]} numberOfLines={1}>
-                        {user.name || user.email || 'Unknown'}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+
+            {recipient === 'SPECIFIC' && (
+              <View style={styles.specificPicker}>
+                <AdminInput
+                  placeholder={`Search ${receiverType.toLowerCase()} by name or email...`}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  leftIcon={<SearchIcon size={16} color="#8A93AB" />}
+                  containerStyle={{ marginBottom: 10 }}
+                />
+
+                {fetchingUsers ? (
+                  <ActivityIndicator size="small" color="#4F5BD5" style={{ marginVertical: 12 }} />
+                ) : filteredUsers.length === 0 ? (
+                  <Text style={styles.emptyText}>No users found.</Text>
+                ) : (
+                  <View style={styles.usersList}>
+                    {filteredUsers.slice(0, 8).map((u) => {
+                      const uId = u.userId || u.id;
+                      const isSelected = specificUserId === uId;
+                      return (
+                        <AdminListRow
+                          key={uId}
+                          title={u.name || 'User'}
+                          subtitle={u.email}
+                          avatarText={u.name || u.email || 'U'}
+                          showChevron={false}
+                          onPress={() => setSpecificUserId(uId)}
+                          rightElement={
+                            isSelected ? (
+                              <View style={styles.selectedRadioActive}>
+                                <CheckIcon size={12} color="#FFFFFF" strokeWidth={2.4} />
+                              </View>
+                            ) : (
+                              <View style={styles.selectedRadioInactive} />
+                            )
+                          }
+                          style={[styles.userRow, isSelected && styles.userRowSelected]}
+                        />
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
             )}
-          </View>
-        )}
-        <Text style={styles.label}>Notification Type</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeScroll}>
-          {NOTIFICATION_TYPES.map(nt => (
-            <TouchableOpacity
-              key={nt}
-              style={[styles.typeBtn, type === nt && styles.typeBtnActive]}
-              onPress={() => setType(nt)}
-            >
-              <Text style={[styles.typeText, type === nt && styles.typeTextActive]}>{nt}</Text>
-            </TouchableOpacity>
-          ))}
+          </AdminCard>
+
+          {/* Notification Category */}
+          {renderSectionHeader('NOTIFICATION TYPE')}
+          <AdminCard style={styles.card}>
+            <View style={styles.typeChipsGrid}>
+              {NOTIFICATION_TYPES.map((t) => (
+                <AdminChip
+                  key={t}
+                  label={t}
+                  active={type === t}
+                  onPress={() => setType(t)}
+                  style={styles.typeChipItem}
+                />
+              ))}
+            </View>
+          </AdminCard>
+
+          {/* Content Section */}
+          {renderSectionHeader('CONTENT')}
+          <AdminCard style={styles.card}>
+            <AdminInput
+              label="Notification Title"
+              required
+              placeholder="e.g. Scheduled Platform Maintenance"
+              value={title}
+              onChangeText={setTitle}
+            />
+
+            <AdminInput
+              label="Message Body"
+              required
+              placeholder="Enter notification message details..."
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              containerStyle={{ marginBottom: 0 }}
+            />
+          </AdminCard>
         </ScrollView>
-        <Text style={styles.label}>Title</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., Order Update"
-          value={title}
-          onChangeText={setTitle}
-          placeholderTextColor="#9CA3AF"
-        />
-        <Text style={styles.label}>Message</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Enter detailed message..."
-          value={message}
-          onChangeText={setMessage}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-          placeholderTextColor="#9CA3AF"
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, loading && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.sendButtonText}>Send Notification</Text>
-          )}
-        </TouchableOpacity>
-        </ScrollView>
+
+        <AdminStickyBar>
+          <AdminPrimaryButton
+            title="Dispatch Notification"
+            onPress={handleSend}
+            loading={loading}
+          />
+        </AdminStickyBar>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AdminPageBackground>
   );
 };
+
 const styles = StyleSheet.create({
-  safeArea: {
+  keyboardContainer: {
     flex: 1,
-    backgroundColor: '#17212F',
-    paddingTop: Platform.OS === 'android' ? 24 : 0,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    padding: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  rowSelector: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  selectorBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-  },
-  selectorBtnActiveCustomer: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#3B82F6',
-  },
-  selectorText: {
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  selectorTextActiveCustomer: {
-    color: '#3B82F6',
-    fontWeight: '700',
-  },
-  selectorBtnActiveFarmer: {
-    backgroundColor: '#E6F4EA',
-    borderColor: '#2D983A',
-  },
-  selectorTextActiveFarmer: {
-    color: '#2D983A',
-    fontWeight: '700',
-  },
-  typeScroll: {
-    flexDirection: 'row',
-  },
-  typeBtn: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    marginRight: 8,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
-  typeBtnActive: {
-    backgroundColor: '#1E3A8A',
-    borderColor: '#1E3A8A',
+  sectionHeaderWrapper: {
+    marginBottom: 8,
+    marginTop: 6,
   },
-  typeText: {
-    fontSize: 13,
-    color: '#374151',
-    fontWeight: '500',
+  sectionHeaderTitle: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    color: '#4F5BD5',
+    marginBottom: 6,
   },
-  typeTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 12,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#111827',
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 16,
-    color: '#111827',
-  },
-  textArea: {
-    height: 120,
-  },
-  specificUserContainer: {
-    marginTop: 12,
+  sectionHeaderDivider: {
+    height: 1,
+    backgroundColor: '#EEF0F7',
     marginBottom: 4,
   },
-  infoText: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontStyle: 'italic',
+  card: {
+    marginBottom: 16,
+    padding: 16,
   },
-  usersScroll: {
+  fieldLabel: {
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.ink,
+    marginBottom: 8,
+  },
+  chipsRow: {
     flexDirection: 'row',
+    gap: 10,
   },
-  userCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    padding: 12,
-    marginRight: 12,
-    width: 100,
+  flex1: {
+    flex: 1,
+  },
+  specificPicker: {
+    marginTop: 14,
+  },
+  emptyText: {
+    fontFamily: AdminFonts.regular,
+    fontSize: 13,
+    color: ADMIN_THEME.colors.inkMuted,
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
+  usersList: {
+    maxHeight: 260,
+  },
+  userRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  userRowSelected: {
+    backgroundColor: '#E8EBFF',
+  },
+  selectedRadioActive: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#4F5BD5',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  userCardSelected: {
-    backgroundColor: '#2D983A',
-    borderColor: '#2D983A',
+  selectedRadioInactive: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#C9CEF5',
   },
-  userName: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#374151',
-    fontWeight: '500',
+  typeChipsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  sendButton: {
-    backgroundColor: '#2D983A',
-    borderRadius: 8,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 20,
-  },
-  sendButtonDisabled: {
-    opacity: 0.7,
-  },
-  sendButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+  typeChipItem: {
+    marginBottom: 4,
   },
 });
+
 export default AdminSendNotificationScreen;

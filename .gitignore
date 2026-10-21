@@ -32,6 +32,8 @@ android/app/build
 # Bundle artifacts
 *.jsbundle
 *.bundle
+dist/
+web-build/
 
 # IDE
 .idea/

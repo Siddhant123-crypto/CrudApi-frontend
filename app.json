@@ -21,6 +21,7 @@
     },
     "android": {
       "package": "com.siddhant.farm2home",
+      "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "config": {
@@ -41,7 +42,13 @@
       "expo-font",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Farm2Home to use your location for live order tracking."
+        }
+      ]
     ]
   }
 }

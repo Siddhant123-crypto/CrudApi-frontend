@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useRef, useLayoutEffect} from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,12 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
+  Animated,
+  Pressable,
+  Share,
+  Platform,
 } from 'react-native';
+import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Rect } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuth} from '../context/AuthContext';
 import {getProductImageUrl, getProductById, getProductVideoUrl} from '../services/productService';
@@ -21,11 +26,31 @@ import {StarRating} from '../components/reviews/StarRating';
 import {ReviewCard} from '../components/reviews/ReviewCard';
 import {MediaViewerModal} from '../components/reviews/MediaViewerModal';
 import {Review} from '../types';
+import {formatAddedTime} from '../utils/dateUtils';
 import {useFocusEffect} from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api, {BASE_URL} from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { THEME } from '../constants/theme';
+import { PageBackground } from '../components/ui/PageBackground';
+import { ThemedHeader } from '../components/ui/ThemedHeader';
+import { Card } from '../components/ui/Card';
+import { PrimaryButton, MaroonButton } from '../components/ui/Buttons';
+import { ThemedBadge } from '../components/ui/ThemedBadge';
+import { HeartIcon, ShareIcon } from '../components/CustomerIcons';
+import ProductCard from '../components/ProductCard';
+
+const formatDisplayPrice = (val: any) => {
+  const num = Number(val);
+  if (isNaN(num)) return val ?? '0';
+  if (num % 1 === 0) {
+    return String(Math.round(num));
+  }
+  return num.toFixed(2).replace(/\.00$/, '').replace(/(\.[0-9])0$/, '$1');
+};
+
 const {width} = Dimensions.get('window');
 const PRODUCT_CARD_WIDTH = width * 0.4;
 const PRICE_PRESETS = [
@@ -37,18 +62,82 @@ const PRICE_PRESETS = [
   { label: '₹500–1000', min: 500, max: 1000 },
   { label: '₹1000+', min: 1000, max: 99999 },
 ];
+
+interface AnimatedButtonProps {
+  onPress: () => void;
+  style: any;
+  activeScale?: number;
+  disabled?: boolean;
+  children: React.ReactNode;
+}
+
+const AnimatedButton: React.FC<AnimatedButtonProps> = ({
+  onPress,
+  style,
+  activeScale = 0.93,
+  disabled = false,
+  children,
+}) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: activeScale,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 8,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={disabled}
+      style={{ flex: 1 }}
+    >
+      {({ pressed }) => (
+        <Animated.View
+          style={[
+            style,
+            {
+              transform: [{ scale }],
+              opacity: disabled ? 0.6 : pressed ? 0.82 : 1,
+            },
+          ]}
+        >
+          {children}
+        </Animated.View>
+      )}
+    </Pressable>
+  );
+};
+
 const ProductDetailScreen = ({route, navigation}: any) => {
+  const insets = useSafeAreaInsets();
   const {product} = route.params;
   const {user} = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(0);
-  const [ordering, setOrdering] = useState(false);
+  const [goToCartLoading, setGoToCartLoading] = useState(false);
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
   const [productData, setProductData] = useState<any>(product);
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState<boolean>(true);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [mediaModalUrl, setMediaModalUrl] = useState<string | null>(null);
+  const [mediaModalIsVideo, setMediaModalIsVideo] = useState(false);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [similarLoading, setSimilarLoading] = useState<boolean>(true);
@@ -57,6 +146,23 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [categoryDropdownVisible, setCategoryDropdownVisible] = useState(false);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `Check out ${productData?.productName || 'Fresh Produce'} on Farm2Home!`,
+      });
+    } catch (e) {
+      console.log('Share error:', e);
+    }
+  };
+
   const fetchSimilarProducts = async (currentId: string) => {
     try {
       setSimilarLoading(true);
@@ -98,16 +204,32 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   const imageUrl = productData.productPhoto
     ? getProductImageUrl(productData.productPhoto)
     : null;
-  const handleGoToCart = () => {
+  const handleGoToCart = async () => {
     if (!user) {
       Alert.alert('Login Required', 'Please log in to add items to cart.');
       return;
     }
     const finalQuantity = quantity === 0 ? 1 : quantity;
-    addToCart(productData.productId, finalQuantity);
     if (quantity === 0) setQuantity(1);
-    navigation.navigate('Cart');
+
+    const alreadyInCart = cart?.items?.some((i: any) => i.productId === productData.productId);
+
+    if (alreadyInCart) {
+      navigation.navigate('Cart');
+      return;
+    }
+
+    setGoToCartLoading(true);
+    try {
+      await addToCart(productData.productId, finalQuantity, false);
+    } catch (err) {
+      console.log('Error adding to cart before navigating:', err);
+    } finally {
+      setGoToCartLoading(false);
+      navigation.navigate('Cart');
+    }
   };
+
   const handleBuyNow = () => {
     if (!user) {
       Alert.alert('Login Required', 'Please log in to place an order.');
@@ -115,13 +237,28 @@ const ProductDetailScreen = ({route, navigation}: any) => {
     }
     const finalQuantity = quantity === 0 ? 1 : quantity;
     if (quantity === 0) setQuantity(1);
-    
+
+    setBuyNowLoading(true);
+
+    const rawPrice = productData.price;
+    const price = typeof rawPrice === 'number' ? rawPrice : parseFloat(rawPrice) || 0;
+    const totalAmount = parseFloat((price * finalQuantity).toFixed(2));
+
     const orderItems = [{
-      product: productData,
-      quantity: finalQuantity
+      product: {
+        productId: productData.productId,
+        productName: productData.productName || 'Product',
+        price: price,
+        unit: productData.unit || 'kg',
+        productPhoto: productData.productPhoto || null,
+      },
+      quantity: finalQuantity,
     }];
-    const totalAmount = productData.price * finalQuantity;
-    navigation.navigate('Checkout', { orderItems, totalAmount });
+
+    setTimeout(() => {
+      setBuyNowLoading(false);
+      navigation.navigate('Checkout', { orderItems, totalAmount });
+    }, 120);
   };
   const isCustomer = user?.role === 'USER';
   const isFarmer = user?.role === 'FARMER';
@@ -144,41 +281,72 @@ const ProductDetailScreen = ({route, navigation}: any) => {
     return matchesSearch && inPriceRange && categoryMatch;
   });
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 100}}>
-        {}
-        <View style={styles.headerImageContainer}>
-          {imageUrl ? (
-            <Image source={{uri: imageUrl}} style={styles.headerImage} />
-          ) : (
-            <View style={styles.placeholderImage}>
-              <Text style={{fontSize: 50}}>🌾</Text>
-            </View>
-          )}
-          {}
-          <View style={styles.topBar}>
+    <PageBackground>
+      <ThemedHeader
+        title="Product Details"
+        titleAlign="left"
+        titleStyle={styles.headerTitle}
+        rightAction={
+          <View style={styles.headerGlassActions}>
             {isCustomer && (
-              <TouchableOpacity style={styles.iconButton} onPress={() => toggleWishlist(productData.productId)}>
-                <Ionicons name={isInWishlist(productData.productId) ? "heart" : "heart-outline"} size={24} color={isInWishlist(productData.productId) ? "#FF5252" : "#FFF"} />
+              <TouchableOpacity
+                style={styles.headerGlassBtn}
+                onPress={() => toggleWishlist(productData.productId)}
+                activeOpacity={0.8}
+              >
+                <HeartIcon
+                  size={19}
+                  color={isInWishlist(productData.productId) ? THEME.colors.heartActive : THEME.colors.white}
+                  fill={isInWishlist(productData.productId) ? THEME.colors.heartActive : 'none'}
+                />
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={styles.headerGlassBtn}
+              onPress={handleShare}
+              activeOpacity={0.8}
+            >
+              <ShareIcon size={18} color={THEME.colors.white} />
+            </TouchableOpacity>
           </View>
-          {}
-          <View style={styles.organicTagOverlay}>
-            <Ionicons name="leaf" size={14} color="#FFF" style={{marginRight: 4}} />
-            <Text style={styles.organicTagText}>Organic</Text>
-          </View>
+        }
+      />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: isCustomer ? 130 : 60}}>
+        {/* Large Peach Radial Hero Image Card */}
+        <View style={styles.heroCardWrapper}>
+          <Card style={styles.heroCard} bordered={false}>
+            <Svg width="100%" height={250} style={StyleSheet.absoluteFillObject}>
+              <Defs>
+                <SvgRadialGradient id="prodHeroGrad" cx="0.5" cy="0.4" r="0.6">
+                  <Stop offset="0%" stopColor={THEME.colors.tileRadialStart} />
+                  <Stop offset="55%" stopColor={THEME.colors.tileRadialMiddle} />
+                  <Stop offset="100%" stopColor={THEME.colors.tileRadialEnd} />
+                </SvgRadialGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height={250} rx={24} fill="url(#prodHeroGrad)" />
+            </Svg>
+
+            {imageUrl ? (
+              <Image source={{uri: imageUrl}} style={styles.heroImage} resizeMode="contain" />
+            ) : (
+              <Text style={{fontSize: 60}}>🌱</Text>
+            )}
+
+            <View style={styles.organicTagOverlay}>
+              <Ionicons name="leaf" size={13} color={THEME.colors.success} style={{marginRight: 4}} />
+              <Text style={styles.organicTagText}>100% Fresh & Organic</Text>
+            </View>
+          </Card>
         </View>
-        {}
+
         <View style={styles.contentContainer}>
-          {}
           <Text style={styles.productName}>{productData.productName}</Text>
           <View style={styles.authorRow}>
             <Text style={styles.authorText}>by {productData.farmerName || 'Farmer'}</Text>
-            <Ionicons name="checkmark-circle" size={16} color="#4CAF50" style={{marginLeft: 4}} />
+            <Ionicons name="checkmark-circle" size={16} color={THEME.colors.success} style={{marginLeft: 4}} />
           </View>
           <View style={styles.ratingRow}>
-            <Ionicons name="star" size={16} color="#FFC107" />
+            <Ionicons name="star" size={16} color={THEME.colors.star} />
             <Text style={styles.ratingText}>
               {" "}
               {productData.averageRating !== undefined && productData.averageRating !== null
@@ -189,30 +357,31 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </Text>
             </Text>
           </View>
-          {}
+
           <View style={styles.priceStatusRow}>
             <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
-              <Text style={styles.price}>₹{productData.price?.toFixed(2) || '0.00'}</Text>
+              <Text style={styles.price}>
+                ₹{formatDisplayPrice(productData.price)}
+              </Text>
               <Text style={styles.unit}> / {productData.unit || 'KG'}</Text>
             </View>
-            <View style={[styles.statusBadge, productData.isActive ? styles.statusActive : styles.statusInactive]}>
-              <Text style={[styles.statusText, productData.isActive ? styles.statusActiveText : styles.statusInactiveText]}>
-                {productData.isActive ? 'Active' : 'Inactive'}
-              </Text>
-            </View>
+            <ThemedBadge
+              label={productData.isActive ? 'Active' : 'Inactive'}
+              variant={productData.isActive ? 'success' : 'neutral'}
+            />
           </View>
           {}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsContainer}>
             <View style={styles.tag}>
-              <Ionicons name="nutrition-outline" size={14} color="#1E3A8A" />
+              <Ionicons name="nutrition-outline" size={14} color={THEME.colors.accentDeep} />
               <Text style={styles.tagText}>Fresh & Healthy</Text>
             </View>
             <View style={styles.tag}>
-              <Ionicons name="leaf-outline" size={14} color="#1E3A8A" />
+              <Ionicons name="leaf-outline" size={14} color={THEME.colors.accentDeep} />
               <Text style={styles.tagText}>100% Organic</Text>
             </View>
             <View style={styles.tag}>
-              <Ionicons name="shield-checkmark-outline" size={14} color="#1E3A8A" />
+              <Ionicons name="shield-checkmark-outline" size={14} color={THEME.colors.accentDeep} />
               <Text style={styles.tagText}>Pesticide Free</Text>
             </View>
           </ScrollView>
@@ -271,6 +440,15 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </View>
               <Text style={styles.detailValue}>{productData.harvestDate || 'Freshly Harvested'}</Text>
             </View>
+            {formatAddedTime(productData.createdOn, productData.addedTime) && (
+              <View style={styles.detailRow}>
+                <View style={styles.detailLabelContainer}>
+                  <Ionicons name="time-outline" size={16} color="#1E3A8A" />
+                  <Text style={styles.detailLabel}>Added</Text>
+                </View>
+                <Text style={styles.detailValue}>{formatAddedTime(productData.createdOn, productData.addedTime)}</Text>
+              </View>
+            )}
             <View style={[styles.detailRow, {borderBottomWidth: 0, alignItems: 'flex-start', marginTop: 8}]}>
               <View style={styles.detailLabelContainer}>
                 <Ionicons name="document-text-outline" size={16} color="#1E3A8A" />
@@ -285,22 +463,23 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           <Text style={styles.sectionTitle}>Location</Text>
           <View style={styles.locationCard}>
             <View style={styles.locationInfo}>
-              <Ionicons name="location" size={28} color="#1E3A8A" style={{marginRight: 10}} />
-              <View>
+              <View style={styles.locationPinBox}>
+                <Ionicons name="location" size={20} color={THEME.colors.accentDeep} />
+              </View>
+              <View style={{marginLeft: 12, flex: 1}}>
                 <Text style={styles.locationCity}>{productData.farmerAddress?.split(',')[0] || 'Nashik'}, Nashik</Text>
                 <Text style={styles.locationSub}>Near Panchavati</Text>
               </View>
             </View>
-            {}
           </View>
           {}
           <Text style={styles.sectionTitle}>Customer Photos & Videos</Text>
           <View style={styles.reviewsSection}>
             {reviewsLoading ? (
-              <ActivityIndicator size="small" color="#1E3A8A" style={{ marginVertical: 20 }} />
+              <ActivityIndicator size="small" color={THEME.colors.accentDeep} style={{ marginVertical: 20 }} />
             ) : reviewsList.length === 0 ? (
               <View style={styles.emptyReviewsContainer}>
-                <Ionicons name="chatbox-ellipses-outline" size={40} color="#9CA3AF" />
+                <Ionicons name="chatbox-ellipses-outline" size={40} color={THEME.colors.textMuted} />
                 <Text style={styles.emptyReviewsText}>No reviews yet for this product.</Text>
               </View>
             ) : (
@@ -315,17 +494,10 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                           key={m.mediaId}
                           activeOpacity={0.8}
                           onPress={() => {
-                            if (isVideo) {
-                              import('react-native').then(({ Linking, Alert }) => {
-                                Linking.openURL(url).catch(() =>
-                                  Alert.alert('Error', 'Could not play video. Please try again.')
-                                );
-                              });
-                            } else {
-                              setMediaModalUrl(url);
-                              setSelectedReview(review);
-                              setMediaModalVisible(true);
-                            }
+                            setMediaModalIsVideo(isVideo);
+                            setMediaModalUrl(url);
+                            setSelectedReview(review);
+                            setMediaModalVisible(true);
                           }}
                           style={styles.galleryMediaWrapper}
                         >
@@ -356,12 +528,12 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               <View style={styles.searchWrapper}>
                 <View style={[styles.searchContainer, searchFocused && styles.searchContainerFocused]}>
                   <View style={styles.searchIconCircle}>
-                    <Ionicons name="search" size={18} color="#FFFFFF" />
+                    <Ionicons name="search" size={17} color="#FFFFFF" />
                   </View>
                   <TextInput
                     style={styles.searchInput}
                     placeholder="Search..."
-                    placeholderTextColor="#9CA69E"
+                    placeholderTextColor={THEME.colors.placeholder}
                     value={searchText}
                     onChangeText={setSearchText}
                     onFocus={() => setSearchFocused(true)}
@@ -369,7 +541,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                   />
                   {searchText.length > 0 && (
                     <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearBtn}>
-                      <Ionicons name="close-circle" size={20} color="#9CA69E" />
+                      <Ionicons name="close-circle" size={18} color={THEME.colors.textMuted} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -378,17 +550,17 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                   onPress={() => setCategoryDropdownVisible(true)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="options-outline" size={18} color="#2563EB" />
+                  <Ionicons name="options-outline" size={17} color={THEME.colors.accentDeep} />
                   <Text style={styles.categoryFilterBtnText} numberOfLines={1}>
                     {selectedCategoryFilter}
                   </Text>
-                  <Ionicons name="chevron-down" size={14} color="#2563EB" style={{marginLeft: 2}} />
+                  <Ionicons name="chevron-down" size={14} color={THEME.colors.accentDeep} style={{marginLeft: 2}} />
                 </TouchableOpacity>
               </View>
               {}
               <View style={styles.priceFilterWrapper}>
                 <View style={styles.priceFilterHeader}>
-                  <Ionicons name="pricetag" size={16} color="#1E3A8A" />
+                  <Ionicons name="pricetag" size={15} color={THEME.colors.accentDeep} />
                   <Text style={styles.priceFilterTitle}>Price Filter</Text>
                 </View>
                 <ScrollView
@@ -414,49 +586,20 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                 </ScrollView>
               </View>
               {similarLoading ? (
-                <ActivityIndicator size="small" color="#1E3A8A" style={{ marginVertical: 20 }} />
+                <ActivityIndicator size="small" color={THEME.colors.accentDeep} style={{ marginVertical: 20 }} />
               ) : (
                 <View style={styles.similarGridContainer}>
                   {displayedSimilarProducts.map((item) => (
-                    <TouchableOpacity
-                      key={item.productId}
-                      activeOpacity={0.9}
-                      style={styles.similarCard}
-                      onPress={() => navigation.push('ProductDetail', { product: item })}
-                    >
-                      <View style={styles.similarImageContainer}>
-                        <Image
-                          source={
-                            item.productPhoto
-                              ? { uri: `${BASE_URL}/product/image/${item.productPhoto}` }
-                              : { uri: 'https://placehold.co/200x200/E8F5E2/2E9B32?text=Fresh' }
-                          }
-                          style={styles.similarImage}
-                          resizeMode="cover"
-                        />
-                        <View style={styles.freshTag}>
-                          <Text style={styles.freshTagText}>Fresh</Text>
-                        </View>
-                      </View>
-                      <View style={styles.similarInfo}>
-                        <Text style={styles.similarProductName} numberOfLines={1}>
-                          {item.productName}
-                        </Text>
-                        <Text style={styles.similarProductFarmer} numberOfLines={1}>
-                          🌾 {item.farmerName || 'Local Farmer'}
-                        </Text>
-                        <View style={styles.similarRatingRow}>
-                          <StarRating rating={Math.round(item.averageRating || 0)} size={10} disabled={true} />
-                          <Text style={styles.similarRatingText}>
-                            {item.averageRating ? item.averageRating.toFixed(1) : 'New'}
-                          </Text>
-                        </View>
-                        <View style={styles.similarPriceRow}>
-                          <Text style={styles.similarProductPrice}>₹{item.price}</Text>
-                          <Text style={styles.similarProductUnit}>/{item.unit || 'kg'}</Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
+                    <View key={item.productId} style={styles.similarCardWrapper}>
+                      <ProductCard
+                        product={item}
+                        variant="customer"
+                        onPress={() => navigation.push('ProductDetail', { product: item })}
+                        onWishlistToggle={() => toggleWishlist(item.productId)}
+                        isWishlisted={isInWishlist(item.productId)}
+                        onAddToCart={() => addToCart(item.productId, 1)}
+                      />
+                    </View>
                   ))}
                 </View>
               )}
@@ -466,41 +609,50 @@ const ProductDetailScreen = ({route, navigation}: any) => {
       </ScrollView>
       {}
       {isCustomer && (
-        <View style={styles.bottomBar}>
-          {}
-          <View style={styles.bottomTopRow}>
-            <View style={styles.quantityContainer}>
-              {quantity === 0 ? (
-                <TouchableOpacity style={styles.addBtn} onPress={() => setQuantity(1)}>
-                  <Text style={styles.addBtnText}>Add</Text>
-                  <Ionicons name="add" size={16} color="#1E3A8A" style={{marginLeft: 4}} />
-                </TouchableOpacity>
-              ) : (
-                <>
-                  <TouchableOpacity style={styles.quantityBtn} onPress={() => setQuantity(q => Math.max(0, q - 1))}>
-                    <Text style={styles.quantityBtnText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.quantityValue}>{quantity}</Text>
-                  <TouchableOpacity style={styles.quantityBtn} onPress={() => setQuantity(q => q + 1)}>
-                    <Text style={styles.quantityBtnText}>+</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+        <View style={[styles.themedStickyBar, { paddingBottom: Math.max(insets.bottom + 10, 26) }]}>
+          <View style={styles.bottomBarRow}>
+            {/* Quantity Stepper */}
+            <View style={styles.quantityStepper}>
+              <TouchableOpacity
+                style={styles.stepperActionBtn}
+                onPress={() => setQuantity(q => Math.max(0, q - 1))}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="remove" size={14} color={THEME.colors.selectedText} />
+              </TouchableOpacity>
+              <Text style={styles.stepperQuantityText}>{quantity === 0 ? 1 : quantity}</Text>
+              <TouchableOpacity
+                style={styles.stepperActionBtn}
+                onPress={() => setQuantity(q => (q === 0 ? 2 : q + 1))}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add" size={14} color={THEME.colors.selectedText} />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.totalPriceText}>₹{(productData.price * quantity).toFixed(2)}</Text>
-          </View>
-          {}
-          <View style={styles.actionButtonsRow}>
-            {}
-            <TouchableOpacity style={styles.goToCartBtn} onPress={handleGoToCart} activeOpacity={0.8}>
-              <Ionicons name="cart-outline" size={18} color="#F59E0B" style={{marginRight: 6}} />
-              <Text style={styles.goToCartBtnText}>Go to Cart</Text>
-            </TouchableOpacity>
-            {}
-            <TouchableOpacity style={styles.buyNowBtn} onPress={handleBuyNow} disabled={ordering} activeOpacity={0.85}>
-              <Ionicons name="flash" size={18} color="#FFF" style={{marginRight: 6}} />
-              <Text style={styles.buyNowBtnText}>Buy Now</Text>
-            </TouchableOpacity>
+
+            {/* Add to Cart Button */}
+            <View style={{ flex: 1.15 }}>
+              <PrimaryButton
+                title={goToCartLoading ? 'Adding...' : 'Add to Cart'}
+                onPress={handleGoToCart}
+                loading={goToCartLoading}
+                style={{ height: 46 }}
+                contentStyle={{ paddingHorizontal: 6 }}
+                textStyle={{ fontSize: 13, letterSpacing: 0 }}
+              />
+            </View>
+
+            {/* Buy Now Button */}
+            <View style={{ flex: 1 }}>
+              <MaroonButton
+                title={buyNowLoading ? 'Please wait...' : 'Buy Now'}
+                onPress={handleBuyNow}
+                loading={buyNowLoading}
+                style={{ height: 46 }}
+                contentStyle={{ paddingHorizontal: 6 }}
+                textStyle={{ fontSize: 13, letterSpacing: 0 }}
+              />
+            </View>
           </View>
         </View>
       )}
@@ -527,11 +679,13 @@ const ProductDetailScreen = ({route, navigation}: any) => {
       )}
       <MediaViewerModal
         visible={mediaModalVisible}
-        imageUrl={mediaModalUrl}
+        mediaUrl={mediaModalUrl}
+        isVideo={mediaModalIsVideo}
         review={selectedReview}
         onClose={() => {
           setMediaModalVisible(false);
           setMediaModalUrl(null);
+          setMediaModalIsVideo(false);
           setSelectedReview(null);
         }}
       />
@@ -574,78 +728,120 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </PageBackground>
   );
 };
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
-  headerImageContainer: {
-    width: '100%',
-    height: 320,
-    position: 'relative',
-    backgroundColor: '#E0E0E0',
-  },
-  headerImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  placeholderImage: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#C8E6C9',
-  },
-  topBar: {
-    position: 'absolute',
-    top: 40,
-    left: 20,
-    right: 20,
+  headerGlassActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    zIndex: 10,
+    alignItems: 'center',
+    gap: 8,
   },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+  headerGlassBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: THEME.colors.headerGlassBorder,
+    backgroundColor: THEME.colors.headerGlassBg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  heroCardWrapper: {
+    paddingHorizontal: THEME.spacing.pageHorizontal,
+    marginTop: 14,
+  },
+  heroCard: {
+    width: '100%',
+    height: 250,
+    borderRadius: THEME.radius.cards,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    padding: 0,
+    ...THEME.shadows.card,
+  },
+  heroImage: {
+    width: '80%',
+    height: 200,
   },
   organicTagOverlay: {
     position: 'absolute',
-    bottom: 40,
-    left: 20,
-    backgroundColor: 'rgba(27, 94, 32, 0.8)',
+    bottom: 12,
+    left: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: THEME.colors.successBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: THEME.radius.pill,
+    borderWidth: 1,
+    borderColor: '#C6E8D0',
   },
   organicTagText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.success,
+    fontSize: 11,
+  },
+  headerTitle: {
+    fontSize: 18,
+  },
+  themedStickyBar: {
+    backgroundColor: THEME.colors.cardBg,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderTopWidth: 1,
+    borderColor: THEME.colors.cardBorder,
+    paddingTop: 14,
+    paddingBottom: 28,
+    paddingHorizontal: 16,
+    ...THEME.shadows.stickyBar,
+  },
+  bottomBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  quantityStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.colors.cardBg,
+    borderRadius: THEME.radius.pill,
+    borderWidth: 1,
+    borderColor: THEME.colors.cardBorder,
+    padding: 2,
+  },
+  stepperActionBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: THEME.colors.selectedBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperQuantityText: {
+    fontFamily: THEME.fonts.bold,
+    fontSize: 13.5,
+    color: THEME.colors.textBase,
+    paddingHorizontal: 6,
+    minWidth: 22,
+    textAlign: 'center',
   },
   contentContainer: {
-    backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    marginTop: -30,
+    backgroundColor: 'transparent',
+    paddingHorizontal: THEME.spacing.pageHorizontal,
+    paddingTop: 16,
     minHeight: 500,
   },
   productName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
+    fontFamily: THEME.fonts.bold,
+    fontSize: 21,
+    color: THEME.colors.textHeading,
+    lineHeight: 26,
   },
   authorRow: {
     flexDirection: 'row',
@@ -653,40 +849,41 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   authorText: {
-    fontSize: 15,
-    color: '#4B5563',
-    fontWeight: '500',
+    fontFamily: THEME.fonts.semiBold,
+    fontSize: 13,
+    color: THEME.colors.textSecondary,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   ratingText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#374151',
+    fontFamily: THEME.fonts.semiBold,
+    fontSize: 12.5,
+    color: THEME.colors.textSecondary,
   },
   reviewCount: {
-    fontWeight: '400',
-    color: '#6B7280',
+    fontFamily: THEME.fonts.regular,
+    color: THEME.colors.textMuted,
   },
   priceStatusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 12,
+    marginBottom: 14,
   },
   price: {
+    fontFamily: THEME.fonts.serif,
     fontSize: 24,
-    fontWeight: '800',
-    color: '#1E3A8A',
+    color: THEME.colors.textBase,
   },
   unit: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontFamily: THEME.fonts.medium,
+    fontSize: 14,
+    color: THEME.colors.textSecondary,
+    marginLeft: 4,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -711,39 +908,39 @@ const styles = StyleSheet.create({
   },
   tagsContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFF4E8',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 8,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#FBDDB8',
   },
   tagText: {
-    fontSize: 12,
-    color: '#1E3A8A',
-    fontWeight: '600',
+    fontSize: 11.5,
+    color: THEME.colors.accentDeep,
+    fontFamily: THEME.fonts.bold,
     marginLeft: 4,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 16.5,
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.textHeading,
     marginBottom: 12,
     marginTop: 8,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: THEME.colors.cardBg,
     borderRadius: 20,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: THEME.colors.cardBorder,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.05,
@@ -753,41 +950,36 @@ const styles = StyleSheet.create({
   farmerCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: THEME.colors.cardBg,
     padding: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: THEME.colors.cardBorder,
   },
   farmerAvatarPlaceholder: {
-    width: 65,
-    height: 65,
-    borderRadius: 32.5,
-    backgroundColor: '#EFF6FF',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#FFF4E8',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 2,
-    borderColor: '#FFF',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#FBDDB8',
   },
   farmerInfo: {
     flex: 1,
   },
   farmerName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: 16,
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.textHeading,
   },
   farmerSubtitle: {
-    fontSize: 13,
-    color: '#1E3A8A',
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: 12.5,
+    color: THEME.colors.accentDeep,
+    fontFamily: THEME.fonts.semiBold,
+    marginBottom: 6,
   },
   iconRow: {
     flexDirection: 'row',
@@ -813,40 +1005,53 @@ const styles = StyleSheet.create({
     width: 120,
   },
   detailLabel: {
-    fontSize: 14,
+    fontSize: 13.5,
     color: '#4B5563',
     marginLeft: 8,
     fontWeight: '500',
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: 13.5,
     color: '#111827',
     fontWeight: '600',
   },
   locationCard: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: THEME.colors.cardBg,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 40,
+    padding: 14,
+    marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderColor: THEME.colors.cardBorder,
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
+    ...THEME.shadows.card,
   },
   locationInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     zIndex: 1,
+    flex: 1,
+  },
+  locationPinBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#FFF1DE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: THEME.colors.cardBorder,
   },
   locationCity: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 14.5,
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.textHeading,
   },
   locationSub: {
-    fontSize: 13,
-    color: '#4B5563',
+    fontSize: 12.5,
+    fontFamily: THEME.fonts.medium,
+    color: THEME.colors.textSecondary,
     marginTop: 2,
   },
   bottomBar: {
@@ -865,6 +1070,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 12,
+    zIndex: 999,
   },
   bottomTopRow: {
     flexDirection: 'row',
@@ -915,10 +1121,11 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
+    alignItems: 'center',
   },
   goToCartBtn: {
-    flex: 1,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -927,6 +1134,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 13,
     backgroundColor: '#FFFBEB',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   goToCartBtnText: {
     color: '#D97706',
@@ -934,18 +1146,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   buyNowBtn: {
-    flex: 1,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F59E0B',
     borderRadius: 12,
     paddingVertical: 13,
-    shadowColor: '#F59E0B',
+    shadowColor: '#D97706',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 5,
   },
   buyNowBtnText: {
     color: '#FFF',
@@ -1047,17 +1259,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   mediaGalleryContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: THEME.colors.cardBg,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: THEME.colors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 4,
-    marginBottom: 40,
+    elevation: 3,
+    marginBottom: 28,
   },
   galleryMediaWrapper: {
     marginRight: 12,
@@ -1086,16 +1298,16 @@ const styles = StyleSheet.create({
   viewAllBtn: {
     marginTop: 16,
     paddingVertical: 12,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 8,
+    backgroundColor: '#FFF4E8',
+    borderRadius: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#FBDDB8',
   },
   viewAllBtnText: {
-    color: '#2563EB',
-    fontWeight: '700',
-    fontSize: 14,
+    color: THEME.colors.accentDeep,
+    fontFamily: THEME.fonts.bold,
+    fontSize: 13.5,
   },
   similarSection: {
     marginTop: 10,
@@ -1111,12 +1323,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: THEME.colors.cardBg,
     borderRadius: 16,
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: THEME.colors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1124,24 +1336,24 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchContainerFocused: {
-    borderColor: '#1E3A8A',
-    shadowOpacity: 0.15,
+    borderColor: THEME.colors.accent,
+    shadowOpacity: 0.12,
   },
   searchIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#1E3A8A',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: THEME.colors.accentDeep,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    color: '#2C3E50',
-    fontWeight: '500',
-    paddingVertical: 8,
+    fontSize: 14,
+    fontFamily: THEME.fonts.medium,
+    color: THEME.colors.textBase,
+    paddingVertical: 6,
   },
   clearBtn: {
     padding: 8,
@@ -1149,12 +1361,12 @@ const styles = StyleSheet.create({
   categoryFilterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: THEME.colors.cardBg,
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: THEME.colors.cardBorder,
     borderRadius: 16,
     paddingHorizontal: 12,
-    height: 50,
+    height: 48,
     marginLeft: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1164,8 +1376,8 @@ const styles = StyleSheet.create({
   },
   categoryFilterBtnText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#2563EB',
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.accentDeep,
     marginLeft: 6,
     maxWidth: 70,
   },
@@ -1208,8 +1420,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   dropdownItemTextActive: {
-    color: '#1E3A8A',
-    fontWeight: '700',
+    color: THEME.colors.accentDeep,
+    fontFamily: THEME.fonts.bold,
   },
   priceFilterWrapper: {
     marginBottom: 16,
@@ -1221,9 +1433,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   priceFilterTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2C3E50',
+    fontSize: 13.5,
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.textHeading,
     marginLeft: 6,
   },
   priceButtonsScroll: {
@@ -1231,13 +1443,13 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   priceChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    marginRight: 10,
+    backgroundColor: THEME.colors.cardBg,
+    marginRight: 8,
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: THEME.colors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -1245,101 +1457,28 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   priceChipActive: {
-    backgroundColor: '#1E3A8A',
-    borderColor: '#1E3A8A',
+    backgroundColor: THEME.colors.accentDeep,
+    borderColor: THEME.colors.accentDeep,
     elevation: 4,
     shadowOpacity: 0.2,
   },
   priceChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7F8C8D',
+    fontSize: 12.5,
+    fontFamily: THEME.fonts.semiBold,
+    color: THEME.colors.textSecondary,
   },
   priceChipTextActive: {
     color: '#FFFFFF',
+    fontFamily: THEME.fonts.bold,
   },
   similarGridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    marginHorizontal: -6,
     paddingTop: 8,
   },
-  similarCard: {
-    backgroundColor: '#FFFFFF',
-    width: '48%',
-    borderRadius: 16,
-    marginBottom: 16,
-    shadowColor: '#1E3A8A',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  similarImageContainer: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#EDF5EE',
-    position: 'relative',
-  },
-  similarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  freshTag: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  freshTagText: {
-    color: '#16A34A',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  similarInfo: {
-    padding: 12,
-  },
-  similarProductName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#121912',
-    marginBottom: 3,
-  },
-  similarProductFarmer: {
-    fontSize: 10,
-    color: '#687168',
-    marginBottom: 5,
-  },
-  similarRatingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  similarRatingText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#6B7F6E',
-    marginLeft: 4,
-  },
-  similarPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  similarProductPrice: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1E3A8A',
-  },
-  similarProductUnit: {
-    fontSize: 11,
-    color: '#687168',
-    marginLeft: 2,
+  similarCardWrapper: {
+    width: '50%',
   },
 });
 export default ProductDetailScreen;

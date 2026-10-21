@@ -13,7 +13,13 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api, { BASE_URL } from '../services/api';
+import { THEME } from '../constants/theme';
+import { PageBackground } from '../components/ui/PageBackground';
+import { ThemedHeader } from '../components/ui/ThemedHeader';
+import { ThemedEmptyState } from '../components/ui/ThemedEmptyState';
+
 const { width } = Dimensions.get('window');
+
 interface FarmDetailsResponse {
   id: string;
   farmerId: string;
@@ -36,38 +42,17 @@ interface FarmDetailsResponse {
   farmVideo: string | null;
   verified: boolean;
 }
+
 export default function CustomerFarmerFarmsScreen({ navigation }: any) {
   const [farms, setFarms] = useState<FarmDetailsResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: 'Farmer Farms',
-      headerStyle: {
-        backgroundColor: '#1E3A8A',
-        elevation: 6,
-        shadowColor: '#1E3A8A',
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 3 },
-      },
-      headerTintColor: '#FFFFFF',
-      headerTitleStyle: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#FFFFFF',
-      },
-      headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: 12 }}>
-          <Ionicons name="chevron-back-outline" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
+
   useFocusEffect(
     useCallback(() => {
       fetchFarms();
     }, [])
   );
+
   const fetchFarms = async () => {
     try {
       setLoading(true);
@@ -81,6 +66,7 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
       setLoading(false);
     }
   };
+
   const renderFarmCard = ({ item }: { item: FarmDetailsResponse }) => (
     <TouchableOpacity
       activeOpacity={0.9}
@@ -96,12 +82,12 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
           />
         ) : (
           <View style={[styles.farmImage, styles.placeholderImage]}>
-            <Ionicons name="leaf" size={40} color="#1E3A8A" />
+            <Ionicons name="leaf" size={40} color="#B8470F" />
           </View>
         )}
         {item.verified && (
           <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+            <Ionicons name="checkmark-circle" size={16} color="#2E7D4F" />
             <Text style={styles.verifiedText}>Verified</Text>
           </View>
         )}
@@ -110,11 +96,11 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
         <Text style={styles.farmName} numberOfLines={1}>{item.farmName || 'Unnamed Farm'}</Text>
         <Text style={styles.tagline} numberOfLines={1}>{item.tagline || 'Fresh from the root'}</Text>
         <View style={styles.infoRow}>
-          <Ionicons name="person-outline" size={14} color="#6B7280" />
+          <Ionicons name="person-outline" size={14} color="#8A6F5C" />
           <Text style={styles.infoText}>{item.farmerName}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Ionicons name="location-outline" size={14} color="#6B7280" />
+          <Ionicons name="location-outline" size={14} color="#B8470F" />
           <Text style={styles.infoText} numberOfLines={1}>{item.location}</Text>
         </View>
         <View style={styles.badgeRow}>
@@ -128,17 +114,23 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
       </View>
     </TouchableOpacity>
   );
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <PageBackground style={styles.safeArea}>
+      <ThemedHeader
+        variant="inner"
+        title="Farmer Farms"
+        onBackPress={() => navigation.goBack()}
+      />
       <View style={styles.container}>
         {loading ? (
-          <ActivityIndicator size="large" color="#1E3A8A" style={styles.loader} />
+          <ActivityIndicator size="large" color="#B8470F" style={styles.loader} />
         ) : farms.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="home-outline" size={60} color="#9CA3AF" />
-            <Text style={styles.emptyTitle}>No Farms Found</Text>
-            <Text style={styles.emptySubtitle}>There are currently no farmer farms to display.</Text>
-          </View>
+          <ThemedEmptyState
+            icon={<Ionicons name="home-outline" size={44} color="#B8470F" />}
+            title="No Farms Found"
+            subtitle="There are currently no farmer farms to display."
+          />
         ) : (
           <FlatList
             data={farms}
@@ -149,13 +141,12 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
           />
         )}
       </View>
-    </SafeAreaView>
+    </PageBackground>
   );
 }
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
   },
   container: {
     flex: 1,
@@ -163,46 +154,28 @@ const styles = StyleSheet.create({
   loader: {
     marginTop: '50%',
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#374151',
-    marginTop: 10,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 5,
-    textAlign: 'center',
-  },
   listContent: {
     padding: 16,
     paddingBottom: 40,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 24,
     marginBottom: 20,
     overflow: 'hidden',
-    shadowColor: '#1E3A8A',
+    shadowColor: 'rgba(90,40,15,0.09)',
     shadowOpacity: 0.1,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
     elevation: 4,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    borderColor: '#F0E1CF',
   },
   imageContainer: {
     width: '100%',
     height: 180,
     position: 'relative',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
   },
   farmImage: {
     width: '100%',
@@ -211,7 +184,7 @@ const styles = StyleSheet.create({
   placeholderImage: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#E0E7FF',
+    backgroundColor: '#FFF1E3',
   },
   verifiedBadge: {
     position: 'absolute',
@@ -219,34 +192,32 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#E3F3E8',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BBE3C8',
   },
   verifiedText: {
+    fontFamily: THEME.fonts.bold,
     fontSize: 12,
-    fontWeight: '700',
-    color: '#16A34A',
+    color: '#2E7D4F',
     marginLeft: 4,
   },
   cardBody: {
-    padding: 16,
+    padding: 18,
   },
   farmName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+    fontFamily: THEME.fonts.serif,
+    fontSize: 19,
+    color: '#3B1A0E',
     marginBottom: 4,
   },
   tagline: {
+    fontFamily: THEME.fonts.medium,
     fontSize: 13,
-    color: '#10B981',
-    fontWeight: '600',
+    color: '#8A6F5C',
     marginBottom: 12,
   },
   infoRow: {
@@ -255,8 +226,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   infoText: {
-    fontSize: 14,
-    color: '#4B5563',
+    fontFamily: THEME.fonts.regular,
+    fontSize: 13.5,
+    color: '#5C4433',
     marginLeft: 8,
     flex: 1,
   },
@@ -266,16 +238,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   badge: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFF1E3',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#F2B27D',
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1E3A8A',
+    fontFamily: THEME.fonts.bold,
+    fontSize: 11.5,
+    color: '#B8470F',
   },
 });

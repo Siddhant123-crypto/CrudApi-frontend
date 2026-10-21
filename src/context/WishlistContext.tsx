@@ -8,6 +8,7 @@ interface WishlistContextType {
   isLoading: boolean;
   refreshWishlist: () => Promise<void>;
   toggleWishlist: (productId: string) => Promise<void>;
+  removeFromWishlist: (productId: string, showNotification?: boolean) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
 }
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -63,6 +64,21 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
       Alert.alert('Error', 'Failed to update wishlist');
     }
   };
+  const removeFromWishlist = async (productId: string, showNotification: boolean = true) => {
+    try {
+      await wishlistService.removeFromWishlist(productId);
+      if (showNotification) {
+        Alert.alert('Success', 'Removed from product wishlist');
+      }
+      await refreshWishlist();
+    } catch (error: any) {
+      console.log('Error removing from wishlist:', error);
+      if (showNotification) {
+        Alert.alert('Error', 'Failed to remove from wishlist');
+      }
+    }
+  };
+
   return (
     <WishlistContext.Provider
       value={{
@@ -70,6 +86,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         isLoading,
         refreshWishlist,
         toggleWishlist,
+        removeFromWishlist,
         isInWishlist,
       }}
     >

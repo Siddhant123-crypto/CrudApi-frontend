@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
+import { setUnauthorizedHandler } from '../services/api';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -44,6 +45,13 @@ export const AuthProvider: React.FC<{
     );
   useEffect(() => {
     loadStoredUser();
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      setInitialAuthRoute('NewUserLogin');
+    });
+    return () => {
+      setUnauthorizedHandler(null);
+    };
   }, []);
   const loadStoredUser = async () => {
     try {
