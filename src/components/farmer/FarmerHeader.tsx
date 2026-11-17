@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 import {
   MenuIcon,
@@ -76,6 +77,7 @@ export const FarmerHeader: React.FC<FarmerHeaderProps> = React.memo(({
   searchLoading = false,
   weatherRefreshTrigger,
 }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const searchInputRef = useRef<TextInput>(null);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -324,7 +326,7 @@ export const FarmerHeader: React.FC<FarmerHeaderProps> = React.memo(({
                   style={styles.locationLabel}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  Your farm
+                  {t('farmer.yourFarm', 'Your farm')}
                 </Text>
                 <View style={styles.locationNameRow}>
                   <PinIcon
@@ -337,7 +339,7 @@ export const FarmerHeader: React.FC<FarmerHeaderProps> = React.memo(({
                     numberOfLines={1}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    {farmName || 'Farmer'}
+                    {farmName || t('auth.farmer', 'Farmer')}
                   </Text>
                   <ChevronDownIcon size={16} color="#FFFFFF" strokeWidth={2.2} />
                 </View>
@@ -394,7 +396,7 @@ export const FarmerHeader: React.FC<FarmerHeaderProps> = React.memo(({
                     style={styles.expandedSearchInput}
                     value={searchValue}
                     onChangeText={onSearchChange}
-                    placeholder="Search products, orders..."
+                    placeholder={t('farmer.searchPlaceholder', 'Search products, orders...')}
                     placeholderTextColor={FARMER_THEME.colors.placeholder}
                     underlineColorAndroid="transparent"
                     returnKeyType="search"
@@ -543,14 +545,19 @@ const styles = StyleSheet.create({
   },
   unreadDot: {
     position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: FARMER_THEME.colors.goldDot,
+    top: 7,
+    right: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
     borderWidth: 2,
-    borderColor: FARMER_THEME.colors.goldDotBorder,
+    borderColor: '#FFFFFF',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.7,
+    shadowRadius: 3,
+    elevation: 4,
   },
   locationBlock: {
     flex: 1,

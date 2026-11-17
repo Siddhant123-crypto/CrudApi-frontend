@@ -16,6 +16,7 @@ import api, { BASE_URL } from '../services/api';
 import { THEME } from '../constants/theme';
 import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -50,6 +51,7 @@ interface FarmGalleryResponse {
 }
 
 export default function CustomerFarmDetailScreen({ route, navigation }: any) {
+  const { t } = useTranslation();
   const { farm }: { farm: FarmDetailsResponse } = route.params;
   const [gallery, setGallery] = useState<FarmGalleryResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,47 +105,47 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
           <View style={styles.statBox}>
             <Ionicons name="leaf-outline" size={24} color="#B8470F" />
             <Text style={styles.statValue}>{farm.farmingType}</Text>
-            <Text style={styles.statLabel}>Farming</Text>
+            <Text style={styles.statLabel}>{t('farmer.farming', 'Farming')}</Text>
           </View>
           <View style={styles.statBox}>
             <Ionicons name="calendar-outline" size={24} color="#B8470F" />
             <Text style={styles.statValue}>{farm.yearsExperience}+</Text>
-            <Text style={styles.statLabel}>Years</Text>
+            <Text style={styles.statLabel}>{t('farmer.years', 'Years')}</Text>
           </View>
           <View style={styles.statBox}>
             <Ionicons name="people-outline" size={24} color="#B8470F" />
             <Text style={styles.statValue}>{farm.happyCustomersCount}+</Text>
-            <Text style={styles.statLabel}>Happy Users</Text>
+            <Text style={styles.statLabel}>{t('farmer.happyUsers', 'Happy Users')}</Text>
           </View>
         </View>
         <View style={styles.detailsSection}>
-          <Text style={styles.sectionTitle}>Farm Details</Text>
+          <Text style={styles.sectionTitle}>{t('farmer.farmDetails', 'Farm Details')}</Text>
           <View style={styles.detailGrid}>
             <View style={styles.detailItem}>
               <View style={styles.detailHeader}>
                 <Ionicons name="person-outline" size={16} color="#B8470F" />
-                <Text style={styles.detailLabel}>Farmer Name</Text>
+                <Text style={styles.detailLabel}>{t('orders.farmer', 'Farmer Name')}</Text>
               </View>
               <Text style={styles.detailValue}>{farm.farmerName}</Text>
             </View>
             <View style={styles.detailItem}>
               <View style={styles.detailHeader}>
                 <Ionicons name="basket-outline" size={16} color="#B8470F" />
-                <Text style={styles.detailLabel}>Main Crops</Text>
+                <Text style={styles.detailLabel}>{t('farmer.mainCrops', 'Main Crops')}</Text>
               </View>
               <Text style={styles.detailValue}>{farm.mainCrops}</Text>
             </View>
             <View style={styles.detailItem}>
               <View style={styles.detailHeader}>
                 <Ionicons name="water-outline" size={16} color="#B8470F" />
-                <Text style={styles.detailLabel}>Irrigation</Text>
+                <Text style={styles.detailLabel}>{t('farmer.irrigation', 'Irrigation')}</Text>
               </View>
               <Text style={styles.detailValue}>{farm.irrigationSource}</Text>
             </View>
             <View style={styles.detailItem}>
               <View style={styles.detailHeader}>
                 <Ionicons name="earth-outline" size={16} color="#B8470F" />
-                <Text style={styles.detailLabel}>Soil Type</Text>
+                <Text style={styles.detailLabel}>{t('farmer.soilType', 'Soil Type')}</Text>
               </View>
               <Text style={styles.detailValue}>{farm.soilType}</Text>
             </View>
@@ -152,14 +154,14 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
             <View style={styles.aboutBox}>
               <View style={styles.detailHeader}>
                 <Ionicons name="information-circle-outline" size={18} color="#B8470F" />
-                <Text style={[styles.detailLabel, { fontSize: 16, fontFamily: THEME.fonts.bold, color: '#3B1A0E' }]}>About My Farm</Text>
+                <Text style={[styles.detailLabel, { fontSize: 16, fontFamily: THEME.fonts.bold, color: '#3B1A0E' }]}>{t('farmer.aboutMyFarm', 'About My Farm')}</Text>
               </View>
               <Text style={styles.aboutText}>{farm.aboutFarm}</Text>
             </View>
           )}
         </View>
         <View style={styles.gallerySection}>
-          <Text style={styles.sectionTitle}>Farm Gallery</Text>
+          <Text style={styles.sectionTitle}>{t('farmer.farmGallery', 'Farm Gallery')}</Text>
           {loading ? (
             <ActivityIndicator size="small" color="#B8470F" style={{ marginTop: 20 }} />
           ) : gallery.length === 0 && (!farm.farmVideo || farm.farmVideo === 'null') ? (
@@ -177,7 +179,7 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
                 >
                   <View style={[styles.galleryMedia, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
                     <Ionicons name="videocam" size={40} color="rgba(255,255,255,0.8)" />
-                    <Text style={{ color: '#fff', marginTop: 8 }}>Video Player</Text>
+                    <Text style={{ color: '#fff', marginTop: 8 }}>{t('farmer.videoPlayer', 'Video Player')}</Text>
                   </View>
                 </TouchableOpacity>
               )}
@@ -191,7 +193,7 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
                     >
                       <View style={[styles.galleryMedia, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
                         <Ionicons name="videocam" size={40} color="rgba(255,255,255,0.8)" />
-                        <Text style={{ color: '#fff', marginTop: 8 }}>Video Player</Text>
+                        <Text style={{ color: '#fff', marginTop: 8 }}>{t('farmer.videoPlayer', 'Video Player')}</Text>
                       </View>
                     </TouchableOpacity>
                   ) : (

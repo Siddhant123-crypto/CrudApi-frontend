@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { THEME } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 interface LogoutModalProps {
   visible: boolean;
@@ -25,6 +26,8 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
   onConfirm,
   loading = false,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -48,9 +51,9 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
           </View>
 
           {/* Heading & Subtitle */}
-          <Text style={styles.modalTitle}>Log Out?</Text>
+          <Text style={styles.modalTitle}>{t('profile.logoutConfirmTitle', 'Log Out?')}</Text>
           <Text style={styles.modalSubtitle}>
-            Are you sure you want to log out of your account?
+            {t('profile.logoutConfirmDesc', 'Are you sure you want to log out of your account?')}
           </Text>
 
           {/* Action Buttons: Customer Dashboard Color Combo */}
@@ -74,7 +77,7 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
                   color="#FFFFFF"
                   style={{ marginRight: 6 }}
                 />
-                <Text numberOfLines={1} style={styles.btnText}>Cancel</Text>
+                <Text numberOfLines={1} style={styles.btnText}>{t('common.cancel', 'Cancel')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
@@ -97,7 +100,7 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
                   color="#FFFFFF"
                   style={{ marginRight: 6 }}
                 />
-                <Text numberOfLines={1} style={styles.btnText}>Log Out</Text>
+                <Text numberOfLines={1} style={styles.btnText}>{t('profile.logout', 'Log Out')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>

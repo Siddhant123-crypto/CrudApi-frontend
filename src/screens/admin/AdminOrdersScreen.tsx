@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -26,6 +27,7 @@ import {
 } from '../../components/admin';
 
 export const AdminOrdersScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState<any[]>([]);
@@ -141,8 +143,8 @@ export const AdminOrdersScreen: React.FC = () => {
       {/* 1) HEADER (shows "Orders" title in Fraunces 600 22, back button preserved, no separate big heading) */}
       <AdminHeader
         variant="tab"
-        title="Orders"
-        subtitle="Manage customer orders"
+        title={t('admin.allOrders', 'Orders')}
+        subtitle={t('admin.ordersSubtitle', 'Manage customer orders')}
         showBackButton={true}
       />
 
@@ -152,7 +154,7 @@ export const AdminOrdersScreen: React.FC = () => {
           <SearchIcon size={20} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search orders..."
+            placeholder={t('admin.searchOrders', 'Search orders...')}
             placeholderTextColor="#8A93AB"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -171,7 +173,7 @@ export const AdminOrdersScreen: React.FC = () => {
             {tabs.map(tab => (
               <AdminChip
                 key={tab}
-                label={tab}
+                label={tab === 'All' ? t('common.all', 'All') : tab}
                 active={activeTab === tab}
                 onPress={() => setActiveTab(tab)}
               />
@@ -201,8 +203,8 @@ export const AdminOrdersScreen: React.FC = () => {
         ) : (
           <AdminEmptyState
             icon={<ShoppingBagIcon size={44} color={ADMIN_THEME.colors.indigo} strokeWidth={1.8} />}
-            title="No orders found"
-            subtitle="Looks like you don't have any orders matching your criteria."
+            title={t('admin.noOrdersFound', 'No orders found')}
+            subtitle={t('admin.noOrdersMatched', "Looks like you don't have any orders matching your criteria.")}
           />
         )}
       </View>

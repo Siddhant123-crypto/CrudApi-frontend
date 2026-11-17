@@ -5,7 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { FARMER_THEME } from '../../constants/farmerTheme';
+import { formatOrderStatus } from '../../utils/statusUtils';
 
 export interface FarmerOrderCardProps {
   orderId: string;
@@ -26,6 +28,7 @@ export const FarmerOrderCard: React.FC<FarmerOrderCardProps> = ({
   status,
   onPress,
 }) => {
+  const { t } = useTranslation();
   const normStatus = (status || 'PENDING').toUpperCase();
 
   let pillBg = FARMER_THEME.colors.pendingBg;
@@ -40,12 +43,12 @@ export const FarmerOrderCard: React.FC<FarmerOrderCardProps> = ({
   }
 
   const displayId = orderNumber
-    ? `Order #${orderNumber.length > 12 ? orderNumber.substring(0, 12) : orderNumber}`
+    ? `${t('orders.orderNumber', 'Order #')}${orderNumber.length > 12 ? orderNumber.substring(0, 12) : orderNumber}`
     : `Order #${orderId.length > 8 ? orderId.substring(0, 8) : orderId}`;
 
   const subtitle = customerName
     ? `${customerName}${itemSummary ? ` • ${itemSummary}` : ''}`
-    : itemSummary || 'Customer order';
+    : itemSummary || t('orders.customerOrder', 'Customer order');
 
   return (
     <TouchableOpacity
@@ -57,7 +60,7 @@ export const FarmerOrderCard: React.FC<FarmerOrderCardProps> = ({
         <Text style={styles.orderIdText}>{displayId}</Text>
         <View style={[styles.statusPill, { backgroundColor: pillBg }]}>
           <Text style={[styles.statusText, { color: pillText }]}>
-            {normStatus}
+            {formatOrderStatus(status, t)}
           </Text>
         </View>
       </View>
@@ -67,7 +70,7 @@ export const FarmerOrderCard: React.FC<FarmerOrderCardProps> = ({
       </Text>
 
       <View style={styles.bottomRow}>
-        <Text style={styles.amountLabel}>Total</Text>
+        <Text style={styles.amountLabel}>{t('cart.total', 'Total')}</Text>
         <Text style={styles.amountText}>₹{amount}</Text>
       </View>
     </TouchableOpacity>

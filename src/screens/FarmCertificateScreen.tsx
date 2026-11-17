@@ -10,16 +10,20 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useTranslation } from 'react-i18next';
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
 import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
 import { FarmerCard } from '../components/farmer/FarmerCard';
-import { FarmerGoldButton, FarmerOutlineButton } from '../components/farmer/FarmerButtons';
+import { FarmerGoldButton, FarmerPrimaryButton } from '../components/farmer/FarmerButtons';
 import { FARMER_THEME } from '../constants/farmerTheme';
 
 export const FarmCertificateScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const { farmDetails } = route.params || {};
 
@@ -29,22 +33,57 @@ export const FarmCertificateScreen: React.FC = () => {
         <StatusBar barStyle="light-content" backgroundColor="#1F7A4D" />
         <FarmerHeader
           variant="inner"
-          title="Official Certificate"
+          title={t('farmer.officialCert', 'Official Certificate')}
           onBackPress={() => navigation.goBack()}
         />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Certificate details not found.</Text>
+          <Text style={styles.errorText}>{t('farmer.certNotFound', 'Certificate details not found.')}</Text>
         </View>
       </FarmerPageBackground>
     );
   }
 
-  const VerifiedRow = ({ label, value }: { label: string; value: string }) => (
-    <View style={styles.verifiedRow}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value || 'N/A'}</Text>
+  const formatParticular = (val?: string | number | null) => {
+    if (!val || val === 'null' || val === 'undefined') return 'N/A';
+    const str = String(val).trim();
+    if (!str) return 'N/A';
+    return str
+      .split(',')
+      .map(part =>
+        part
+          .trim()
+          .split(' ')
+          .map(w => {
+            const lower = w.toLowerCase();
+            if (lower === 'and') return '&';
+            if (lower === 'canel') return 'Canal';
+            return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+          })
+          .join(' ')
+      )
+      .join(', ');
+  };
+
+  const VerifiedRow = ({
+    label,
+    value,
+    isLast = false,
+  }: {
+    label: string;
+    value: string;
+    isLast?: boolean;
+  }) => (
+    <View style={[styles.verifiedRow, isLast && styles.verifiedRowLast]}>
+      <View style={styles.labelCol}>
+        <Text style={styles.rowLabel}>{label}</Text>
+      </View>
+      <View style={styles.valueCol}>
+        <Text style={styles.rowValue} numberOfLines={2}>
+          {formatParticular(value)}
+        </Text>
+      </View>
       <View style={styles.tickCircle}>
-        <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+        <Ionicons name="checkmark-sharp" size={12} color="#FFFFFF" />
       </View>
     </View>
   );
@@ -108,36 +147,38 @@ export const FarmCertificateScreen: React.FC = () => {
             <div class="corner bl"></div><div class="corner br"></div>
             <div class="header">
               <div class="ribbon">🎗️</div>
-              <div class="cert-title">CERTIFICATE</div>
-              <div class="cert-subtitle">OF VERIFICATION</div>
+              <div class="cert-title">${t('farmer.certTitle', 'CERTIFICATE')}</div>
+              <div class="cert-subtitle">${t('farmer.certOfVerification', 'OF VERIFICATION')}</div>
             </div>
-            <div class="intro">This document certifies that</div>
+            <div class="intro">${t('farmer.certIntro', 'This document certifies that')}</div>
             <div class="farm-name">${(farmDetails.farmName || 'THE FARM').toUpperCase()}</div>
-            <div class="cert-body">has undergone a rigorous verification process and all provided agricultural details have been officially approved by the Farm2Home Administration.</div>
+            <div class="cert-body">${t('farmer.certApprovedNotice', 'has undergone a rigorous verification process and all provided agricultural details have been officially approved by the Farm2Home Administration.')}</div>
             <div class="divider"></div>
-            <div class="section-title">VERIFIED FARM PARTICULARS</div>
+            <div class="section-title">${t('farmer.verifiedParticulars', 'VERIFIED FARM PARTICULARS')}</div>
             <table>
-              <tr><td class="lbl">Location</td><td class="val">${farmDetails.location || 'N/A'}</td><td class="tick">✓</td></tr>
-              <tr><td class="lbl">Farm Area</td><td class="val">${farmDetails.farmArea ? `${farmDetails.farmArea} ${farmDetails.farmAreaUnit || 'Acres'}` : 'N/A'}</td><td class="tick">✓</td></tr>
-              <tr><td class="lbl">Farming Type</td><td class="val">${farmDetails.farmingType || 'N/A'}</td><td class="tick">✓</td></tr>
-              <tr><td class="lbl">Main Crops</td><td class="val">${farmDetails.mainCrops || 'N/A'}</td><td class="tick">✓</td></tr>
-              <tr><td class="lbl">Irrigation</td><td class="val">${farmDetails.irrigationSource || 'N/A'}</td><td class="tick">✓</td></tr>
-              <tr><td class="lbl">Soil Type</td><td class="val">${farmDetails.soilType || 'N/A'}</td><td class="tick">✓</td></tr>
-              <tr><td class="lbl">Experience</td><td class="val">${farmDetails.yearsExperience ? `${farmDetails.yearsExperience} Years` : 'N/A'}</td><td class="tick">✓</td></tr>
+              <tr><td class="lbl">${t('common.location', 'Location')}</td><td class="val">${farmDetails.location || 'N/A'}</td><td class="tick">✓</td></tr>
+              <tr><td class="lbl">${t('farmer.farmArea', 'Farm Area')}</td><td class="val">${farmDetails.farmArea ? `${farmDetails.farmArea} ${farmDetails.farmAreaUnit || 'Acres'}` : 'N/A'}</td><td class="tick">✓</td></tr>
+              <tr><td class="lbl">${t('farmer.farmingType', 'Farming Type')}</td><td class="val">${farmDetails.farmingType || 'N/A'}</td><td class="tick">✓</td></tr>
+              <tr><td class="lbl">${t('farmer.mainCrops', 'Main Crops')}</td><td class="val">${farmDetails.mainCrops || 'N/A'}</td><td class="tick">✓</td></tr>
+              <tr><td class="lbl">${t('farmer.irrigation', 'Irrigation')}</td><td class="val">${farmDetails.irrigationSource || 'N/A'}</td><td class="tick">✓</td></tr>
+              <tr><td class="lbl">${t('farmer.soilType', 'Soil Type')}</td><td class="val">${farmDetails.soilType || 'N/A'}</td><td class="tick">✓</td></tr>
+              <tr><td class="lbl">${t('farmer.experience', 'Experience')}</td><td class="val">${farmDetails.yearsExperience ? `${farmDetails.yearsExperience} ${t('farmer.years', 'Years')}` : 'N/A'}</td><td class="tick">✓</td></tr>
             </table>
             <div class="footer">
               <div>
-                <div class="footer-label">Date of Issue</div>
+                <div class="footer-label">${t('farmer.dateOfIssue', 'Date of Issue')}</div>
                 <div class="footer-value">${verificationDate}</div>
               </div>
               <div style="text-align:center">
-                <div style="border: 2.5px solid #C0392B; border-radius: 50%; width: 70px; height: 70px; display:inline-flex; flex-direction:column; justify-content:center; align-items:center; transform:rotate(-15deg); opacity:0.85">
-                  <span style="color:#C0392B;font-size:9px;font-weight:900;letter-spacing:1px">VERIFIED</span>
-                  <span style="color:#C0392B;font-size:8px;font-weight:700">Farm2Home</span>
+                <div style="border: 2px solid #C0392B; border-radius: 50%; width: 74px; height: 74px; display:inline-flex; flex-direction:column; justify-content:center; align-items:center; transform:rotate(-12deg); opacity:0.88; box-sizing:border-box; padding:4px;">
+                  <span style="color:#C0392B;font-size:7px;line-height:1;margin-bottom:2px">★</span>
+                  <span style="color:#C0392B;font-size:8.5px;font-weight:900;letter-spacing:1px;white-space:nowrap;line-height:1.1">${t('farmer.verifiedStamp', 'VERIFIED')}</span>
+                  <span style="width:28px;height:1px;background:#C0392B;margin:2px 0"></span>
+                  <span style="color:#C0392B;font-size:7.5px;font-weight:800;letter-spacing:0.8px;white-space:nowrap;line-height:1.1">FARM2HOME</span>
                 </div>
               </div>
               <div>
-                <div class="footer-label">Admin Authority</div>
+                <div class="footer-label">${t('farmer.adminAuthority', 'Admin Authority')}</div>
                 <div class="sig">Farm2Home</div>
               </div>
             </div>
@@ -151,15 +192,15 @@ export const FarmCertificateScreen: React.FC = () => {
       if (canShare) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
-          dialogTitle: 'Download / Save Certificate PDF',
+          dialogTitle: t('farmer.downloadPdf', 'Download Certificate PDF'),
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('PDF Created', `PDF saved at:\n${uri}`);
+        Alert.alert(t('farmer.pdfCreated', 'PDF Created'), t('farmer.pdfSavedAt', { uri }));
       }
     } catch (error) {
       console.log('PDF error:', error);
-      Alert.alert('Error', 'Could not generate the PDF certificate.');
+      Alert.alert(t('common.error', 'Error'), t('farmer.couldNotGenPdf', 'Could not generate the PDF certificate.'));
     }
   };
 
@@ -168,11 +209,17 @@ export const FarmCertificateScreen: React.FC = () => {
       <StatusBar barStyle="light-content" backgroundColor="#1F7A4D" />
       <FarmerHeader
         variant="inner"
-        title="Official Certificate"
+        title={t('farmer.officialCert', 'Official Certificate')}
         onBackPress={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom + 40, 70) },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <FarmerCard style={styles.certificateCard}>
           {/* Gold corner decorations */}
           <View style={[styles.corner, styles.topLeft]} />
@@ -183,61 +230,84 @@ export const FarmCertificateScreen: React.FC = () => {
           {/* Header */}
           <View style={styles.certHeader}>
             <Ionicons name="ribbon" size={40} color="#E9B949" />
-            <Text style={styles.certTitle}>CERTIFICATE</Text>
-            <Text style={styles.certSubtitle}>OF VERIFICATION</Text>
+            <Text style={styles.certTitle}>{t('farmer.certTitle', 'CERTIFICATE')}</Text>
+            <Text style={styles.certSubtitle}>{t('farmer.certOfVerification', 'OF VERIFICATION')}</Text>
           </View>
 
           {/* Intro */}
-          <Text style={styles.certIntro}>This document certifies that</Text>
-          <Text style={styles.farmName}>{(farmDetails.farmName || 'The Farm').toUpperCase()}</Text>
+          <Text style={styles.certIntro}>{t('farmer.certIntro', 'This document certifies that')}</Text>
+          <Text style={styles.farmName}>{(farmDetails.farmName || t('farmer.theFarm', 'The Farm')).toUpperCase()}</Text>
           <Text style={styles.certText}>
-            has undergone a rigorous verification process and all provided agricultural details have been officially approved by the Farm2Home Administration.
+            {t('farmer.certApprovedNotice', 'has undergone a rigorous verification process and all provided agricultural details have been officially approved by the Farm2Home Administration.')}
           </Text>
 
           <View style={styles.divider} />
 
           {/* Details Section */}
-          <Text style={styles.sectionHeader}>VERIFIED FARM PARTICULARS</Text>
+          <Text style={styles.sectionHeader}>{t('farmer.verifiedParticulars', 'VERIFIED FARM PARTICULARS')}</Text>
           <View style={styles.detailsBox}>
-            <VerifiedRow label="Location" value={farmDetails.location} />
-            <VerifiedRow label="Farm Area" value={farmDetails.farmArea ? `${farmDetails.farmArea} ${farmDetails.farmAreaUnit || 'Acres'}` : 'N/A'} />
-            <VerifiedRow label="Farming Type" value={farmDetails.farmingType} />
-            <VerifiedRow label="Main Crops" value={farmDetails.mainCrops} />
-            <VerifiedRow label="Irrigation" value={farmDetails.irrigationSource} />
-            <VerifiedRow label="Soil Type" value={farmDetails.soilType} />
-            <VerifiedRow label="Experience" value={farmDetails.yearsExperience ? `${farmDetails.yearsExperience} Years` : 'N/A'} />
+            <VerifiedRow label={t('farmer.location', 'Location')} value={farmDetails.location} />
+            <VerifiedRow
+              label={t('farmer.farmArea', 'Farm Area')}
+              value={
+                farmDetails.farmArea
+                  ? `${farmDetails.farmArea} ${farmDetails.farmAreaUnit || 'Acres'}`
+                  : 'N/A'
+              }
+            />
+            <VerifiedRow label={t('farmer.farmingType', 'Farming Type')} value={farmDetails.farmingType} />
+            <VerifiedRow label={t('farmer.mainCrops', 'Main Crops')} value={farmDetails.mainCrops} />
+            <VerifiedRow label={t('farmer.irrigationSource', 'Irrigation')} value={farmDetails.irrigationSource} />
+            <VerifiedRow label={t('farmer.soilType', 'Soil Type')} value={farmDetails.soilType} />
+            <VerifiedRow
+              label={t('farmer.experience', 'Experience')}
+              value={
+                farmDetails.yearsExperience
+                  ? `${farmDetails.yearsExperience} Years`
+                  : 'N/A'
+              }
+              isLast={true}
+            />
           </View>
 
           {/* Footer */}
           <View style={styles.certFooter}>
             <View style={styles.footerLeft}>
-              <Text style={styles.footerLabel}>Date of Issue</Text>
+              <Text style={styles.footerLabel}>{t('farmer.dateOfIssue', 'Date of Issue')}</Text>
               <Text style={styles.footerValue}>{verificationDate}</Text>
             </View>
             <View style={styles.stampArea}>
-              <View style={styles.stampCircle}>
-                <Text style={styles.stampText}>VERIFIED</Text>
-                <Text style={styles.stampSub}>Farm2Home</Text>
+              <View style={styles.stampOuterCircle}>
+                <View style={styles.stampInnerCircle}>
+                  <Text style={styles.stampStar}>★</Text>
+                  <Text style={styles.stampText} numberOfLines={1}>
+                    {t('farmer.verifiedStamp', 'VERIFIED')}
+                  </Text>
+                  <View style={styles.stampDivider} />
+                  <Text style={styles.stampSub}>
+                    Farm2Home
+                  </Text>
+                </View>
               </View>
             </View>
             <View style={styles.footerRight}>
-              <Text style={styles.footerLabel}>Admin Authority</Text>
+              <Text style={styles.footerLabel}>{t('farmer.adminAuthority', 'Admin Authority')}</Text>
               <Text style={styles.signatureText}>Farm2Home</Text>
             </View>
           </View>
         </FarmerCard>
 
-        {/* Action Buttons: FarmerGoldButton & FarmerOutlineButton */}
+        {/* Action Buttons: Share Certificate FIRST (on top), Download PDF below */}
         <View style={styles.actionButtonsCol}>
-          <FarmerGoldButton
-            title="Download PDF"
-            icon={<Ionicons name="download-outline" size={19} color="#0E3B29" />}
+          <FarmerPrimaryButton
+            title={t('farmer.shareCert', 'Share Certificate')}
+            icon={<Ionicons name="share-social-outline" size={18} color="#FFFFFF" />}
             onPress={handleDownloadPDF}
             style={styles.actionBtn}
           />
-          <FarmerOutlineButton
-            title="Share Certificate"
-            icon={<Ionicons name="share-social-outline" size={19} color="#17663F" />}
+          <FarmerGoldButton
+            title={t('farmer.downloadPdf', 'Download PDF')}
+            icon={<Ionicons name="download-outline" size={18} color="#0E3B29" />}
             onPress={handleDownloadPDF}
             style={styles.actionBtn}
           />
@@ -252,8 +322,9 @@ const styles = StyleSheet.create({
   errorText: { color: '#C0392B', fontSize: 15, fontFamily: FARMER_THEME.fonts.medium },
 
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 20,
     alignItems: 'center',
   },
 
@@ -262,7 +333,8 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#FAFAF8',
     borderRadius: 16,
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderWidth: 1.5,
     borderColor: '#E9B949',
     position: 'relative',
@@ -272,69 +344,69 @@ const styles = StyleSheet.create({
   // Corner decorations
   corner: {
     position: 'absolute',
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     borderColor: '#E9B949',
     borderWidth: 2.5,
   },
-  topLeft: { top: 10, left: 10, borderRightWidth: 0, borderBottomWidth: 0 },
-  topRight: { top: 10, right: 10, borderLeftWidth: 0, borderBottomWidth: 0 },
-  bottomLeft: { bottom: 10, left: 10, borderRightWidth: 0, borderTopWidth: 0 },
-  bottomRight: { bottom: 10, right: 10, borderLeftWidth: 0, borderTopWidth: 0 },
+  topLeft: { top: 8, left: 8, borderRightWidth: 0, borderBottomWidth: 0 },
+  topRight: { top: 8, right: 8, borderLeftWidth: 0, borderBottomWidth: 0 },
+  bottomLeft: { bottom: 8, left: 8, borderRightWidth: 0, borderTopWidth: 0 },
+  bottomRight: { bottom: 8, right: 8, borderLeftWidth: 0, borderTopWidth: 0 },
 
   certHeader: {
     alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 14,
+    marginTop: 2,
+    marginBottom: 6,
   },
   certTitle: {
-    fontSize: 22,
+    fontSize: 21,
     fontFamily: FARMER_THEME.fonts.bold,
     color: '#0E3B29',
-    letterSpacing: 4,
+    letterSpacing: 3.5,
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 4,
   },
   certSubtitle: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontFamily: FARMER_THEME.fonts.bold,
     color: '#C98A1B',
-    letterSpacing: 3,
-    marginTop: 3,
+    letterSpacing: 2.5,
+    marginTop: 2,
   },
 
   certIntro: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#5C6B60',
     fontStyle: 'italic',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
     fontFamily: FARMER_THEME.fonts.regular,
   },
   farmName: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: FARMER_THEME.fonts.bold,
     color: '#17663F',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
     letterSpacing: 1,
   },
   certText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#1B2A22',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 16.5,
     paddingHorizontal: 4,
     fontFamily: FARMER_THEME.fonts.regular,
   },
 
   divider: {
-    width: 50,
-    height: 2.5,
+    width: 44,
+    height: 2,
     backgroundColor: '#E9B949',
     borderRadius: 2,
     alignSelf: 'center',
-    marginVertical: 16,
+    marginVertical: 10,
   },
 
   sectionHeader: {
@@ -343,7 +415,7 @@ const styles = StyleSheet.create({
     color: '#0E3B29',
     textAlign: 'center',
     letterSpacing: 1.5,
-    marginBottom: 10,
+    marginBottom: 8,
   },
 
   detailsBox: {
@@ -351,29 +423,37 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 2,
     borderWidth: 1,
     borderColor: '#E5EFE3',
   },
   verifiedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 9,
+    paddingVertical: 7.5,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F8F0',
+    borderBottomColor: '#F0F5EE',
   },
-  rowLabel: {
-    fontSize: 12,
-    color: '#5C6B60',
-    fontFamily: FARMER_THEME.fonts.medium,
-    width: 90,
+  verifiedRowLast: {
+    borderBottomWidth: 0,
+  },
+  labelCol: {
+    width: 104,
     flexShrink: 0,
   },
+  rowLabel: {
+    fontSize: 12.5,
+    color: '#5C6B60',
+    fontFamily: FARMER_THEME.fonts.medium,
+  },
+  valueCol: {
+    flex: 1,
+    paddingRight: 6,
+  },
   rowValue: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#0E3B29',
     fontFamily: FARMER_THEME.fonts.bold,
-    flex: 1,
   },
   tickCircle: {
     width: 20,
@@ -382,7 +462,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#17663F',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
     flexShrink: 0,
   },
 
@@ -391,7 +470,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginTop: 20,
+    marginTop: 12,
     paddingHorizontal: 4,
   },
   footerLeft: {
@@ -427,39 +506,67 @@ const styles = StyleSheet.create({
   },
   stampArea: {
     alignItems: 'center',
-    paddingHorizontal: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
   },
-  stampCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  stampOuterCircle: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     borderWidth: 2,
     borderColor: '#C0392B',
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ rotate: '-15deg' }],
-    opacity: 0.85,
+    transform: [{ rotate: '-12deg' }],
+    opacity: 0.9,
+  },
+  stampInnerCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(192, 57, 43, 0.4)',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+  },
+  stampStar: {
+    fontSize: 8,
+    color: '#C0392B',
+    lineHeight: 9,
+    marginBottom: 1,
   },
   stampText: {
     color: '#C0392B',
-    fontSize: 9.5,
+    fontSize: 8.5,
     fontFamily: FARMER_THEME.fonts.bold,
-    letterSpacing: 1,
+    letterSpacing: 1.1,
+    textAlign: 'center',
+  },
+  stampDivider: {
+    width: 28,
+    height: 1,
+    backgroundColor: '#C0392B',
+    marginVertical: 2,
   },
   stampSub: {
     color: '#C0392B',
-    fontSize: 7.5,
+    fontSize: 7,
     fontFamily: FARMER_THEME.fonts.bold,
-    marginTop: 1,
+    letterSpacing: 0.2,
+    textAlign: 'center',
   },
 
   actionButtonsCol: {
     width: '100%',
-    marginTop: 20,
-    gap: 12,
+    marginTop: 10,
+    gap: 8,
   },
   actionBtn: {
     width: '100%',
+    height: 46,
+    borderRadius: 14,
   },
 });
 export default FarmCertificateScreen;

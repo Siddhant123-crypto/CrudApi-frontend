@@ -20,6 +20,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, {
   Path,
@@ -41,10 +42,12 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { formatCategory } from '../utils/categoryUtils';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useNotification } from '../context/NotificationContext';
-import api, { BASE_URL } from '../services/api';
+import api, { BASE_URL, resolveMediaUrl } from '../services/api';
 import { getUserById } from '../services/userService';
 import {
   MenuIcon,
@@ -60,6 +63,9 @@ import {
   BikeIcon,
   PlayIcon,
 } from '../components/CustomerIcons';
+import { FarmerShortCard } from '../components/farmer/FarmerShortCard';
+import { FarmerShortsSkeleton } from '../components/shorts/FarmerShortsSkeleton';
+import { getFarmerShorts, FarmerShortItem } from '../services/shortsService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const BANNER_WIDTH = screenWidth - 40;
@@ -155,6 +161,7 @@ const CustomerDashboard = ({ navigation }: any) => {
   });
 
   const { logout, user } = useAuth();
+  const { t } = useTranslation();
   const { unreadCount } = useNotification();
   const { cartCount, addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -269,6 +276,8 @@ const CustomerDashboard = ({ navigation }: any) => {
   const [searchText, setSearchText] = useState('');
   const [allProducts, setAllProducts] = useState<ProductItem[]>([]);
   const [searchResults, setSearchResults] = useState<ProductItem[]>([]);
+  const [farmShorts, setFarmShorts] = useState<FarmerShortItem[]>([]);
+  const [loadingShorts, setLoadingShorts] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [isFilteredView, setIsFilteredView] = useState(false);
   const [locationText, setLocationText] = useState('Sinner, MH');
@@ -336,11 +345,25 @@ const CustomerDashboard = ({ navigation }: any) => {
     }
   };
 
+  const fetchFarmShorts = async () => {
+    try {
+      setLoadingShorts(true);
+      const res = await getFarmerShorts(0, 6);
+      setFarmShorts(res.items || []);
+    } catch (error) {
+      console.log('Error fetching farm shorts in HomeScreen:', error);
+      setFarmShorts([]);
+    } finally {
+      setLoadingShorts(false);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchAllProducts();
       fetchCategories();
       fetchUserLocation();
+      fetchFarmShorts();
     }, [user])
   );
 
@@ -384,7 +407,7 @@ const CustomerDashboard = ({ navigation }: any) => {
         setSearchResults(results);
         setIsFilteredView(true);
       } catch (fallbackError) {
-        Alert.alert('Error', 'Failed to search products');
+        Alert.alert(t('common.error'), t('product.failedSearch'));
       }
     } finally {
       setLoadingProducts(false);
@@ -437,7 +460,7 @@ const CustomerDashboard = ({ navigation }: any) => {
       setSearchResults(visible);
       setIsFilteredView(true);
     } catch (error) {
-      Alert.alert('Error', 'Failed to apply filters');
+      Alert.alert(t('common.error'), t('product.failedApplyFilters'));
     } finally {
       setLoadingProducts(false);
     }
@@ -463,7 +486,7 @@ const CustomerDashboard = ({ navigation }: any) => {
     const product = allProducts.find(p => p.productId === productId);
     if (product) {
       if (product.status === 'INACTIVE') {
-        Alert.alert('Inactive', 'This product is inactive');
+        Alert.alert(t('common.inactive'), t('product.inactiveAlert'));
         return;
       }
       navigation.navigate('ProductDetail', { product });
@@ -537,7 +560,7 @@ const CustomerDashboard = ({ navigation }: any) => {
               onPress={() => navigation.navigate('Profile')}
               activeOpacity={0.8}
             >
-              <Text style={styles.deliverToLabel}>Deliver to</Text>
+              <Text style={styles.deliverToLabel}>{t('home.deliverTo', 'Deliver to')}</Text>
               <View style={styles.locationTextRow}>
                 <PinIcon size={16} color="#F5B870" strokeWidth={2} />
                 <Text style={styles.locationText} numberOfLines={1}>
@@ -585,7 +608,7 @@ const CustomerDashboard = ({ navigation }: any) => {
               value={searchText}
               onChangeText={setSearchText}
               onSubmitEditing={handleSearch}
-              placeholder="Search for fresh products..."
+              placeholder={t('home.searchPlaceholder', 'Search for fresh products...')}
               placeholderTextColor="#8E9A90"
               style={styles.searchInput}
             />
@@ -644,11 +667,11 @@ const CustomerDashboard = ({ navigation }: any) => {
             {/* Banner Text & Button (stationary on top) */}
             <View style={styles.heroBannerTextBlock}>
               <View style={styles.heroChip}>
-                <Text style={styles.heroChipText}>FRESH TODAY</Text>
+                <Text style={styles.heroChipText}>{t('home.freshToday')}</Text>
               </View>
-              <Text style={styles.heroTitle}>Farm Fresh{'\n'}Goodness</Text>
+              <Text style={styles.heroTitle}>{t('home.heroTitle')}</Text>
               <Text style={styles.heroSubtitle}>
-                Handpicked • Natural • Chemical free
+                {t('home.heroSubtitle')}
               </Text>
               <TouchableOpacity
                 style={styles.heroShopButtonContainer}
@@ -661,7 +684,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                   end={{ x: 1, y: 1 }}
                   style={styles.heroShopButtonGradient}
                 >
-                  <Text style={styles.heroShopButtonText}>Shop now</Text>
+                  <Text style={styles.heroShopButtonText}>{t('home.shopNow')}</Text>
                   <ArrowRightIcon size={14} color="#3B1A0E" strokeWidth={2.4} />
                 </LinearGradient>
               </TouchableOpacity>
@@ -692,8 +715,8 @@ const CustomerDashboard = ({ navigation }: any) => {
 
           {/* ─── 4 & 5) CATEGORIES ─────────────────────────────────── */}
           <SectionHeader
-            title="Categories"
-            actionText="All products"
+            title={t('home.categories', 'Categories')}
+            actionText={t('home.browseAll', 'All products')}
             onPress={() => navigation.navigate('CategoryDashboard', { category: 'All Products' })}
           />
 
@@ -725,7 +748,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                     <Text style={{ fontSize: 26 }}>{emoji}</Text>
                   </View>
                   <Text style={styles.categoryLabel} numberOfLines={1}>
-                    {category.name}
+                    {formatCategory(category.name, t)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -733,102 +756,53 @@ const CustomerDashboard = ({ navigation }: any) => {
           </ScrollView>
 
           {/* ─── 6) FARMER SHORTS ──────────────────────────────────── */}
-          <SectionHeader
-            title="Farmer shorts"
-            actionText="Watch all"
-            onPress={() => navigation.navigate('FarmerShorts')}
-          />
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.bleedingScroll}
-            contentContainerStyle={styles.shortsContentContainer}
-          >
-            {(videoProducts.length > 0 ? videoProducts : [
-              { productId: 'demo-1', productName: 'Fresh tomatoes', farmerVillage: 'Farmer', category: 'Vegetable', price: 0, unit: '', status: 'ACTIVE' },
-              { productId: 'demo-2', productName: 'Onion harvest', farmerVillage: 'Farmer', category: 'Vegetable', price: 0, unit: '', status: 'ACTIVE' },
-              { productId: 'demo-3', productName: 'Wheat crops', farmerVillage: 'Farmer', category: 'Grain', price: 0, unit: '', status: 'ACTIVE' },
-            ] as ProductItem[]).map((product, idx) => {
-              const gradientStops = [
-                ['#F7B267', '#B4551B', '#2E170A'],
-                ['#F2A6A0', '#B8505A', '#3E1A22'],
-                ['#F5D27A', '#C98A1B', '#3A2606'],
-              ][idx % 3];
-
-              return (
-                <TouchableOpacity
-                  key={product.productId || idx}
-                  style={styles.shortCard}
-                  activeOpacity={0.88}
-                  onPress={() => {
-                    if (product.status === 'INACTIVE') {
-                      Alert.alert('Inactive', 'This product is inactive');
-                      return;
+          {loadingShorts ? (
+            <>
+              <SectionHeader
+                title={t('home.farmerShorts')}
+                actionText={t('farmer.watchAll')}
+                onPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <FarmerShortsSkeleton />
+            </>
+          ) : farmShorts.length > 0 ? (
+            <>
+              <SectionHeader
+                title={t('home.farmerShorts')}
+                actionText={t('farmer.watchAll')}
+                onPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.bleedingScroll}
+                contentContainerStyle={styles.shortsContentContainer}
+              >
+                {farmShorts.map((shortItem, idx) => (
+                  <FarmerShortCard
+                    key={`home-short-${shortItem.id || idx}`}
+                    id={shortItem.id}
+                    handle={shortItem.farmerName || 'Farmer'}
+                    farmName={shortItem.farmName}
+                    videoUrl={shortItem.playbackUrl}
+                    thumbnailUrl={shortItem.thumbnailUrl}
+                    index={idx}
+                    onPress={() =>
+                      navigation.navigate('FarmerShorts', {
+                        initialIndex: idx,
+                        initialShorts: farmShorts,
+                      })
                     }
-                    navigation.navigate('FarmerShorts');
-                  }}
-                >
-                  {/* Background Gradient */}
-                  <LinearGradient
-                    colors={gradientStops as [string, string, string]}
-                    start={{ x: 0.3, y: 0 }}
-                    end={{ x: 0.7, y: 1 }}
-                    style={StyleSheet.absoluteFillObject}
                   />
-
-                  {/* If product has photo, render as background */}
-                  {product.productPhoto ? (
-                    <Image
-                      source={{ uri: `${BASE_URL}/product/image/${product.productPhoto}` }}
-                      style={StyleSheet.absoluteFillObject}
-                      resizeMode="cover"
-                    />
-                  ) : null}
-
-                  {/* Sunlight glow on top */}
-                  <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
-                    <Defs>
-                      <SvgRadialGradient id={`shortsGlow-${idx}`} cx="0.72" cy="0.22" r="0.48">
-                        <Stop offset="0%" stopColor="#FFE8AA" stopOpacity={0.6} />
-                        <Stop offset="100%" stopColor="#FFE8AA" stopOpacity={0} />
-                      </SvgRadialGradient>
-                    </Defs>
-                    <Rect x={0} y={0} width="100%" height="100%" fill={`url(#shortsGlow-${idx})`} />
-                  </Svg>
-
-                  {/* "Shorts" badge */}
-                  <View style={styles.shortsBadge}>
-                    <View style={styles.shortsBadgeDot} />
-                    <Text style={styles.shortsBadgeText}>Shorts</Text>
-                  </View>
-
-                  {/* Play button */}
-                  <View style={styles.shortPlayButton}>
-                    <PlayIcon size={20} fill="#FFFFFF" />
-                  </View>
-
-                  {/* Bottom overlay */}
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.6)']}
-                    style={styles.shortBottomOverlay}
-                  >
-                    <Text style={styles.shortTitle} numberOfLines={1}>
-                      {product.productName}
-                    </Text>
-                    <Text style={styles.shortFarmerSubtitle} numberOfLines={1}>
-                      🌾 Farmer
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                ))}
+              </ScrollView>
+            </>
+          ) : null}
 
           {/* ─── 7) FRESH VEGETABLES ───────────────────────────────── */}
           <SectionHeader
-            title="Fresh vegetables"
-            actionText="View all"
+            title={t('home.freshHarvest', 'Fresh vegetables')}
+            actionText={t('common.viewAll', 'View all')}
             onPress={() => openCategory('Vegetable')}
           />
 
@@ -980,8 +954,8 @@ const CustomerDashboard = ({ navigation }: any) => {
             </View>
 
             <View style={styles.freeDeliveryTextCol}>
-              <Text style={styles.freeDeliveryTitle}>Free delivery</Text>
-              <Text style={styles.freeDeliverySubtitle}>On orders above ₹499</Text>
+              <Text style={styles.freeDeliveryTitle}>{t('home.freeDelivery')}</Text>
+              <Text style={styles.freeDeliverySubtitle}>{t('home.freeDeliveryThreshold')}</Text>
             </View>
 
             <TouchableOpacity
@@ -995,14 +969,19 @@ const CustomerDashboard = ({ navigation }: any) => {
                 end={{ x: 1, y: 1 }}
                 style={styles.freeDeliveryShopBtnGradient}
               >
-                <Text style={styles.freeDeliveryShopBtnText}>Shop now</Text>
+                <Text style={styles.freeDeliveryShopBtnText}>{t('home.shopNow')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </LinearGradient>
 
           {isFilteredView && (
-            <TouchableOpacity style={styles.backToDashButton} onPress={clearFilters}>
-              <Text style={styles.backToDashText}>Back to Dashboard</Text>
+            <TouchableOpacity
+              style={styles.backToDashButton}
+              onPress={clearFilters}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="arrow-back-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.backToDashText}>{t('home.backToDashboard')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -1019,32 +998,32 @@ const CustomerDashboard = ({ navigation }: any) => {
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={styles.modalContainer}>
+          <View style={[styles.modalContainer, { paddingBottom: Math.max(insets.bottom || 0, 24) + 32 }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Products</Text>
+              <Text style={styles.modalTitle}>{t('product.filterProducts')}</Text>
               <TouchableOpacity onPress={() => setShowFilterModal(false)}>
                 <Text style={styles.modalCloseText}>✕</Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.filterSectionTitle}>Location</Text>
+              <Text style={styles.filterSectionTitle}>{t('common.location')}</Text>
               <TextInput
                 style={styles.filterInput}
-                placeholder="State (e.g. Maharashtra)"
+                placeholder={t('auth.statePlaceholder')}
                 value={filterState}
                 onChangeText={setFilterState}
                 placeholderTextColor="#8E9A90"
               />
               <TextInput
                 style={styles.filterInput}
-                placeholder="Village"
+                placeholder={t('auth.village')}
                 value={filterVillage}
                 onChangeText={setFilterVillage}
                 placeholderTextColor="#8E9A90"
               />
 
-              <Text style={styles.filterSectionTitle}>Category</Text>
+              <Text style={styles.filterSectionTitle}>{t('product.category')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 15 }}>
                 {categories.map((c) => (
                   <TouchableOpacity
@@ -1061,17 +1040,17 @@ const CustomerDashboard = ({ navigation }: any) => {
                         filterCategory === c.name && styles.filterChipTextActive,
                       ]}
                     >
-                      {c.name}
+                      {formatCategory(c.name, t)}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
-              <Text style={styles.filterSectionTitle}>Price Range (₹)</Text>
+              <Text style={styles.filterSectionTitle}>{t('product.priceRange')}</Text>
               <View style={styles.priceRow}>
                 <TextInput
                   style={[styles.filterInput, { flex: 1, marginRight: 10, marginBottom: 0 }]}
-                  placeholder="Min"
+                  placeholder={t('product.minPrice')}
                   keyboardType="numeric"
                   value={minPrice}
                   onChangeText={setMinPrice}
@@ -1079,7 +1058,7 @@ const CustomerDashboard = ({ navigation }: any) => {
                 />
                 <TextInput
                   style={[styles.filterInput, { flex: 1, marginBottom: 0 }]}
-                  placeholder="Max"
+                  placeholder={t('product.maxPrice')}
                   keyboardType="numeric"
                   value={maxPrice}
                   onChangeText={setMaxPrice}
@@ -1089,11 +1068,20 @@ const CustomerDashboard = ({ navigation }: any) => {
             </ScrollView>
 
             <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.resetButton} onPress={clearFilters}>
-                <Text style={styles.resetButtonText}>Clear All</Text>
+              <TouchableOpacity
+                style={styles.resetButton}
+                onPress={clearFilters}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="refresh-outline" size={16} color="#B91C1C" style={{ marginRight: 6 }} />
+                <Text style={styles.resetButtonText}>{t('common.clearAll')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
-                <Text style={styles.applyButtonText}>Apply Filters</Text>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={applyFilters}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.applyButtonText}>{t('common.applyFilters')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1111,7 +1099,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBF5EA',
   },
   scrollContent: {
-    paddingBottom: 130, // generous bottom padding so content is never hidden behind floating nav
+    paddingBottom: 160, // generous bottom padding so content is never hidden behind floating nav
   },
 
   // Header
@@ -1162,14 +1150,19 @@ const styles = StyleSheet.create({
   },
   notificationDot: {
     position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: '#F59A4A',
+    top: 7,
+    right: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
     borderWidth: 2,
-    borderColor: '#6B2410',
+    borderColor: '#FFFFFF',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.7,
+    shadowRadius: 3,
+    elevation: 4,
   },
   cartBadge: {
     position: 'absolute',
@@ -1417,6 +1410,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
     paddingBottom: 4,
+  },
+  emptyShortsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#EBD9B3',
+  },
+  emptyShortsText: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 13,
+    color: '#8E9A90',
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 18,
   },
   shortCard: {
     width: 158,
@@ -1689,12 +1701,21 @@ const styles = StyleSheet.create({
 
   // Search Results / Filter Helpers
   backToDashButton: {
-    marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 22,
+    marginTop: 24,
+    marginBottom: 70,
+    paddingVertical: 13,
+    paddingHorizontal: 24,
     backgroundColor: '#C2561A',
     borderRadius: 16,
     alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#C2561A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
   backToDashText: {
     fontFamily: 'PlusJakartaSans_700Bold',
@@ -1723,8 +1744,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFDF8',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    padding: 24,
-    maxHeight: '80%',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1790,35 +1812,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    marginTop: 16,
+    marginTop: 20,
+    marginBottom: 6,
   },
   resetButton: {
     flex: 1,
-    height: 46,
+    height: 48,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EBD9B3',
+    borderWidth: 1.5,
+    borderColor: '#DC2626',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    backgroundColor: '#FEE2E2',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 3,
   },
   resetButtonText: {
-    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 14,
-    color: '#7A6350',
+    color: '#B91C1C',
+    letterSpacing: 0.3,
   },
   applyButton: {
     flex: 1,
-    height: 46,
+    height: 48,
     borderRadius: 14,
     backgroundColor: '#C2561A',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#C2561A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
   applyButtonText: {
     fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 14,
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 });
 

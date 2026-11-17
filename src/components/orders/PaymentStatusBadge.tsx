@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { PaymentStatus } from '../../types';
 import { THEME } from '../../constants/theme';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 import { AdminFonts } from '../../constants/adminTheme';
+import { formatPaymentStatus } from '../../utils/statusUtils';
 
 interface PaymentStatusBadgeProps {
   status?: PaymentStatus | string;
@@ -11,25 +13,27 @@ interface PaymentStatusBadgeProps {
 }
 
 export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({ status, variant = 'default' }) => {
+  const { t } = useTranslation();
+  const localizedLabel = formatPaymentStatus(status, t);
+  const s = (status || '').toUpperCase().trim();
+
   if (variant === 'admin') {
     let color = '#B8860B';
     let bgColor = '#FFF4D6';
-    let label = 'PENDING';
 
-    switch (status) {
+    switch (s) {
       case 'PAID':
-        label = 'PAID';
+      case 'SUCCESS':
+      case 'COMPLETED':
         color = '#1E9E6A';
         bgColor = '#E1F6EC';
         break;
       case 'FAILED':
-        label = 'FAILED';
         color = '#D64545';
         bgColor = '#FDE7E7';
         break;
       case 'PENDING':
       default:
-        label = 'PENDING';
         color = '#B8860B';
         bgColor = '#FFF4D6';
         break;
@@ -37,7 +41,7 @@ export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({ status, 
 
     return (
       <View style={[styles.adminBadge, { backgroundColor: bgColor }]}>
-        <Text style={[styles.adminText, { color }]}>{label}</Text>
+        <Text style={[styles.adminText, { color }]}>{localizedLabel.toUpperCase()}</Text>
       </View>
     );
   }
@@ -45,22 +49,20 @@ export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({ status, 
   if (variant === 'farmer') {
     let color = '#B45309';
     let bgColor = '#FEF3C7';
-    let label = 'Payment Pending';
 
-    switch (status) {
+    switch (s) {
       case 'PAID':
-        label = 'Paid';
+      case 'SUCCESS':
+      case 'COMPLETED':
         color = '#15803D';
         bgColor = '#DCFCE7';
         break;
       case 'FAILED':
-        label = 'Payment Failed';
         color = '#B91C1C';
         bgColor = '#FEE2E2';
         break;
       case 'PENDING':
       default:
-        label = 'Payment Pending';
         color = '#B45309';
         bgColor = '#FEF3C7';
         break;
@@ -68,7 +70,7 @@ export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({ status, 
 
     return (
       <View style={[styles.farmerBadge, { backgroundColor: bgColor }]}>
-        <Text style={[styles.farmerText, { color }]}>{label}</Text>
+        <Text style={[styles.farmerText, { color }]}>{localizedLabel}</Text>
       </View>
     );
   }
@@ -76,22 +78,20 @@ export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({ status, 
   if (variant === 'customer') {
     let color = THEME.colors.warning;
     let bgColor = THEME.colors.warningBg;
-    let label = 'Payment Pending';
 
-    switch (status) {
+    switch (s) {
       case 'PAID':
-        label = 'Paid';
+      case 'SUCCESS':
+      case 'COMPLETED':
         color = THEME.colors.success;
         bgColor = THEME.colors.successBg;
         break;
       case 'FAILED':
-        label = 'Payment Failed';
         color = THEME.colors.error;
         bgColor = THEME.colors.errorBg;
         break;
       case 'PENDING':
       default:
-        label = 'Payment Pending';
         color = '#B85814';
         bgColor = '#FFEBD6';
         break;
@@ -99,29 +99,27 @@ export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({ status, 
 
     return (
       <View style={[styles.customerBadge, { backgroundColor: bgColor }]}>
-        <Text style={[styles.customerText, { color }]}>{label}</Text>
+        <Text style={[styles.customerText, { color }]}>{localizedLabel}</Text>
       </View>
     );
   }
 
   let color = '#B45309';
   let bgColor = '#FEF3C7';
-  let label = 'Payment Pending';
 
-  switch (status) {
+  switch (s) {
     case 'PAID':
-      label = 'Paid';
+    case 'SUCCESS':
+    case 'COMPLETED':
       color = '#15803D';
       bgColor = '#DCFCE7';
       break;
     case 'FAILED':
-      label = 'Payment Failed';
       color = '#B91C1C';
       bgColor = '#FEE2E2';
       break;
     case 'PENDING':
     default:
-      label = 'Payment Pending';
       color = '#B45309';
       bgColor = '#FEF3C7';
       break;
@@ -129,7 +127,7 @@ export const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({ status, 
 
   return (
     <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.text, { color }]}>{label}</Text>
+      <Text style={[styles.text, { color }]}>{localizedLabel}</Text>
     </View>
   );
 };
@@ -177,4 +175,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
 });
-

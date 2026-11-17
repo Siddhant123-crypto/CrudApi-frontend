@@ -27,14 +27,20 @@ import { StarRating } from '../components/reviews/StarRating';
 import { getProductReviews, deleteReview } from '../services/reviewService';
 import { useAuth } from '../context/AuthContext';
 import { startOnlinePayment, getPaymentErrorMessage, syncPayment } from '../services/paymentService';
+import { updateOrderAddress } from '../services/orderService';
 import { PAYMENT_MESSAGES } from '../constants/paymentMessages';
 import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { Card } from '../components/ui/Card';
 import { PrimaryButton, OutlineButton } from '../components/ui/Buttons';
+import { useTranslation } from 'react-i18next';
 import { THEME } from '../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { formatCurrency } from '../utils/formatters';
+import { formatPaymentMethod } from '../utils/statusUtils';
+import { getPaymentMessage } from '../utils/paymentMessageUtils';
+import { mapApiError } from '../utils/errorUtils';
 
 const formatDisplayPrice = (val: any) => {
   const num = Number(val);
@@ -46,6 +52,7 @@ const formatDisplayPrice = (val: any) => {
 };
 
 const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {user} = useAuth();
   const {orderId} = route.params;
@@ -63,8 +70,63 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
   const [remainingTime, setRemainingTime] = useState<string | null>(null);
   const [isCancellableTime, setIsCancellableTime] = useState<boolean>(false);
   const [isPaying, setIsPaying] = useState<boolean>(false);
+  const [editAddressModalVisible, setEditAddressModalVisible] = useState(false);
+  const [formAddress, setFormAddress] = useState('');
+  const [formVillage, setFormVillage] = useState('');
+  const [formPostalCode, setFormPostalCode] = useState('');
+  const [formState, setFormState] = useState('');
+  const [savingAddress, setSavingAddress] = useState(false);
   const appState = useRef(AppState.currentState);
   const isPaidOnline = order?.paymentMethod !== 'COD' && order?.paymentStatus === 'PAID';
+
+  const openEditAddressModal = () => {
+    if (!order) return;
+    setFormAddress(order.deliveryAddress || '');
+    setFormVillage(order.village || '');
+    setFormPostalCode(order.postalCode || '');
+    setFormState(order.state || 'Maharashtra');
+    setEditAddressModalVisible(true);
+  };
+
+  const handleSaveAddress = async () => {
+    if (!formAddress.trim() || !formVillage.trim() || !formPostalCode.trim() || !formState.trim()) {
+      Alert.alert(t('common.error', 'Required Fields'), t('checkout.fillAllAddress', 'Please fill in all address fields.'));
+      return;
+    }
+    setSavingAddress(true);
+    try {
+      const payload = {
+        deliveryAddress: formAddress.trim(),
+        village: formVillage.trim(),
+        postalCode: formPostalCode.trim(),
+        state: formState.trim(),
+        deliveryLatitude: order.deliveryLatitude !== undefined ? order.deliveryLatitude : null,
+        deliveryLongitude: order.deliveryLongitude !== undefined ? order.deliveryLongitude : null,
+      };
+
+      const response = await updateOrderAddress(order.orderId, payload);
+      if (response && response.order) {
+        setOrder(response.order);
+      } else {
+        await fetchOrderDetails(true);
+      }
+      setEditAddressModalVisible(false);
+
+      const syncCount = response.syncSummary?.synchronizedOrdersCount || 0;
+      const syncText = syncCount > 0
+        ? `\n${t('orders.addressSyncedWithOrders', { count: syncCount, defaultValue: `Your profile address and ${syncCount} other active order(s) were also synchronized.` })}`
+        : `\n${t('orders.addressSyncedWithProfile', 'Your profile address has also been synchronized.')}`;
+      Alert.alert(t('common.success', 'Address Updated'), `${t('orders.addressUpdatedSuccess', { orderNumber: order.orderNumber, defaultValue: `Delivery address successfully updated for Order #${order.orderNumber}.` })}${syncText}`);
+    } catch (error: any) {
+      console.log('Error updating order address:', error);
+      Alert.alert(
+        t('common.error', 'Error'),
+        mapApiError(error, t)
+      );
+    } finally {
+      setSavingAddress(false);
+    }
+  };
   const fetchReviewsForOrderItems = async (orderData: any) => {
     if (orderData && orderData.status === 'DELIVERED') {
       try {
@@ -99,7 +161,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
     } catch (error) {
       console.log('Error fetching order details:', error);
       if (!isSilent) {
-        Alert.alert('Error', 'Failed to load order details');
+        Alert.alert(t('common.error', 'Error'), mapApiError(error, t));
         navigation.goBack();
       }
     } finally {
@@ -221,7 +283,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
     try {
       const queryParams = cancelReason.trim() ? `?reason=${encodeURIComponent(cancelReason.trim())}` : '';
       await api.put(`/order/${orderId}/cancel${queryParams}`);
-      Alert.alert('Success', 'Order cancelled successfully');
+      Alert.alert(t('common.success', 'Success'), t('orders.orderCancelledSuccess', 'Order cancelled successfully'));
       setCancelModalVisible(false);
       fetchOrderDetails();
     } catch (error: any) {
@@ -230,11 +292,11 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
         error.response?.data?.message?.includes('Paid online order cannot be cancelled')
       ) {
         Alert.alert(
-          'Cancel Not Allowed',
-          PAYMENT_MESSAGES.CANCEL_PAID_ONLINE_NOTICE
+          t('orders.cancelNotAllowed', 'Cancel Not Allowed'),
+          getPaymentMessage('CANCEL_PAID_ONLINE_NOTICE', t)
         );
       } else {
-        Alert.alert('Error', error.response?.data?.message || 'Failed to cancel order');
+        Alert.alert(t('common.error', 'Error'), mapApiError(error, t));
       }
     } finally {
       setCancelling(false);
@@ -246,41 +308,41 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
   };
   const submitEditReason = async () => {
     if (!editReasonText.trim()) {
-      Alert.alert('Validation Error', 'Reason cannot be empty');
+      Alert.alert(t('common.error', 'Validation Error'), t('orders.reasonRequired', 'Reason cannot be empty'));
       return;
     }
     setEditingReason(true);
     try {
       const queryParams = `?reason=${encodeURIComponent(editReasonText.trim())}`;
       await api.put(`/order/${orderId}/cancel-reason${queryParams}`);
-      Alert.alert('Success', 'Cancellation reason updated');
+      Alert.alert(t('common.success', 'Success'), t('orders.reasonUpdatedSuccess', 'Cancellation reason updated'));
       setEditReasonModalVisible(false);
       fetchOrderDetails();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update reason');
+      Alert.alert(t('common.error', 'Error'), mapApiError(error, t));
     } finally {
       setEditingReason(false);
     }
   };
   const handleDeleteReview = (reviewId: string, productId: string) => {
     Alert.alert(
-      'Delete Review',
-      'Are you sure you want to delete your review?',
+      t('reviews.deleteReview', 'Delete Review'),
+      t('reviews.deleteReviewConfirm', 'Are you sure you want to delete your review?'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteReview(reviewId);
-              Alert.alert('Success', 'Review deleted successfully');
+              Alert.alert(t('common.success', 'Success'), t('reviews.reviewDeletedSuccess', 'Review deleted successfully'));
               const updatedReviews = { ...reviews };
               delete updatedReviews[productId];
               setReviews(updatedReviews);
             } catch (error: any) {
               console.log('Error deleting review:', error);
-              Alert.alert('Error', error.response?.data?.message || 'Failed to delete review');
+              Alert.alert(t('common.error', 'Error'), mapApiError(error, t));
             }
           },
         },
@@ -303,22 +365,22 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
         });
       } else if (result.status === 'VERIFY_FAILED') {
         Alert.alert(
-          'Payment Status',
-          result.message || PAYMENT_MESSAGES.VERIFICATION_PROBLEM
+          t('payments.paymentStatus', 'Payment Status'),
+          result.message || getPaymentMessage('VERIFICATION_PROBLEM', t)
         );
         fetchOrderDetails(true);
       } else if (result.status === 'CANCELLED') {
-        Alert.alert('Payment Cancelled', result.message || PAYMENT_MESSAGES.PAYMENT_CANCELLED);
+        Alert.alert(t('payments.paymentCancelled', 'Payment Cancelled'), result.message || getPaymentMessage('PAYMENT_CANCELLED', t));
       } else {
-        Alert.alert('Payment Failed', result.message || PAYMENT_MESSAGES.PAYMENT_FAILED);
+        Alert.alert(t('payments.paymentFailed', 'Payment Failed'), result.message || getPaymentMessage('PAYMENT_FAILED', t));
       }
     } catch (err: any) {
       const msg = getPaymentErrorMessage(err);
       if (msg.includes('already paid') || msg.includes('ho chuka hai')) {
-        Alert.alert('Payment Successful', msg);
+        Alert.alert(t('payments.paymentSuccessful', 'Payment Successful'), msg);
         fetchOrderDetails(true);
       } else {
-        Alert.alert('Payment Error', msg);
+        Alert.alert(t('payments.paymentFailed', 'Payment Error'), msg);
       }
     } finally {
       setIsPaying(false);
@@ -339,7 +401,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       {/* Inner ThemedHeader */}
       <ThemedHeader
         variant="inner"
-        title={`Order #${order.orderNumber ? order.orderNumber.substring(0, 12) : order.orderId.substring(0, 8)}`}
+        title={t('orders.orderNumber', { id: order.orderNumber ? order.orderNumber.substring(0, 12) : order.orderId.substring(0, 8) })}
         titleStyle={styles.headerTitle}
         onBackPress={() => navigation.goBack()}
       />
@@ -348,7 +410,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
         {/* Overall Order Status Card */}
         <Card style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardHeaderTitle}>Overall Order Status</Text>
+            <Text style={styles.cardHeaderTitle}>{t('orders.overallStatus', 'Overall Order Status')}</Text>
             <OrderStatusBadge status={order.status} variant="customer" />
           </View>
           <OrderTimeline status={order.status} variant="customer" />
@@ -357,7 +419,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
           {order.status !== 'CANCELLED' && order.status !== 'PENDING' && (
             <View style={{ marginTop: 16 }}>
               <OutlineButton
-                title="Track Order"
+                title={t('orders.trackOrder', 'Track Order')}
                 onPress={() => navigation.navigate('CustomerOrderTracking', { orderId: order.orderId })}
               />
             </View>
@@ -370,7 +432,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             <View style={styles.cancellationHeader}>
               <View style={{flexDirection: 'row', alignItems: 'center'}}>
                 <Ionicons name="warning" size={20} color={THEME.colors.error} />
-                <Text style={styles.cancellationReasonTitle}>Cancellation Reason</Text>
+                <Text style={styles.cancellationReasonTitle}>{t('orders.cancellationReason', 'Cancellation Reason')}</Text>
               </View>
               {(!order.cancellationReason || !order.cancellationReason.includes('Cancelled by Farmer:')) && (
                 <TouchableOpacity onPress={handleEditReason} style={{padding: 4}}>
@@ -379,14 +441,14 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
               )}
             </View>
             <Text style={styles.cancellationReasonText}>
-              {order.cancellationReason || 'This order was cancelled without providing a reason.'}
+              {order.cancellationReason || t('orders.noReasonProvided', 'This order was cancelled without providing a reason.')}
             </Text>
           </Card>
         )}
 
         {/* Ordered Items Card */}
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Ordered Items</Text>
+          <Text style={styles.sectionTitle}>{t('orders.orderedItems', 'Ordered Items')}</Text>
           {order.items.map((item: any, index: number) => {
             const imageUrl = item.imageUrl ? getProductImageUrl(item.imageUrl) : null;
             return (
@@ -401,14 +463,14 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
                   )}
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName} numberOfLines={2}>{item.productName}</Text>
-                    <Text style={styles.itemFarmer}>Farmer: {item.farmerName || 'Local Farmer'}</Text>
-                    <Text style={styles.itemMeta}>{item.quantity} {item.unit} × ₹{formatDisplayPrice(item.price)}</Text>
+                    <Text style={styles.itemFarmer}>{t('orders.farmer', 'Farmer')}: {item.farmerName || t('common.farmerRole', 'Local Farmer')}</Text>
+                    <Text style={styles.itemMeta}>{item.quantity} {item.unit} × {formatCurrency(item.price)}</Text>
                     <View style={styles.itemBadgeRow}>
                       <OrderStatusBadge status={item.status} variant="customer" />
                     </View>
                   </View>
                   <View style={styles.itemPriceCol}>
-                    <Text style={styles.itemTotal}>₹{formatDisplayPrice(item.subtotal)}</Text>
+                    <Text style={styles.itemTotal}>{formatCurrency(item.subtotal)}</Text>
                   </View>
                 </View>
 
@@ -419,7 +481,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
                       <View style={styles.reviewedBox}>
                         <View style={styles.reviewedHeader}>
                           <Ionicons name="checkmark-circle" size={16} color={THEME.colors.success} />
-                          <Text style={styles.reviewedText}>You reviewed this product</Text>
+                          <Text style={styles.reviewedText}>{t('reviews.youReviewed', 'You reviewed this product')}</Text>
                         </View>
                         <View style={styles.reviewedContent}>
                           <StarRating rating={reviews[item.productId].rating} size={14} disabled={true} variant="customer" />
@@ -437,19 +499,19 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
                               setReviewFormVisible(true);
                             }}
                           >
-                            <Text style={styles.reviewEditBtnText}>Edit Review</Text>
+                            <Text style={styles.reviewEditBtnText}>{t('reviews.editReview', 'Edit Review')}</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={styles.reviewDeleteBtn}
                             onPress={() => handleDeleteReview(reviews[item.productId].reviewId, item.productId)}
                           >
-                            <Text style={styles.reviewDeleteBtnText}>Delete</Text>
+                            <Text style={styles.reviewDeleteBtnText}>{t('common.delete', 'Delete')}</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
                     ) : (
                       <View style={styles.notReviewedBox}>
-                        <Text style={styles.ratePrompt}>How was this product?</Text>
+                        <Text style={styles.ratePrompt}>{t('reviews.howWasProduct', 'How was this product?')}</Text>
                         <View style={styles.rateActionRow}>
                           <StarRating
                             rating={0}
@@ -467,7 +529,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
                               setReviewFormVisible(true);
                             }}
                           >
-                            <Text style={styles.writeReviewBtnText}>Write a review</Text>
+                            <Text style={styles.writeReviewBtnText}>{t('reviews.writeReview', 'Write a review')}</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -481,7 +543,19 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
 
         {/* Delivery Details Card */}
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Delivery Details</Text>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardHeaderTitle}>{t('checkout.deliveryAddress', 'Delivery Details')}</Text>
+            {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+              <TouchableOpacity
+                style={styles.editAddressBtn}
+                onPress={openEditAddressModal}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="pencil" size={13} color={THEME.colors.accentDeep} style={{ marginRight: 4 }} />
+                <Text style={styles.editAddressBtnText}>{t('checkout.changeAddress', 'Edit Address')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={styles.detailRow}>
             <View style={styles.locationIconBox}>
               <Ionicons name="location-outline" size={20} color={THEME.colors.accent} />
@@ -491,37 +565,53 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
               <Text style={styles.addressSubText}>{order.village}, {order.state} {order.postalCode}</Text>
             </View>
           </View>
+
+          {/* Status explanation notice for packed or processing orders */}
+          {(order.status === 'PROCESSING' || order.status === 'PACKED') && (
+            <View style={styles.addressNoticeBox}>
+              <Ionicons name="information-circle-outline" size={17} color="#D97706" style={{ marginRight: 8, marginTop: 1 }} />
+              <Text style={styles.addressNoticeText}>
+                {t('orders.addressChangeApprovalNotice', 'Order is being packed/prepared. Address changes require farmer approval.')}
+              </Text>
+            </View>
+          )}
+
+          {/* Status explanation notice for shipped or out for delivery orders */}
+          {(order.status === 'SHIPPED' || order.status === 'OUT_FOR_DELIVERY') && (
+            <View style={styles.addressNoticeBox}>
+              <Ionicons name="bicycle-outline" size={17} color="#2563EB" style={{ marginRight: 8, marginTop: 1 }} />
+              <Text style={styles.addressNoticeText}>
+                {t('orders.addressCannotBeModified', 'Order is already in transit / out for delivery. Delivery address cannot be modified.')}
+              </Text>
+            </View>
+          )}
         </Card>
 
         {/* Payment Details Card */}
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Payment Details</Text>
+          <Text style={styles.sectionTitle}>{t('orders.paymentDetails', 'Payment Details')}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Payment Method</Text>
+            <Text style={styles.summaryLabel}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
             <Text style={styles.summaryValue} numberOfLines={2}>
-              {order.paymentMethod === 'COD'
-                ? 'Cash on Delivery'
-                : order.paymentMethod === 'ONLINE'
-                ? 'Online Payment (Razorpay)'
-                : order.paymentMethod || 'N/A'}
+              {formatPaymentMethod(order.paymentMethod, t)}
             </Text>
           </View>
           {order.paymentMethod !== 'COD' && (
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Payment Status</Text>
+              <Text style={styles.summaryLabel}>{t('orders.paymentStatus', 'Payment Status')}</Text>
               <PaymentStatusBadge status={order.paymentStatus} variant="customer" />
             </View>
           )}
           <View style={[styles.summaryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-            <Text style={styles.summaryLabelTotal}>Total Amount</Text>
-            <Text style={styles.summaryTotal}>₹{formatDisplayPrice(order.totalAmount)}</Text>
+            <Text style={styles.summaryLabelTotal}>{t('cart.totalAmount', 'Total Amount')}</Text>
+            <Text style={styles.summaryTotal}>{formatCurrency(order.totalAmount)}</Text>
           </View>
 
           {/* Paid status clear message */}
           {order.paymentStatus === 'PAID' && (
             <View style={styles.paidInfoBox}>
               <Ionicons name="checkmark-circle" size={18} color={THEME.colors.success} />
-              <Text style={styles.paidInfoText}>Payment Verified & Paid</Text>
+              <Text style={styles.paidInfoText}>{t('payments.paymentVerifiedAndPaid', 'Payment Verified & Paid')}</Text>
             </View>
           )}
 
@@ -531,7 +621,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             (order.paymentStatus === 'PENDING' || order.paymentStatus === 'FAILED') && (
               <View style={{ marginTop: 14 }}>
                 <PrimaryButton
-                  title={`Pay Now • ₹${formatDisplayPrice(order.totalAmount)}`}
+                  title={`${t('payments.payNow', 'Pay Now')} • ${formatCurrency(order.totalAmount)}`}
                   onPress={handlePayNow}
                   loading={isPaying}
                   disabled={isPaying}
@@ -551,7 +641,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             <View style={styles.paidOnlineNoticeContainer}>
               <Ionicons name="information-circle-outline" size={22} color={THEME.colors.accent} style={{ marginRight: 8 }} />
               <Text style={styles.paidOnlineNoticeText}>
-                {PAYMENT_MESSAGES.CANCEL_PAID_ONLINE_NOTICE}
+                {getPaymentMessage('CANCEL_PAID_ONLINE_NOTICE', t)}
               </Text>
             </View>
           ) : (
@@ -567,7 +657,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
                 style={styles.cancelGradientFill}
               >
                 <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" style={styles.cancelBtnIcon} />
-                <Text style={styles.cancelButtonText}>Cancel Order</Text>
+                <Text style={styles.cancelButtonText}>{t('orders.cancelOrder', 'Cancel Order')}</Text>
                 {remainingTime && (
                   <View style={styles.cancelTimerBadge}>
                     <Ionicons name="time-outline" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
@@ -593,11 +683,11 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
               <View style={styles.warningIconContainer}>
                 <Ionicons name="warning-outline" size={36} color={THEME.colors.error} />
               </View>
-              <Text style={styles.cancelModalTitle}>Cancel Order?</Text>
-              <Text style={styles.cancelModalSubtitle}>Are you sure you want to cancel this order? This action cannot be undone. Please let us know why.</Text>
+              <Text style={styles.cancelModalTitle}>{t('orders.cancelOrderConfirmTitle', 'Cancel Order?')}</Text>
+              <Text style={styles.cancelModalSubtitle}>{t('orders.cancelOrderConfirmSubtitle', 'Are you sure you want to cancel this order? This action cannot be undone. Please let us know why.')}</Text>
               <TextInput
                 style={styles.cancelReasonInput}
-                placeholder="Reason for cancellation (optional)"
+                placeholder={t('orders.cancelReasonPlaceholder', 'Reason for cancellation (optional)')}
                 placeholderTextColor={THEME.colors.placeholder}
                 value={cancelReason}
                 onChangeText={setCancelReason}
@@ -619,7 +709,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
                     style={styles.keepOrderGradientFill}
                   >
                     <Ionicons name="checkmark-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                    <Text numberOfLines={1} style={styles.keepOrderBtnText}>Keep Order</Text>
+                    <Text numberOfLines={1} style={styles.keepOrderBtnText}>{t('orders.keepOrder', 'Keep Order')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
@@ -640,7 +730,7 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
                     ) : (
                       <View style={styles.cancelOrderBtnContent}>
                         <Ionicons name="close-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 5 }} />
-                        <Text numberOfLines={1} style={styles.cancelOrderBtnText}>Cancel Order</Text>
+                        <Text numberOfLines={1} style={styles.cancelOrderBtnText}>{t('orders.cancelOrder', 'Cancel Order')}</Text>
                       </View>
                     )}
                   </LinearGradient>
@@ -660,11 +750,11 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Cancellation Reason</Text>
-            <Text style={styles.modalSubtitle}>Update your reason for cancelling this order.</Text>
+            <Text style={styles.modalTitle}>{t('orders.editCancelReason', 'Edit Cancellation Reason')}</Text>
+            <Text style={styles.modalSubtitle}>{t('orders.editCancelReasonDesc', 'Update your reason for cancelling this order.')}</Text>
             <TextInput
               style={styles.reasonInput}
-              placeholder="Reason for cancellation (optional)"
+              placeholder={t('orders.cancelReasonPlaceholder', 'Reason for cancellation (optional)')}
               placeholderTextColor={THEME.colors.placeholder}
               value={editReasonText}
               onChangeText={setEditReasonText}
@@ -675,14 +765,14 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             <View style={styles.modalActions}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <OutlineButton
-                  title="Cancel"
+                  title={t('common.cancel', 'Cancel')}
                   onPress={() => setEditReasonModalVisible(false)}
                   disabled={editingReason}
                 />
               </View>
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <PrimaryButton
-                  title={editingReason ? "Updating..." : "Update"}
+                  title={editingReason ? t('common.loading', 'Updating...') : t('common.save', 'Update')}
                   onPress={submitEditReason}
                   loading={editingReason}
                   disabled={editingReason}
@@ -691,6 +781,117 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Edit Delivery Address Modal */}
+      <Modal
+        visible={editAddressModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => !savingAddress && setEditAddressModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.addressModalContent}>
+              <View style={styles.addressModalHeader}>
+                <View style={styles.addressModalTitleRow}>
+                  <View style={styles.addressModalIconBox}>
+                    <Ionicons name="location" size={20} color={THEME.colors.accentDeep} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.addressModalTitle}>{t('checkout.editDeliveryAddress', 'Edit Delivery Address')}</Text>
+                    <Text style={styles.addressModalSubtitle}>{t('orders.orderNumber', { id: order?.orderNumber })}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => !savingAddress && setEditAddressModalVisible(false)}
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons name="close" size={22} color={THEME.colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+                <View style={styles.modalInputGroup}>
+                  <Text style={styles.modalInputLabel}>{t('auth.address', 'Full Street Address')} *</Text>
+                  <TextInput
+                    style={[styles.modalTextInput, styles.modalMultilineInput]}
+                    placeholder={t('auth.addressPlaceholder', 'House / Flat / Street / Landmark')}
+                    placeholderTextColor={THEME.colors.placeholder}
+                    value={formAddress}
+                    onChangeText={setFormAddress}
+                    multiline
+                    numberOfLines={3}
+                  />
+                </View>
+
+                <View style={styles.modalRow}>
+                  <View style={[styles.modalInputGroup, { flex: 1, marginRight: 8 }]}>
+                    <Text style={styles.modalInputLabel}>{t('auth.village', 'Village / Locality')} *</Text>
+                    <TextInput
+                      style={styles.modalTextInput}
+                      placeholder={t('auth.villagePlaceholder', 'Village or City')}
+                      placeholderTextColor={THEME.colors.placeholder}
+                      value={formVillage}
+                      onChangeText={setFormVillage}
+                    />
+                  </View>
+                  <View style={[styles.modalInputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <Text style={styles.modalInputLabel}>{t('auth.postalCode', 'Postal Code (PIN)')} *</Text>
+                    <TextInput
+                      style={styles.modalTextInput}
+                      placeholder={t('auth.postalCodePlaceholder', '6-digit PIN')}
+                      placeholderTextColor={THEME.colors.placeholder}
+                      value={formPostalCode}
+                      onChangeText={setFormPostalCode}
+                      keyboardType="numeric"
+                      maxLength={6}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.modalInputGroup}>
+                  <Text style={styles.modalInputLabel}>{t('auth.state', 'State')} *</Text>
+                  <TextInput
+                    style={styles.modalTextInput}
+                    placeholder={t('auth.statePlaceholder', 'State')}
+                    placeholderTextColor={THEME.colors.placeholder}
+                    value={formState}
+                    onChangeText={setFormState}
+                  />
+                </View>
+
+                <View style={styles.modalSyncNotice}>
+                  <Ionicons name="sync-outline" size={16} color={THEME.colors.accent} style={{ marginRight: 6 }} />
+                  <Text style={styles.modalSyncNoticeText}>
+                    {t('orders.addressSyncNotice', 'Saving will also update your saved profile address and synchronize other eligible pending orders.')}
+                  </Text>
+                </View>
+              </ScrollView>
+
+              <View style={styles.modalActionsRow}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <OutlineButton
+                    title={t('common.cancel', 'Cancel')}
+                    onPress={() => setEditAddressModalVisible(false)}
+                    disabled={savingAddress}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <PrimaryButton
+                    title={savingAddress ? t('common.loading', 'Saving...') : t('common.save', 'Save Address')}
+                    onPress={handleSaveAddress}
+                    loading={savingAddress}
+                    disabled={savingAddress}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {selectedProduct && (
@@ -1234,6 +1435,133 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontFamily: THEME.fonts.bold,
+  },
+  editAddressBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEFE5',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+  },
+  editAddressBtnText: {
+    fontSize: 12,
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.accentDeep,
+  },
+  addressNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFBEB',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  addressNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: THEME.fonts.regular,
+    color: '#92400E',
+    lineHeight: 17,
+  },
+  addressModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 22,
+    width: '92%',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  addressModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  addressModalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  addressModalIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#FFEFE5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  addressModalTitle: {
+    fontSize: 17,
+    fontFamily: THEME.fonts.serif,
+    color: THEME.colors.textHeading,
+  },
+  addressModalSubtitle: {
+    fontSize: 12,
+    fontFamily: THEME.fonts.regular,
+    color: THEME.colors.textMuted,
+    marginTop: 1,
+  },
+  modalInputGroup: {
+    marginBottom: 12,
+  },
+  modalInputLabel: {
+    fontSize: 12,
+    fontFamily: THEME.fonts.bold,
+    color: THEME.colors.textHeading,
+    marginBottom: 5,
+  },
+  modalTextInput: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: THEME.fonts.regular,
+    color: THEME.colors.textBase,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  modalMultilineInput: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  modalRow: {
+    flexDirection: 'row',
+  },
+  modalSyncNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  modalSyncNoticeText: {
+    flex: 1,
+    fontSize: 11.5,
+    fontFamily: THEME.fonts.regular,
+    color: '#166534',
+    lineHeight: 16,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    marginTop: 14,
   },
 });
 

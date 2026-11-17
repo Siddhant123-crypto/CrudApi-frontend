@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { NotificationService } from '../services/NotificationService';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sseNotificationClient } from '../services/sseNotificationClient';
+import { NotificationResponse } from '../types';
 
 interface NotificationContextType {
   unreadCount: number;
@@ -11,6 +13,8 @@ interface NotificationContextType {
   blockedFarmerUnreadCount: number;
   hasNewAdminGroupMsg: boolean;
   farmerNewOrdersCount: number;
+  latestAddressChangeEvent: NotificationResponse | null;
+  clearAddressChangeEvent: () => void;
   refreshUnreadCount: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -26,7 +30,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [blockedFarmerUnreadCount, setBlockedFarmerUnreadCount] = useState(0);
   const [hasNewAdminGroupMsg, setHasNewAdminGroupMsg] = useState(false);
   const [farmerNewOrdersCount, setFarmerNewOrdersCount] = useState(0);
+  const [latestAddressChangeEvent, setLatestAddressChangeEvent] = useState<NotificationResponse | null>(null);
   const { user } = useAuth();
+
+  const clearAddressChangeEvent = () => setLatestAddressChangeEvent(null);
 
   const refreshUnreadCount = async () => {
     if (!user) {
@@ -37,6 +44,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setBlockedFarmerUnreadCount(0);
       setHasNewAdminGroupMsg(false);
       setFarmerNewOrdersCount(0);
+      setLatestAddressChangeEvent(null);
       return;
     }
 
@@ -97,12 +105,42 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     refreshUnreadCount();
 
-    // Set up polling for notifications
+    // Set up polling for notifications (30s interval; real-time notifications arrive via SSE)
     const intervalId = setInterval(() => {
       refreshUnreadCount();
-    }, 10000);
+    }, 30000);
 
-    return () => clearInterval(intervalId);
+    // Setup real-time SSE stream for Farmers
+    let unsubscribeSse: (() => void) | null = null;
+    if (user?.role === 'FARMER') {
+      sseNotificationClient.start();
+      unsubscribeSse = sseNotificationClient.subscribe((notif: NotificationResponse) => {
+        // Ignore internal handshake and connection ping events (not real notifications)
+        if (
+          !notif.notificationId ||
+          notif.type === ('CONNECTED' as any) ||
+          notif.notificationType === 'CONNECTED'
+        ) {
+          return;
+        }
+
+        setUnreadCount((prev) => prev + 1);
+        if (
+          notif.type === 'ORDER_ADDRESS_CHANGED' ||
+          notif.notificationType === 'ORDER_ADDRESS_CHANGED'
+        ) {
+          setLatestAddressChangeEvent(notif);
+        }
+      });
+    } else {
+      sseNotificationClient.stop();
+    }
+
+    return () => {
+      if (unsubscribeSse) unsubscribeSse();
+      sseNotificationClient.stop();
+      clearInterval(intervalId);
+    };
   }, [user]);
   const markAsRead = async (id: string) => {
     try {
@@ -156,6 +194,8 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         blockedFarmerUnreadCount,
         hasNewAdminGroupMsg,
         farmerNewOrdersCount,
+        latestAddressChangeEvent,
+        clearAddressChangeEvent,
         refreshUnreadCount,
         markAsRead,
         markAllAsRead,

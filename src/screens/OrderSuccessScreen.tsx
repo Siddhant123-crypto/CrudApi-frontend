@@ -13,8 +13,10 @@ import {Card} from '../components/ui/Card';
 import {PrimaryButton, OutlineButton} from '../components/ui/Buttons';
 import {THEME} from '../constants/theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTranslation} from 'react-i18next';
 
 const OrderSuccessScreen = ({route, navigation}: any) => {
+  const {t} = useTranslation();
   const insets = useSafeAreaInsets();
   const {orderNumber, totalAmount} = route.params || {};
   const {user} = useAuth();
@@ -62,15 +64,15 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
             <Ionicons name="checkmark" size={54} color={THEME.colors.success} />
           </View>
 
-          <Text style={styles.title}>Order Placed!</Text>
+          <Text style={styles.title}>{t('checkout.orderSuccessTitle', 'Order Placed!')}</Text>
           <Text style={styles.subtitle}>
-            Pay with cash when your order is delivered.
+            {t('payments.codSubtitle', 'Pay with cash when your order is delivered.')}
           </Text>
 
           {/* Order Summary Card */}
           <Card style={styles.detailsCard}>
             <View style={styles.detailRow}>
-              <Text style={styles.label}>Order Number</Text>
+              <Text style={styles.label}>{t('orders.orderNumber', 'Order Number')}</Text>
               <Text style={styles.value}>
                 {orderNumber ? orderNumber.substring(0, 16) : 'N/A'}
               </Text>
@@ -79,14 +81,14 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
             <View style={styles.divider} />
 
             <View style={styles.detailRow}>
-              <Text style={styles.label}>Payment Method</Text>
-              <Text style={styles.value}>Cash on Delivery</Text>
+              <Text style={styles.label}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
+              <Text style={styles.value}>{t('checkout.cashOnDelivery', 'Cash on Delivery')}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.detailRow}>
-              <Text style={styles.label}>Total Amount</Text>
+              <Text style={styles.label}>{t('cart.totalAmount', 'Total Amount')}</Text>
               <Text style={styles.amountValue}>
                 ₹{totalAmount?.toFixed(2) || '0.00'}
               </Text>
@@ -97,11 +99,11 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
         {/* Action Buttons */}
         <View style={styles.bottomActions}>
           <PrimaryButton
-            title="View My Orders"
+            title={t('payments.viewMyOrders', 'View My Orders')}
             onPress={handleViewOrders}
           />
           <OutlineButton
-            title="Continue Shopping"
+            title={t('payments.continueShopping', 'Continue Shopping')}
             onPress={handleContinueShopping}
             style={{ marginTop: 12 }}
           />

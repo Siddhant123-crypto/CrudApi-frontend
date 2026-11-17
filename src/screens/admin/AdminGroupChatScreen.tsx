@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -38,6 +39,7 @@ interface AdminGroupMessage {
 }
 
 export const AdminGroupChatScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<AdminGroupMessage[]>([]);
@@ -96,7 +98,7 @@ export const AdminGroupChatScreen = () => {
       await fetchMessages(false);
     } catch (error) {
       console.error('Error fetching admins/messages:', error);
-      Alert.alert('Error', 'Could not load group chat data.');
+      Alert.alert(t('common.error', 'Error'), t('admin.couldNotLoadGroupChat', 'Could not load group chat data.'));
     } finally {
       setLoading(false);
     }
@@ -178,7 +180,7 @@ export const AdminGroupChatScreen = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'Could not send message.');
+      Alert.alert(t('common.error', 'Error'), t('admin.couldNotSendMessage', 'Could not send message.'));
     } finally {
       setSending(false);
       isSendingRef.current = false;
@@ -187,15 +189,15 @@ export const AdminGroupChatScreen = () => {
 
   const handleLongPressMessage = (message: AdminGroupMessage) => {
     const isMe = message.senderAdminId === user?.userId;
-    const title = 'Delete message?';
+    const title = t('common.deleteSelectedMessages', 'Delete message?');
     const msgText = isMe
-      ? 'This message will be deleted for everyone.'
-      : 'This message will only be removed from your chat.';
+      ? t('admin.deleteForEveryone', 'This message will be deleted for everyone.')
+      : t('admin.deleteForMe', 'This message will only be removed from your chat.');
 
     Alert.alert(title, msgText, [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete', 'Delete'),
         style: 'destructive',
         onPress: () => deleteMessage(message.id),
       },
@@ -208,17 +210,17 @@ export const AdminGroupChatScreen = () => {
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
     } catch (error) {
       console.error('Error deleting message:', error);
-      Alert.alert('Error', 'Could not delete message.');
+      Alert.alert(t('common.error', 'Error'), t('admin.couldNotDeleteMessage', 'Could not delete message.'));
     }
   };
 
   const formatDateLabel = (dateStr: string) => {
     const d = new Date(dateStr);
     const today = new Date();
-    if (d.toDateString() === today.toDateString()) return 'Today';
+    if (d.toDateString() === today.toDateString()) return t('notifications.today', 'Today');
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
-    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    if (d.toDateString() === yesterday.toDateString()) return t('common.yesterday', 'Yesterday');
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
@@ -294,8 +296,8 @@ export const AdminGroupChatScreen = () => {
       >
         <AdminHeader
           variant="inner"
-          title="Admin Group"
-          subtitle="Internal team communication"
+          title={t('admin.adminGroup', 'Admin Group')}
+          subtitle={t('admin.adminGroupSubtitle', 'Internal team communication')}
           onBack={() => navigation.goBack()}
         />
 
@@ -326,8 +328,8 @@ export const AdminGroupChatScreen = () => {
             ListEmptyComponent={
               <View style={styles.centerContainer}>
                 <Ionicons name="chatbubbles-outline" size={48} color="#C9CEF5" />
-                <Text style={styles.emptyText}>No messages yet.</Text>
-                <Text style={styles.emptySubText}>Start the conversation with other admins.</Text>
+                <Text style={styles.emptyText}>{t('admin.noMessagesYet', 'No messages yet.')}</Text>
+                <Text style={styles.emptySubText}>{t('admin.startConversationAdmins', 'Start the conversation with other admins.')}</Text>
               </View>
             }
           />
@@ -348,7 +350,7 @@ export const AdminGroupChatScreen = () => {
             ref={textInputRef}
             style={styles.input}
             value={inputText}
-            placeholder="Type your message..."
+            placeholder={t('admin.typeYourMessage', 'Type your message...')}
             placeholderTextColor="#8A93AB"
             onChangeText={handleTextChange}
             multiline

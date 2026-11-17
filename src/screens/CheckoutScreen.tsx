@@ -25,10 +25,15 @@ import {PageBackground} from '../components/ui/PageBackground';
 import {ThemedHeader} from '../components/ui/ThemedHeader';
 import {Card} from '../components/ui/Card';
 import {MaroonButton} from '../components/ui/Buttons';
+import {useTranslation} from 'react-i18next';
 import {THEME} from '../constants/theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {getPaymentMessage} from '../utils/paymentMessageUtils';
+import {mapApiError} from '../utils/errorUtils';
+import {formatCurrency} from '../utils/formatters';
 
 const CheckoutScreen = ({route, navigation}: any) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {orderItems, totalAmount} = route.params || {};
   const {user} = useAuth();
@@ -69,11 +74,11 @@ const CheckoutScreen = ({route, navigation}: any) => {
   if (!orderItems || orderItems.length === 0) {
     return (
       <PageBackground style={styles.errorContainer}>
-        <ThemedHeader variant="inner" title="Checkout" onBackPress={() => navigation.goBack()} />
+        <ThemedHeader variant="inner" title={t('checkout.checkout', 'Checkout')} onBackPress={() => navigation.goBack()} />
         <View style={styles.emptyContent}>
-          <Text style={styles.errorText}>No items to checkout.</Text>
+          <Text style={styles.errorText}>{t('checkout.noItems', 'No items to checkout.')}</Text>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtnText}>Go Back</Text>
+            <Text style={styles.backBtnText}>{t('common.back', 'Go Back')}</Text>
           </TouchableOpacity>
         </View>
       </PageBackground>
@@ -110,11 +115,11 @@ const CheckoutScreen = ({route, navigation}: any) => {
       } else if (result.reason === 'VERIFY_FAILED') {
         // Payment went through on Razorpay, but verify call failed on server
         Alert.alert(
-          'Payment Status',
-          result.message || PAYMENT_MESSAGES.VERIFICATION_PROBLEM,
+          t('payments.paymentStatus', 'Payment Status'),
+          result.message || getPaymentMessage('VERIFICATION_PROBLEM', t),
           [
             {
-              text: 'View Order',
+              text: t('checkout.viewOrder', 'View Order'),
               onPress: () => {
                 navigation.replace('CustomerOrderDetails', {orderId: orderToPay.orderId});
               },
@@ -125,16 +130,19 @@ const CheckoutScreen = ({route, navigation}: any) => {
         // User cancelled or payment failed on Razorpay sheet
         const isCancelled = result.reason === 'CANCELLED';
         const msg = isCancelled
-          ? (result.message || PAYMENT_MESSAGES.PAYMENT_CANCELLED)
-          : (result.message || PAYMENT_MESSAGES.PAYMENT_FAILED);
+          ? (result.message || getPaymentMessage('PAYMENT_CANCELLED', t))
+          : (result.message || getPaymentMessage('PAYMENT_FAILED', t));
         setPaymentErrorNotice(msg);
-        Alert.alert(isCancelled ? 'Payment Cancelled' : 'Payment Failed', msg);
+        Alert.alert(
+          isCancelled ? t('payments.paymentCancelled', 'Payment Cancelled') : t('payments.paymentFailed', 'Payment Failed'),
+          msg
+        );
       }
     } catch (err: any) {
       console.log('Payment execution error:', err?.message);
       const msg = getPaymentErrorMessage(err);
       setPaymentErrorNotice(msg);
-      Alert.alert('Payment Failed', msg);
+      Alert.alert(t('payments.paymentFailed', 'Payment Failed'), msg);
     } finally {
       setLoading(false);
     }
@@ -151,7 +159,7 @@ const CheckoutScreen = ({route, navigation}: any) => {
     }
 
     if (!address.trim() || !village.trim() || !postalCode.trim() || !state.trim()) {
-      Alert.alert('Missing Info', 'Please fill in all address fields.');
+      Alert.alert(t('common.error', 'Missing Info'), t('checkout.fillAllAddress', 'Please fill in all address fields.'));
       return;
     }
 
@@ -223,8 +231,8 @@ const CheckoutScreen = ({route, navigation}: any) => {
     } catch (error: any) {
       console.log('Error placing order:', error.response?.data || error.message);
       Alert.alert(
-        'Order Failed',
-        error.response?.data?.message || 'Failed to place the order. Please try again.'
+        t('checkout.orderFailed', 'Order Failed'),
+        mapApiError(error, t)
       );
     } finally {
       setLoading(false);
@@ -232,16 +240,16 @@ const CheckoutScreen = ({route, navigation}: any) => {
   };
 
   const getButtonTitle = () => {
-    if (pendingOrder) return PAYMENT_MESSAGES.RETRY_BUTTON;
-    if (paymentMethod === 'ONLINE') return PAYMENT_MESSAGES.PAY_AND_ORDER_BUTTON;
-    return PAYMENT_MESSAGES.PLACE_ORDER_COD;
+    if (pendingOrder) return getPaymentMessage('RETRY_BUTTON', t);
+    if (paymentMethod === 'ONLINE') return getPaymentMessage('PAY_AND_ORDER_BUTTON', t);
+    return getPaymentMessage('PLACE_ORDER_COD', t);
   };
 
   return (
     <PageBackground style={styles.container}>
       <ThemedHeader
         variant="inner"
-        title="Checkout"
+        title={t('checkout.checkout', 'Checkout')}
         onBackPress={() => navigation.goBack()}
       />
 
@@ -256,7 +264,7 @@ const CheckoutScreen = ({route, navigation}: any) => {
         >
           {/* Order Summary Card */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Order Summary</Text>
+            <Text style={styles.sectionTitle}>{t('cart.orderSummary', 'Order Summary')}</Text>
             <Card style={styles.cardContainer}>
               {orderItems.map((item: any, index: number) => {
                 const imageUrl = item.product.productPhoto
@@ -281,11 +289,11 @@ const CheckoutScreen = ({route, navigation}: any) => {
                     <View style={styles.itemDetails}>
                       <Text style={styles.itemName} numberOfLines={1}>{item.product.productName}</Text>
                       <Text style={styles.itemSub}>
-                        {item.quantity} {item.product.unit} x ₹{item.product.price}
+                        {item.quantity} {item.product.unit} x {formatCurrency(item.product.price)}
                       </Text>
                     </View>
                     <Text style={styles.itemTotal}>
-                      ₹{(item.product.price * item.quantity).toFixed(2)}
+                      {formatCurrency(item.product.price * item.quantity)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -295,13 +303,13 @@ const CheckoutScreen = ({route, navigation}: any) => {
 
           {/* Delivery Details Card */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Delivery Details</Text>
+            <Text style={styles.sectionTitle}>{t('checkout.deliveryAddress', 'Delivery Details')}</Text>
             <Card style={styles.cardContainer}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Address</Text>
+                <Text style={styles.label}>{t('auth.address', 'Full Address')}</Text>
                 <TextInput
                   style={[styles.input, styles.multilineInput]}
-                  placeholder="House No, Street, Landmark"
+                  placeholder={t('auth.addressPlaceholder', 'House No, Street, Landmark')}
                   placeholderTextColor={THEME.colors.placeholder}
                   value={address}
                   onChangeText={setAddress}
@@ -311,10 +319,10 @@ const CheckoutScreen = ({route, navigation}: any) => {
               </View>
               <View style={styles.row}>
                 <View style={[styles.inputGroup, {flex: 1, marginRight: 10}]}>
-                  <Text style={styles.label}>Village/City</Text>
+                  <Text style={styles.label}>{t('auth.village', 'Village/City')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Village"
+                    placeholder={t('auth.villagePlaceholder', 'Village')}
                     placeholderTextColor={THEME.colors.placeholder}
                     value={village}
                     onChangeText={setVillage}
@@ -322,10 +330,10 @@ const CheckoutScreen = ({route, navigation}: any) => {
                   />
                 </View>
                 <View style={[styles.inputGroup, {flex: 1}]}>
-                  <Text style={styles.label}>Postal Code</Text>
+                  <Text style={styles.label}>{t('auth.postalCode', 'Postal Code')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="PIN"
+                    placeholder={t('auth.postalCodePlaceholder', 'PIN')}
                     placeholderTextColor={THEME.colors.placeholder}
                     value={postalCode}
                     onChangeText={setPostalCode}
@@ -335,10 +343,10 @@ const CheckoutScreen = ({route, navigation}: any) => {
                 </View>
               </View>
               <View style={[styles.inputGroup, { marginBottom: 0 }]}>
-                <Text style={styles.label}>State</Text>
+                <Text style={styles.label}>{t('auth.state', 'State')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="State"
+                  placeholder={t('auth.statePlaceholder', 'State')}
                   placeholderTextColor={THEME.colors.placeholder}
                   value={state}
                   onChangeText={setState}
@@ -353,20 +361,20 @@ const CheckoutScreen = ({route, navigation}: any) => {
             <View style={styles.retryBanner}>
               <View style={styles.retryBannerHeader}>
                 <Ionicons name="alert-circle" size={22} color={THEME.colors.accent} />
-                <Text style={styles.retryBannerTitle}>Order Created (Awaiting Payment)</Text>
+                <Text style={styles.retryBannerTitle}>{t('payments.orderCreatedAwaitingPayment', 'Order Created (Awaiting Payment)')}</Text>
               </View>
               <Text style={styles.retryBannerText}>
-                {paymentErrorNotice || PAYMENT_MESSAGES.PAYMENT_FAILED}
+                {paymentErrorNotice || getPaymentMessage('PAYMENT_FAILED', t)}
               </Text>
               <Text style={styles.retryOrderNumber}>
-                Order #{pendingOrder.orderNumber ? pendingOrder.orderNumber.substring(0, 16) : pendingOrder.orderId?.substring(0, 8)}
+                {t('orders.orderNumber', { id: pendingOrder.orderNumber ? pendingOrder.orderNumber.substring(0, 16) : pendingOrder.orderId?.substring(0, 8) })}
               </Text>
             </View>
           )}
 
           {/* Payment Method Card */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Payment Method</Text>
+            <Text style={styles.sectionTitle}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
             <Card style={styles.cardContainer}>
               {/* Option 1: Online Payment (Razorpay) */}
               <TouchableOpacity
@@ -383,8 +391,8 @@ const CheckoutScreen = ({route, navigation}: any) => {
                     <Ionicons name="card-outline" size={22} color={THEME.colors.accentDeep} />
                   </View>
                   <View style={{marginLeft: 12, flex: 1}}>
-                    <Text style={styles.paymentOptionTitle}>Online Payment</Text>
-                    <Text style={styles.paymentOptionSubtitle}>UPI, Google Pay, PhonePe, Cards, NetBanking</Text>
+                    <Text style={styles.paymentOptionTitle}>{t('checkout.onlinePayment', 'Online Payment')}</Text>
+                    <Text style={styles.paymentOptionSubtitle}>{t('checkout.onlinePaymentDesc', 'UPI, Google Pay, PhonePe, Cards, NetBanking')}</Text>
                   </View>
                 </View>
                 <Ionicons
@@ -399,7 +407,7 @@ const CheckoutScreen = ({route, navigation}: any) => {
                 <View style={styles.testModeNotice}>
                   <Ionicons name="information-circle-outline" size={18} color="#D97706" style={{marginRight: 6, marginTop: 1}} />
                   <Text style={styles.testModeNoticeText}>
-                    {PAYMENT_MESSAGES.TEST_MODE_HINT}
+                    {getPaymentMessage('TEST_MODE_HINT', t)}
                   </Text>
                 </View>
               )}
@@ -421,8 +429,8 @@ const CheckoutScreen = ({route, navigation}: any) => {
                     <Ionicons name="cash-outline" size={22} color={THEME.colors.success} />
                   </View>
                   <View style={{marginLeft: 12, flex: 1}}>
-                    <Text style={styles.paymentOptionTitle}>Cash on Delivery (COD)</Text>
-                    <Text style={styles.paymentOptionSubtitle}>{PAYMENT_MESSAGES.COD_SUBTITLE}</Text>
+                    <Text style={styles.paymentOptionTitle}>{t('checkout.cashOnDelivery', 'Cash on Delivery (COD)')}</Text>
+                    <Text style={styles.paymentOptionSubtitle}>{getPaymentMessage('COD_SUBTITLE', t)}</Text>
                   </View>
                 </View>
                 <Ionicons
@@ -447,8 +455,8 @@ const CheckoutScreen = ({route, navigation}: any) => {
         ]}
       >
         <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalAmount}>₹{totalAmount.toFixed(2)}</Text>
+          <Text style={styles.totalLabel}>{t('cart.totalAmount', 'Total Amount')}</Text>
+          <Text style={styles.totalAmount}>{formatCurrency(totalAmount)}</Text>
         </View>
         <View style={styles.buttonWrapper}>
           <MaroonButton

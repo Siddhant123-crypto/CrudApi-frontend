@@ -17,6 +17,7 @@ import {
 } from 'react-native-keyboard-controller';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { NotificationService } from '../../services/NotificationService';
 import { NotificationSendRequest } from '../../types';
 import api from '../../services/api';
@@ -36,6 +37,7 @@ import { CheckIcon, SearchIcon } from '../../components/admin/AdminIcons';
 export const AdminMessageScreen: React.FC = () => {
   console.log('MSG_SCREEN_V3 mount');
 
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -109,7 +111,7 @@ export const AdminMessageScreen: React.FC = () => {
       }
     } catch (error) {
       console.log('Failed to fetch customers:', error);
-      Alert.alert('Error', 'Failed to load customers list.');
+      Alert.alert(t('common.error'), t('support.failedLoadCustomers'));
     } finally {
       setFetchingUsers(false);
     }
@@ -118,9 +120,9 @@ export const AdminMessageScreen: React.FC = () => {
   const titleRef = useRef(form.title);
   const messageRef = useRef(form.message);
 
-  const handleTitleChange = useCallback((t: string) => {
-    setForm((prev) => (prev.title === t ? prev : { ...prev, title: t }));
-    titleRef.current = t;
+  const handleTitleChange = useCallback((tVal: string) => {
+    setForm((prev) => (prev.title === tVal ? prev : { ...prev, title: tVal }));
+    titleRef.current = tVal;
   }, []);
 
   const handleMessageChange = useCallback((m: string) => {
@@ -160,8 +162,8 @@ export const AdminMessageScreen: React.FC = () => {
           if (titleInputRef.current) {
             const titleTag = findNodeHandle(titleInputRef.current);
             if (titleTag) {
-              const t = await TextInputCommiter.getAndCommitText(titleTag);
-              if (t && t.trim().length > currentTitle.length) currentTitle = t.trim();
+              const commitedT = await TextInputCommiter.getAndCommitText(titleTag);
+              if (commitedT && commitedT.trim().length > currentTitle.length) currentTitle = commitedT.trim();
             }
           }
           if (messageInputRef.current) {
@@ -178,11 +180,11 @@ export const AdminMessageScreen: React.FC = () => {
     }
 
     if (!currentTitle.trim() || !currentMessage.trim()) {
-      Alert.alert('Error', 'Title and message are required.');
+      Alert.alert(t('common.error'), t('admin.titleAndMessageRequired'));
       return;
     }
     if (recipient === 'SPECIFIC' && !specificUserId) {
-      Alert.alert('Error', 'Please select a specific customer.');
+      Alert.alert(t('common.error'), t('admin.selectCustomer'));
       return;
     }
 
@@ -203,13 +205,13 @@ export const AdminMessageScreen: React.FC = () => {
       };
 
       await NotificationService.sendNotification(payload);
-      Alert.alert('Success', 'Your message was sent successfully.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert(t('common.success'), t('admin.messageSentSuccess'), [
+        { text: t('common.ok'), onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
       console.error('Send message error:', error);
       setTimeout(() => {
-        Alert.alert('Error', 'Failed to send message.');
+        Alert.alert(t('common.error'), t('admin.failedSendMessage'));
       }, 100);
     } finally {
       setLoading(false);
@@ -228,25 +230,25 @@ export const AdminMessageScreen: React.FC = () => {
 
   const screenTitle =
     preSelectedRole === 'FARMER'
-      ? 'Message Farmer'
+      ? t('admin.farmerMessage')
       : preSelectedRole === 'CUSTOMER'
-      ? 'Message Customer'
-      : 'Message User';
+      ? t('admin.customerMessage')
+      : t('admin.sentMessageDetail');
 
-  const audienceAllLabel = `All ${
+  const audienceAllLabel = `${t('common.all')} ${
     preSelectedRole === 'FARMER'
-      ? 'Farmers'
+      ? t('admin.farmers')
       : preSelectedRole === 'CUSTOMER'
-      ? 'Customers'
-      : 'Users'
+      ? t('admin.customers')
+      : t('admin.farmersAndCustomers')
   }`;
 
-  const audienceSpecificLabel = `Select ${
+  const audienceSpecificLabel = `${t('common.select')} ${
     preSelectedRole === 'FARMER'
-      ? 'Farmer'
+      ? t('admin.farmers')
       : preSelectedRole === 'CUSTOMER'
-      ? 'Customer'
-      : 'User'
+      ? t('admin.customers')
+      : t('admin.farmersAndCustomers')
   }`;
 
   return (
@@ -269,7 +271,7 @@ export const AdminMessageScreen: React.FC = () => {
         <View style={styles.formBody}>
           {/* Receiver Section */}
           <View style={styles.sectionHeaderWrapper}>
-            <Text style={styles.sectionHeaderTitle}>RECIPIENT AUDIENCE</Text>
+            <Text style={styles.sectionHeaderTitle}>{t('admin.recipientAudience')}</Text>
             <View style={styles.sectionHeaderDivider} />
           </View>
 
@@ -277,7 +279,7 @@ export const AdminMessageScreen: React.FC = () => {
             {preSelectedId ? (
               <View style={styles.preSelectedRow}>
                 <View style={styles.preSelectedInfo}>
-                  <Text style={styles.preSelectedLabel}>Target Recipient</Text>
+                  <Text style={styles.preSelectedLabel}>{t('admin.targetRecipient')}</Text>
                   <Text style={styles.preSelectedName}>
                     {preSelectedName || 'Selected User'}
                   </Text>
@@ -304,7 +306,7 @@ export const AdminMessageScreen: React.FC = () => {
                 {recipient === 'SPECIFIC' && (
                   <View style={styles.userSelectionContainer}>
                     <AdminInput
-                      placeholder="Search recipient by name or email..."
+                      placeholder={t('admin.searchRecipientPlaceholder')}
                       value={searchQuery}
                       onChangeText={setSearchQuery}
                       leftIcon={<SearchIcon size={16} color="#8A93AB" />}
@@ -314,7 +316,7 @@ export const AdminMessageScreen: React.FC = () => {
                     {fetchingUsers ? (
                       <ActivityIndicator size="small" color="#4F5BD5" style={styles.loaderSpacing} />
                     ) : filteredCustomers.length === 0 ? (
-                      <Text style={styles.noUsersText}>No matching recipients found.</Text>
+                      <Text style={styles.noUsersText}>{t('admin.noMatchingRecipients')}</Text>
                     ) : (
                       <View style={styles.usersList}>
                         {filteredCustomers.slice(0, 10).map((cust) => {
@@ -355,21 +357,21 @@ export const AdminMessageScreen: React.FC = () => {
 
           {/* Message Content Section */}
           <View style={styles.sectionHeaderWrapper}>
-            <Text style={styles.sectionHeaderTitle}>MESSAGE DETAILS</Text>
+            <Text style={styles.sectionHeaderTitle}>{t('admin.messageDetailsUpper')}</Text>
             <View style={styles.sectionHeaderDivider} />
           </View>
 
           <AdminCard style={styles.card}>
             <View style={styles.typeBadgeRow}>
-              <Text style={styles.fieldLabel}>Notification Channel</Text>
+              <Text style={styles.fieldLabel}>{t('admin.notificationChannel')}</Text>
               <AdminBadge label="ADMIN" variant="info" size="small" />
             </View>
 
             <AdminInput
               ref={titleInputRef}
-              label="Subject / Title"
+              label={t('admin.subjectTitle')}
               required
-              placeholder="e.g. Important Account Update"
+              placeholder={t('admin.egAccountUpdate')}
               value={form.title}
               onChangeText={handleTitleChange}
               returnKeyType="next"
@@ -379,9 +381,9 @@ export const AdminMessageScreen: React.FC = () => {
 
             <AdminInput
               ref={messageInputRef}
-              label="Message Body"
+              label={t('admin.messageBody')}
               required
-              placeholder="Type your message to the recipient(s)..."
+              placeholder={t('admin.typeMessageToRecipients')}
               value={form.message}
               onChangeText={handleMessageChange}
               multiline
@@ -398,7 +400,7 @@ export const AdminMessageScreen: React.FC = () => {
       <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
         <AdminStickyBar>
           <AdminPrimaryButton
-            title="Send Message"
+            title={t('support.sendMessage')}
             onPress={handleSend}
             loading={loading}
           />

@@ -7,10 +7,17 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "node --experimental-strip-types --test src/utils/orderReuseUtils.test.ts src/utils/paymentHelpers.test.ts"
+    "test": "node --experimental-strip-types --test --test-concurrency=1 src/utils/orderReuseUtils.test.ts src/utils/paymentHelpers.test.ts src/utils/aiAnswerParser.test.ts src/utils/aiChatHelpers.test.ts src/utils/customerAiAnswerParser.test.ts src/utils/addressSyncUtils.test.ts src/utils/googleAuthUtils.test.ts src/i18n/i18n.test.ts",
+    "i18n:audit": "node scripts/audit-i18n.js"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
+    "@expo-google-fonts/noto-sans-bengali": "^0.4.4",
+    "@expo-google-fonts/noto-sans-devanagari": "^0.4.2",
+    "@expo-google-fonts/noto-sans-kannada": "^0.4.3",
+    "@expo-google-fonts/noto-sans-oriya": "^0.4.2",
+    "@expo-google-fonts/noto-sans-tamil": "^0.4.3",
+    "@expo-google-fonts/noto-sans-telugu": "^0.4.2",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -36,7 +43,9 @@
     "expo-status-bar": "~3.0.9",
     "expo-video-thumbnails": "~10.0.8",
     "expo-web-browser": "~15.0.11",
+    "i18next": "^26.5.11",
     "react": "19.1.0",
+    "react-i18next": "^17.1.9",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-gifted-chat": "^3.4.0",

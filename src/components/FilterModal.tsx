@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -10,6 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import CustomRangeSlider from './CustomRangeSlider';
 import { THEME } from '../constants/theme';
 import { PrimaryButton } from './ui/Buttons';
@@ -22,27 +23,28 @@ interface FilterModalProps {
 
 const { width } = Dimensions.get('window');
 
-const FILTER_CATEGORIES = [
-  'Price',
-  'Customer Ratings',
-  'Category',
-  'Availability',
-  'Organic Certified',
-];
-
 const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) => {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState('Price');
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(2000);
 
-  const priceRanges = [
-    '₹50 and Below',
+  const filterCategories = useMemo(() => [
+    { id: 'Price', label: t('product.priceFilter', 'Price') },
+    { id: 'Customer Ratings', label: t('product.customerRatings', 'Customer Ratings') },
+    { id: 'Category', label: t('product.category', 'Category') },
+    { id: 'Availability', label: t('product.availability', 'Availability') },
+    { id: 'Organic Certified', label: t('product.organicCertified', 'Organic Certified') },
+  ], [t]);
+
+  const priceRanges = useMemo(() => [
+    t('common.andBelow', { amount: 50, defaultValue: '₹50 and Below' }),
     '₹50 - ₹100',
     '₹100 - ₹200',
     '₹200 - ₹500',
     '₹500 - ₹1000',
-    '₹1000 and above',
-  ];
+    t('common.andAbove', { amount: 1000, defaultValue: '₹1000 and above' }),
+  ], [t]);
 
   const handleApply = () => {
     onApply(minPrice, maxPrice);
@@ -61,10 +63,10 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backButton} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={22} color={THEME.colors.textHeading} />
-            <Text style={styles.headerTitle}>Filters</Text>
+            <Text style={styles.headerTitle}>{t('common.filters', 'Filters')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleClearAll} activeOpacity={0.7}>
-            <Text style={styles.clearText}>Clear All</Text>
+            <Text style={styles.clearText}>{t('cart.clearAll', 'Clear All')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -73,23 +75,23 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
           {/* Sidebar */}
           <View style={styles.sidebar}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {FILTER_CATEGORIES.map(cat => (
+              {filterCategories.map(cat => (
                 <TouchableOpacity
-                  key={cat}
+                  key={cat.id}
                   style={[
                     styles.sidebarItem,
-                    activeCategory === cat && styles.sidebarItemActive,
+                    activeCategory === cat.id && styles.sidebarItemActive,
                   ]}
-                  onPress={() => setActiveCategory(cat)}
+                  onPress={() => setActiveCategory(cat.id)}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.sidebarText,
-                      activeCategory === cat && styles.sidebarTextActive,
+                      activeCategory === cat.id && styles.sidebarTextActive,
                     ]}
                   >
-                    {cat}
+                    {cat.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -101,7 +103,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
             {activeCategory === 'Price' ? (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.panelContent}>
                 <View style={styles.sliderBox}>
-                  <Text style={styles.sliderSubtitle}>Selected Price Range</Text>
+                  <Text style={styles.sliderSubtitle}>{t('product.selectedPriceRange', 'Selected Price Range')}</Text>
                   <Text style={styles.sliderTitle}>
                     ₹{minPrice} - {maxPrice >= 2000 ? '₹2000+' : `₹${maxPrice}`}
                   </Text>
@@ -131,7 +133,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
               </ScrollView>
             ) : (
               <View style={styles.emptyPanel}>
-                <Text style={styles.emptyText}>Select Price to configure filters.</Text>
+                <Text style={styles.emptyText}>{t('product.configureFiltersHint', 'Select Price to configure filters.')}</Text>
               </View>
             )}
           </View>
@@ -139,7 +141,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, onApply }) 
 
         {/* Footer */}
         <View style={styles.footer}>
-          <PrimaryButton title="Apply Filters" onPress={handleApply} />
+          <PrimaryButton title={t('product.applyFilters', 'Apply Filters')} onPress={handleApply} />
         </View>
       </SafeAreaView>
     </Modal>

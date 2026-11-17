@@ -41,6 +41,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { farmerRegister } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { GoogleRegistrationPasswordHelper } from '../components/GoogleRegistrationPasswordHelper';
+import { mapApiError } from '../utils/errorUtils';
 
 // ─── SVG ICONS ─────────────────────────────────────────────────────────────
 
@@ -367,6 +370,7 @@ interface FormFieldProps {
   blurOnSubmit?: boolean;
   inputRef?: React.RefObject<TextInput | null>;
   error?: string | null;
+  editable?: boolean;
 }
 
 const FormField = ({
@@ -387,6 +391,7 @@ const FormField = ({
   blurOnSubmit,
   inputRef,
   error,
+  editable = true,
 }: FormFieldProps) => (
   <View style={styles.fieldContainer}>
     <Text style={styles.fieldLabel}>
@@ -397,6 +402,7 @@ const FormField = ({
       style={[
         styles.inputContainer,
         multiline && styles.inputContainerMultiline,
+        !editable && { backgroundColor: '#F3F4F6' },
         !!error && styles.inputContainerError,
       ]}
     >
@@ -405,7 +411,7 @@ const FormField = ({
       </View>
       <TextInput
         ref={inputRef as any}
-        style={[styles.textInput, multiline && styles.textInputMultiline]}
+        style={[styles.textInput, multiline && styles.textInputMultiline, !editable && { color: '#6B7A6F' }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -420,6 +426,7 @@ const FormField = ({
         onSubmitEditing={onSubmitEditing}
         blurOnSubmit={blurOnSubmit}
         underlineColorAndroid="transparent"
+        editable={editable}
       />
       {rightElement}
     </View>
@@ -444,10 +451,12 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
   const {
     name = '',
     email = '',
+    googleRegistrationToken = '',
     isGoogleSignUp = false,
   } = route?.params || {};
 
   const { login } = useAuth();
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState<Record<string, string>>({
     name: name,
@@ -462,7 +471,9 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
   });
 
   const [photo, setPhoto] = useState<any>(null);
+  const [pendingPhoto, setPendingPhoto] = useState<any>(null);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showPhotoPreviewModal, setShowPhotoPreviewModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
@@ -496,27 +507,27 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
   const validate = () => {
     const newErrors: Record<string, string | null> = {};
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('validation.nameRequired', 'Name is required');
     }
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('validation.emailRequired', 'Email is required');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Enter a valid email';
+      newErrors.email = t('validation.emailInvalid', 'Enter a valid email');
     }
     if (!formData.mobile.trim()) {
-      newErrors.mobile = 'Mobile number is required';
+      newErrors.mobile = t('validation.mobileRequired', 'Mobile number is required');
     } else if (!/^[6-9]\d{9}$/.test(formData.mobile)) {
-      newErrors.mobile = 'Enter a valid mobile number';
+      newErrors.mobile = t('validation.mobileInvalid', 'Enter a valid mobile number');
     }
     if (!formData.password.trim()) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('validation.passwordRequired', 'Password is required');
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('validation.passwordTooShort', 'Password must be at least 6 characters');
     }
     if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Confirm password is required';
+      newErrors.confirmPassword = t('validation.confirmPasswordRequired', 'Confirm password is required');
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('validation.passwordsDoNotMatch', 'Passwords do not match');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -524,39 +535,72 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
 
   const pickImage = async () => {
     setShowPhotoOptions(false);
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 1,
-    });
-    if (!result.canceled) {
-      setPhoto(result.assets[0]);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPendingPhoto(result.assets[0]);
+        setShowPhotoPreviewModal(true);
+      }
+    } catch (error) {
+      console.log('Error picking image from library:', error);
     }
   };
 
   const takePhoto = async () => {
     setShowPhotoOptions(false);
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-    if (!result.canceled) {
-      setPhoto(result.assets[0]);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('common.error', 'Error'), t('farmer.cameraPermissionRequired', 'Camera permission is required to take a photo.'));
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 1,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPendingPhoto(result.assets[0]);
+        setShowPhotoPreviewModal(true);
+      }
+    } catch (error) {
+      console.log('Error taking photo:', error);
     }
   };
 
   const pickDocument = async () => {
     setShowPhotoOptions(false);
-    const result = await DocumentPicker.getDocumentAsync({
-      type: 'image/*',
-    });
-    if (
-      result.canceled === false &&
-      result.assets &&
-      result.assets.length > 0
-    ) {
-      setPhoto(result.assets[0]);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'image/*',
+      });
+      if (
+        result.canceled === false &&
+        result.assets &&
+        result.assets.length > 0
+      ) {
+        setPendingPhoto(result.assets[0]);
+        setShowPhotoPreviewModal(true);
+      }
+    } catch (error) {
+      console.log('Error picking document:', error);
     }
+  };
+
+  const confirmSelectedPhoto = () => {
+    if (pendingPhoto) {
+      setPhoto(pendingPhoto);
+    }
+    setShowPhotoPreviewModal(false);
+    setPendingPhoto(null);
+  };
+
+  const cancelPhotoSelection = () => {
+    setShowPhotoPreviewModal(false);
+    setPendingPhoto(null);
   };
 
   const handleRegister = async () => {
@@ -575,6 +619,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
         address: formData.address.trim(),
         postalCode: formData.postalCode.trim(),
         state: formData.state.trim(),
+        googleRegistrationToken: googleRegistrationToken ? googleRegistrationToken.trim() : undefined,
       };
       data.append('data', JSON.stringify(registerData));
       if (photo) {
@@ -596,22 +641,23 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
         !result.message.includes('Registration Successful')
       ) {
         setLoading(false);
-        Alert.alert('Registration Failed', result.message);
+        Alert.alert(t('auth.registrationFailed', 'Registration Failed'), mapApiError(result.message, t));
         return;
       }
       if (isGoogleSignUp) {
         console.log('Google Farmer Registration Flow');
         const responseData = result.response || result;
-        if (!responseData.accessToken) {
+        const accessToken = result.accessToken || responseData.accessToken;
+        if (!accessToken) {
           console.warn(
-            'Backend Limitation: Farmer registration API does not return an accessToken.'
+            'Farmer registration API did not return an accessToken.'
           );
           Alert.alert(
-            'Registration Successful',
-            'Backend did not return an access token. Please login manually.',
+            t('auth.registrationSuccessful', 'Registration Successful'),
+            t('auth.accountCreatedSuccess', 'Account created successfully. Please login.'),
             [
               {
-                text: 'OK',
+                text: t('common.ok', 'OK'),
                 onPress: () => navigation.navigate('NewUserLogin'),
               },
             ]
@@ -625,16 +671,16 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           farmerId: responseData.farmerId || responseData.id,
           profilePhoto: responseData.profilePhoto,
         };
-        await login(userData, responseData.accessToken);
+        await login(userData, accessToken);
         return;
       }
       console.log('Manual Farmer Registration Flow');
       Alert.alert(
-        'Registration Successful',
-        'Your farmer account has been created successfully. Please login.',
+        t('auth.registrationSuccessful', 'Registration Successful'),
+        t('auth.farmerAccountCreated', 'Your farmer account has been created successfully. Please login.'),
         [
           {
-            text: 'OK',
+            text: t('common.ok', 'OK'),
             onPress: () => {
               navigation.navigate('NewUserLogin');
             },
@@ -645,19 +691,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
       console.log('Farmer Registration Error Status:', error.response?.status);
       console.log('Farmer Registration Error Response:', error.response?.data);
       console.log('Farmer Registration Error Message:', error.message);
-      let errorMessage = 'Something went wrong. Please try again.';
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message;
-        } else {
-          errorMessage = JSON.stringify(error.response.data);
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      Alert.alert('Registration Failed', errorMessage);
+      Alert.alert(t('auth.registrationFailed', 'Registration Failed'), mapApiError(error, t));
     } finally {
       setLoading(false);
     }
@@ -729,7 +763,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
             </View>
 
             <Text style={styles.tagline}>
-              Fresh from the farm, straight to your home
+              {t('common.tagline', 'Fresh from the farm, straight to your home')}
             </Text>
           </View>
         </View>
@@ -755,7 +789,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
               ) : (
                 <View style={styles.avatarPlaceholderContent}>
                   <AvatarPersonIcon />
-                  <Text style={styles.tapToUploadText}>Tap to upload</Text>
+                  <Text style={styles.tapToUploadText}>{t('farmer.tapToUpload', 'Tap to upload')}</Text>
                 </View>
               )}
             </View>
@@ -771,21 +805,21 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
 
           {/* ─── 4) TITLE ─── */}
           <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
-            Create farmer account
+            {t('auth.createFarmerAccount', 'Create farmer account')}
           </Text>
           <Text style={styles.subtitle}>
-            Join Farm2Home and sell directly to customers
+            {t('auth.farmerAccountSubtitle', 'Join Farm2Home and sell directly to customers')}
           </Text>
 
           {/* ─── 5) FORM ─── */}
           {/* Section: PERSONAL DETAILS */}
-          <SectionHeader title="PERSONAL DETAILS" />
+          <SectionHeader title={t('auth.personalDetails', 'PERSONAL DETAILS')} />
 
           <FormField
-            label="Full name"
+            label={t('auth.fullName', 'Full name')}
             required
             value={formData.name}
-            placeholder="Enter your full name"
+            placeholder={t('auth.fullNamePlaceholder', 'Enter your full name')}
             onChangeText={v => updateField('name', v)}
             icon={<UserIcon />}
             autoCapitalize="words"
@@ -796,10 +830,10 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           />
 
           <FormField
-            label="Email"
+            label={t('auth.email', 'Email')}
             required
             value={formData.email}
-            placeholder="Enter your email"
+            placeholder={t('auth.emailPlaceholder', 'Enter your email')}
             onChangeText={v => updateField('email', v)}
             icon={<MailIcon />}
             keyboardType="email-address"
@@ -809,13 +843,14 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
             inputRef={emailRef}
             onSubmitEditing={() => mobileRef.current?.focus()}
             error={errors.email}
+            editable={!isGoogleSignUp}
           />
 
           <FormField
-            label="Mobile number"
+            label={t('auth.mobile', 'Mobile number')}
             required
             value={formData.mobile}
-            placeholder="Enter your mobile number"
+            placeholder={t('auth.mobilePlaceholder', 'Enter your mobile number')}
             onChangeText={v => updateField('mobile', v)}
             icon={<PhoneIcon />}
             keyboardType="phone-pad"
@@ -826,12 +861,12 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           />
 
           {/* Section: YOUR FARM ADDRESS */}
-          <SectionHeader title="YOUR FARM ADDRESS" />
+          <SectionHeader title={t('auth.addressDetails', 'YOUR FARM ADDRESS')} />
 
           <FormField
-            label="Village"
+            label={t('auth.village', 'Village')}
             value={formData.village}
-            placeholder="Enter your village"
+            placeholder={t('auth.villagePlaceholder', 'Enter your village')}
             onChangeText={v => updateField('village', v)}
             icon={<HomeIcon />}
             returnKeyType="next"
@@ -840,9 +875,9 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           />
 
           <FormField
-            label="Address"
+            label={t('auth.address', 'Address')}
             value={formData.address}
-            placeholder="Enter your address"
+            placeholder={t('auth.addressPlaceholder', 'Enter your address')}
             onChangeText={v => updateField('address', v)}
             icon={<PinIcon />}
             multiline
@@ -854,9 +889,9 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           <View style={styles.rowFields}>
             <View style={styles.halfField}>
               <FormField
-                label="Postal code"
+                label={t('auth.postalCode', 'Postal code')}
                 value={formData.postalCode}
-                placeholder="Postal code"
+                placeholder={t('auth.postalCodePlaceholder', 'Postal code')}
                 onChangeText={v => updateField('postalCode', v)}
                 icon={<HashIcon />}
                 keyboardType="number-pad"
@@ -868,9 +903,9 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
 
             <View style={styles.halfField}>
               <FormField
-                label="State"
+                label={t('auth.state', 'State')}
                 value={formData.state}
-                placeholder="State"
+                placeholder={t('auth.statePlaceholder', 'State')}
                 onChangeText={v => updateField('state', v)}
                 icon={<FlagIcon />}
                 returnKeyType="next"
@@ -881,13 +916,13 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           </View>
 
           {/* Section: SECURITY */}
-          <SectionHeader title="SECURITY" />
+          <SectionHeader title={t('auth.security', 'SECURITY')} />
 
           <FormField
-            label="Password"
+            label={t('auth.password', 'Password')}
             required
             value={formData.password}
-            placeholder="Create a password"
+            placeholder={t('auth.createPasswordPlaceholder', 'Create a password')}
             onChangeText={v => updateField('password', v)}
             icon={<LockIcon />}
             secureTextEntry={!showPassword}
@@ -907,11 +942,13 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
             }
           />
 
+          <GoogleRegistrationPasswordHelper isGoogleSignUp={isGoogleSignUp} />
+
           <FormField
-            label="Confirm password"
+            label={t('auth.confirmPassword', 'Confirm password')}
             required
             value={formData.confirmPassword}
-            placeholder="Confirm your password"
+            placeholder={t('auth.confirmPasswordPlaceholder', 'Confirm your password')}
             onChangeText={v => updateField('confirmPassword', v)}
             icon={<ShieldCheckIcon />}
             secureTextEntry={!showConfirmPassword}
@@ -950,7 +987,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <View style={styles.signUpButtonRow}>
-                  <Text style={styles.signUpButtonText}>Sign up</Text>
+                  <Text style={styles.signUpButtonText}>{t('auth.signUp', 'Sign up')}</Text>
                   <View style={styles.arrowCircle}>
                     <ArrowRightIcon />
                   </View>
@@ -961,12 +998,12 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
 
           {/* ─── 7) FOOTER ─── */}
           <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>{t('auth.alreadyHaveAccount', 'Already have an account?')} </Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('NewUserLogin')}
               activeOpacity={0.7}
             >
-              <Text style={styles.signInLink}>Sign in</Text>
+              <Text style={styles.signInLink}>{t('auth.signIn', 'Sign in')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -986,28 +1023,103 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Choose Photo</Text>
+            <Text style={styles.modalTitle}>{t('farmer.choosePhoto', 'Choose Photo')}</Text>
 
             <TouchableOpacity style={styles.modalOption} onPress={takePhoto}>
-              <Text style={styles.modalOptionText}>Take Photo</Text>
+              <Text style={styles.modalOptionText}>{t('farmer.takePhoto', 'Take Photo')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.modalOption} onPress={pickImage}>
-              <Text style={styles.modalOptionText}>Gallery</Text>
+              <Text style={styles.modalOptionText}>{t('farmer.gallery', 'Gallery')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.modalOption} onPress={pickDocument}>
-              <Text style={styles.modalOptionText}>Document</Text>
+              <Text style={styles.modalOptionText}>{t('farmer.document', 'Document')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.modalOption, styles.modalOptionCancel]}
               onPress={() => setShowPhotoOptions(false)}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* ─── PHOTO PREVIEW / DONE MODAL ─── */}
+      <Modal
+        visible={showPhotoPreviewModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelPhotoSelection}
+      >
+        <View style={styles.previewOverlay}>
+          <View style={styles.previewCard}>
+            <View style={styles.previewHeaderRow}>
+              <Text style={styles.previewTitle}>{t('farmer.selectedPhoto', 'Selected Photo')}</Text>
+              <Text style={styles.previewSubtitle}>{t('farmer.previewPhoto', 'Preview your profile picture')}</Text>
+            </View>
+
+            <View style={styles.previewImageContainer}>
+              {pendingPhoto?.uri ? (
+                <Image
+                  source={{ uri: pendingPhoto.uri }}
+                  style={styles.previewImage}
+                  resizeMode="cover"
+                />
+              ) : null}
+            </View>
+
+            {/* DONE BUTTON */}
+            <TouchableOpacity
+              style={styles.previewDoneBtn}
+              activeOpacity={0.85}
+              onPress={confirmSelectedPhoto}
+            >
+              <LinearGradient
+                colors={['#2A9560', '#17663F']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.previewDoneGradient}
+              >
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ marginRight: 8 }}>
+                  <Path
+                    d="M20 6L9 17l-5-5"
+                    stroke="#FFFFFF"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+                <Text style={styles.previewDoneBtnText}>{t('common.done', 'Done')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* CHOOSE ANOTHER / CANCEL */}
+            <View style={styles.previewActionsRow}>
+              <TouchableOpacity
+                style={styles.previewSecondaryBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setShowPhotoPreviewModal(false);
+                  setPendingPhoto(null);
+                  setShowPhotoOptions(true);
+                }}
+              >
+                <Text style={styles.previewSecondaryBtnText}>{t('farmer.chooseAnother', 'Choose another')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.previewCancelBtn}
+                activeOpacity={0.7}
+                onPress={cancelPhotoSelection}
+              >
+                <Text style={styles.previewCancelBtnText}>{t('common.cancel', 'Cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -1405,6 +1517,108 @@ const styles = StyleSheet.create({
   modalCancelText: {
     fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 15,
+    color: '#D9383A',
+  },
+
+  // Photo Preview / Done Modal
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 26, 18, 0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  previewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    width: '100%',
+    maxWidth: 340,
+    paddingVertical: 24,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 12,
+  },
+  previewHeaderRow: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  previewTitle: {
+    fontFamily: 'Fraunces_600SemiBold',
+    fontSize: 21,
+    color: '#0E3B29',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  previewSubtitle: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 13,
+    color: '#5C6B60',
+    textAlign: 'center',
+  },
+  previewImageContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 4,
+    borderColor: '#2A9560',
+    overflow: 'hidden',
+    backgroundColor: '#F0F5F2',
+    marginBottom: 22,
+    shadowColor: '#17663F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewDoneBtn: {
+    width: '100%',
+    height: 48,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  previewDoneGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewDoneBtnText: {
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  previewActionsRow: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  previewSecondaryBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  previewSecondaryBtnText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13.5,
+    color: '#17663F',
+  },
+  previewCancelBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  previewCancelBtnText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13.5,
     color: '#D9383A',
   },
 });

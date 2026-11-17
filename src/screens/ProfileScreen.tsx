@@ -13,6 +13,8 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -29,6 +31,7 @@ import { Card } from '../components/ui/Card';
 import { PrimaryButton, OutlineButton } from '../components/ui/Buttons';
 import { THEME } from '../constants/theme';
 import { LogoutModal } from '../components/ui/LogoutModal';
+import { ProfileSuccessModal } from '../components/ProfileSuccessModal';
 
 import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
@@ -38,10 +41,13 @@ import { FarmerPrimaryButton, FarmerDeepButton, FarmerOutlineButton } from '../c
 import { FarmerListRow, FarmerBadge, FarmerChip } from '../components/farmer/FarmerUI';
 import { FARMER_THEME } from '../constants/farmerTheme';
 import { EditIcon, CameraIcon } from '../components/farmer/FarmerIcons';
+import { useTranslation } from 'react-i18next';
 
 const ProfileScreen = () => {
+  const { t } = useTranslation();
   const {user, logout, updateUserData} = useAuth();
   const navigation = useNavigation<any>();
+  const isFarmer = user?.role === 'FARMER';
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -61,6 +67,14 @@ const ProfileScreen = () => {
   const [isStatusModalVisible, setIsStatusModalVisible] = useState(false);
   const [tempInactiveReason, setTempInactiveReason] = useState('');
   const [statusUpdating, setStatusUpdating] = useState(false);
+
+  // Profile Success Modal State
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [successModalConfig, setSuccessModalConfig] = useState({
+    title: 'Profile Updated!',
+    message: 'Your profile details have been saved successfully.',
+    synchronizedOrdersCount: 0,
+  });
 
   useEffect(() => {
     fetchProfile();
@@ -110,7 +124,7 @@ const ProfileScreen = () => {
     if (!isEditing) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to upload profile picture.');
+      Alert.alert(t('common.permissionDenied'), t('profile.cameraRollPermissionDesc'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -125,40 +139,56 @@ const ProfileScreen = () => {
   };
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Name is required');
+      Alert.alert(t('common.error'), t('profile.nameRequired'));
       return;
     }
     setSaving(true);
     try {
       const updatedData = {
-        name,
-        mobile,
-        village,
-        address,
-        postalCode,
-        state: stateVal,
-        email: profileData.email,
+        name: name.trim(),
+        mobile: mobile.trim(),
+        village: village.trim(),
+        address: address.trim(),
+        postalCode: postalCode.trim(),
+        state: stateVal.trim(),
+        email: profileData?.email,
         status,
         inactiveReason: status === 'INACTIVE' ? inactiveReason : '',
+        latitude: profileData?.latitude !== undefined ? profileData.latitude : null,
+        longitude: profileData?.longitude !== undefined ? profileData.longitude : null,
       };
       if (isFarmer && user?.farmerId) {
         await updateFarmer(user.farmerId, updatedData);
         if (selectedPhotoUri) {
           await uploadFarmerPhoto(user.farmerId, selectedPhotoUri);
         }
+        setSuccessModalConfig({
+          title: t('profile.updatedTitle', 'Profile Updated!'),
+          message: t('profile.farmSavedDesc', 'Your farm profile and details have been saved successfully.'),
+          synchronizedOrdersCount: 0,
+        });
+        setSuccessModalVisible(true);
       } else if (user?.userId) {
-        await updateUser(user.userId, updatedData);
+        const updateRes: any = await updateUser(user.userId, updatedData);
         if (selectedPhotoUri) {
           await uploadUserPhoto(user.userId, selectedPhotoUri);
         }
+        const syncCount = updateRes?.synchronizedOrdersCount || 0;
+        setSuccessModalConfig({
+          title: t('profile.updatedTitle', 'Profile Updated!'),
+          message: syncCount > 0
+            ? t('profile.savedWithSync', 'Your profile details have been saved successfully and your delivery address is in sync.')
+            : t('profile.savedSuccessfully', 'Your profile details have been saved successfully.'),
+          synchronizedOrdersCount: syncCount,
+        });
+        setSuccessModalVisible(true);
       }
-      Alert.alert('Success', 'Profile updated successfully');
       setIsEditing(false);
       setSelectedPhotoUri(null);
       fetchProfile();
     } catch (error: any) {
       console.log('Error updating profile:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+      Alert.alert(t('common.error'), error.response?.data?.message || t('profile.failedToUpdate'));
     } finally {
       setSaving(false);
     }
@@ -166,8 +196,18 @@ const ProfileScreen = () => {
 
   const handleStatusToggleChange = (value: boolean) => {
     if (value) {
-      // Toggle to Active
-      submitStatusUpdate(true, '');
+      // Toggle to Active with confirmation
+      Alert.alert(
+        t('profile.reactivateTitle', 'Reactivate Account?'),
+        t('profile.reactivateDesc', 'Your farm status will become Active and your eligible products will be visible to customers again.'),
+        [
+          { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+          {
+            text: t('profile.reactivateBtn', 'Reactivate'),
+            onPress: () => submitStatusUpdate(true, ''),
+          },
+        ]
+      );
     } else {
       // Toggle to Inactive - show modal
       setTempInactiveReason('');
@@ -176,19 +216,46 @@ const ProfileScreen = () => {
   };
 
   const submitStatusUpdate = async (isActive: boolean, reason: string) => {
-    if (!isActive && !reason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for being inactive.');
-      return;
+    const trimmedReason = reason.trim();
+    if (!isActive) {
+      if (!trimmedReason) {
+        Alert.alert(
+          t('profile.reasonRequired', 'Reason Required'),
+          t('profile.reasonRequiredDesc', 'Please provide a valid reason for deactivating your account.')
+        );
+        return;
+      }
+      if (trimmedReason.length < 10) {
+        Alert.alert(
+          t('profile.reasonTooShort', 'Reason Too Short'),
+          t('profile.reasonTooShortDesc', 'Please enter at least 10 characters explaining your deactivation reason.')
+        );
+        return;
+      }
+      if (trimmedReason.length > 500) {
+        Alert.alert(
+          t('profile.reasonTooLong', 'Reason Too Long'),
+          t('profile.reasonTooLongDesc', 'Deactivation reason must be 500 characters or less.')
+        );
+        return;
+      }
     }
     setStatusUpdating(true);
     try {
-      await updateFarmerStatus({ isActive, inactiveReason: reason });
-      Alert.alert('Success', `Status updated to ${isActive ? 'Active' : 'Inactive'}`);
+      await updateFarmerStatus({ isActive, inactiveReason: trimmedReason });
+      setSuccessModalConfig({
+        title: isActive ? t('profile.accountReactivated', 'Account Reactivated!') : t('profile.accountDeactivated', 'Account Deactivated'),
+        message: isActive
+          ? t('profile.accountReactivatedDesc', 'Your farm status is now Active. Customers can see and order your fresh produce!')
+          : `${t('profile.accountDeactivatedDesc', 'Your farm status is now Inactive. All products have been hidden from customer view.')}\nReason: ${trimmedReason}`,
+        synchronizedOrdersCount: 0,
+      });
+      setSuccessModalVisible(true);
       setIsStatusModalVisible(false);
-      fetchProfile();
+      await fetchProfile();
     } catch (error: any) {
       console.log('Error updating status:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update status');
+      Alert.alert(t('common.error', 'Error'), error.response?.data?.message || 'Failed to update status');
     } finally {
       setStatusUpdating(false);
     }
@@ -198,20 +265,19 @@ const ProfileScreen = () => {
     setLogoutModalVisible(true);
   };
   if (loading) {
-    return <LoadingSpinner message="Loading profile..." />;
+    return <LoadingSpinner message={t('common.loading', 'Loading profile...')} />;
   }
   const photoUrl = profileData?.profilePhoto
     ? `${BASE_URL}/user/image/${profileData.profilePhoto}`
     : null;
-  const isFarmer = user?.role === 'FARMER';
 
   if (isFarmer) {
     return (
       <FarmerPageBackground>
         <FarmerHeader
           variant="tab"
-          title="Profile"
-          subtitle="Manage your farmer profile & status"
+          title={t('nav.profile', 'Profile')}
+          subtitle={t('profile.manageStatus', 'Manage your farmer profile & status')}
           onNotificationPress={() => navigation.navigate('Notifications')}
         />
 
@@ -265,7 +331,7 @@ const ProfileScreen = () => {
                 {profileData?.email || user?.email}
               </Text>
               <View style={styles.farmerRoleBadgeRow}>
-                <FarmerBadge label="🌾 Farmer" variant="success" />
+                <FarmerBadge label={`🌾 ${t('auth.farmer', 'Farmer')}`} variant="success" />
               </View>
             </FarmerCard>
 
@@ -276,97 +342,78 @@ const ProfileScreen = () => {
                     style={styles.farmerSectionHeading}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    EDIT PERSONAL INFORMATION
+                    {t('profile.editPersonalInfo', 'EDIT PERSONAL INFORMATION')}
                   </Text>
                   <View style={styles.farmerSectionDivider} />
                 </View>
 
                 <FarmerInput
-                  label="Name"
+                  label={t('auth.fullName', 'Name')}
                   required
                   value={name}
                   onChangeText={setName}
-                  placeholder="Full Name"
+                  placeholder={t('auth.fullNamePlaceholder', 'Full Name')}
                 />
 
                 <FarmerInput
-                  label="Mobile Number"
+                  label={t('auth.mobile', 'Mobile Number')}
                   value={mobile}
                   onChangeText={setMobile}
-                  placeholder="Mobile"
+                  placeholder={t('auth.mobilePlaceholder', 'Mobile')}
                   keyboardType="phone-pad"
                 />
 
                 <FarmerInput
-                  label="Village"
+                  label={t('auth.village', 'Village')}
                   value={village}
                   onChangeText={setVillage}
-                  placeholder="Village"
+                  placeholder={t('auth.villagePlaceholder', 'Village')}
                 />
 
                 <FarmerInput
-                  label="Address"
+                  label={t('auth.address', 'Address')}
                   value={address}
                   onChangeText={setAddress}
-                  placeholder="Address"
+                  placeholder={t('auth.addressPlaceholder', 'Address')}
                   multiline
                 />
 
                 <FarmerInput
-                  label="Postal Code"
+                  label={t('auth.postalCode', 'Postal Code')}
                   value={postalCode}
                   onChangeText={setPostalCode}
-                  placeholder="Postal Code"
+                  placeholder={t('auth.postalCodePlaceholder', 'Postal Code')}
                   keyboardType="number-pad"
                 />
 
                 <FarmerInput
-                  label="State"
+                  label={t('auth.state', 'State')}
                   value={stateVal}
                   onChangeText={setStateVal}
-                  placeholder="State"
+                  placeholder={t('auth.statePlaceholder', 'State')}
                 />
 
-                <View style={styles.farmerStatusSection}>
+                <View style={[styles.farmerStatusSection, { backgroundColor: '#F8FAF9', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB' }]}>
                   <Text
                     style={styles.farmerStatusLabel}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    Availability Status
+                    {t('profile.accountStatus', 'Account Status')}: {(profileData?.status === 'ACTIVE' && profileData?.isActive !== false) ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
                   </Text>
-                  <View style={styles.farmerChipsRow}>
-                    <FarmerChip
-                      label="Active"
-                      selected={status !== 'INACTIVE'}
-                      onPress={() => setStatus('ACTIVE')}
-                    />
-                    <FarmerChip
-                      label="Inactive"
-                      selected={status === 'INACTIVE'}
-                      onPress={() => setStatus('INACTIVE')}
-                    />
-                  </View>
+                  <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                    {t('profile.statusToggleHelper', 'To activate or deactivate your farm, use the Account Status toggle on your main profile screen.')}
+                  </Text>
                 </View>
-
-                {status === 'INACTIVE' && (
-                  <FarmerInput
-                    label="Reason for being inactive"
-                    value={inactiveReason}
-                    onChangeText={setInactiveReason}
-                    placeholder="E.g., Out of town for 5 days"
-                    multiline
-                  />
-                )}
 
                 <View style={{ marginTop: 8, gap: 10 }}>
                   <FarmerDeepButton
-                    title="Save Changes"
+                    title={t('common.save', 'Save Changes')}
                     onPress={handleSave}
                     loading={saving}
                     disabled={saving}
                   />
                   <FarmerOutlineButton
-                    title="Cancel"
+                    title={t('common.cancel', 'Cancel')}
                     onPress={() => {
                       setIsEditing(false);
                       setSelectedPhotoUri(null);
@@ -382,42 +429,42 @@ const ProfileScreen = () => {
                     style={styles.farmerCardTitle}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    Personal Details
+                    {t('auth.personalDetails', 'Personal Details')}
                   </Text>
 
                   <FarmerListRow
                     icon={<Ionicons name="call-outline" size={20} color={FARMER_THEME.colors.primaryGreen} />}
                     iconBg={FARMER_THEME.colors.pastelGreen}
-                    title="Mobile Number"
-                    subtitle={profileData?.mobile || 'Not set'}
+                    title={t('auth.mobile', 'Mobile Number')}
+                    subtitle={profileData?.mobile || t('common.optional', 'Not set')}
                     showChevron={false}
                   />
                   <FarmerListRow
                     icon={<Ionicons name="location-outline" size={20} color={FARMER_THEME.colors.warning} />}
                     iconBg={FARMER_THEME.colors.pastelYellow}
-                    title="Village"
-                    subtitle={profileData?.village || 'Not set'}
+                    title={t('auth.village', 'Village')}
+                    subtitle={profileData?.village || t('common.optional', 'Not set')}
                     showChevron={false}
                   />
                   <FarmerListRow
                     icon={<Ionicons name="home-outline" size={20} color={FARMER_THEME.colors.tealGreen} />}
                     iconBg={FARMER_THEME.colors.pastelTeal}
-                    title="Address"
-                    subtitle={profileData?.address || 'Not set'}
+                    title={t('auth.address', 'Address')}
+                    subtitle={profileData?.address || t('common.optional', 'Not set')}
                     showChevron={false}
                   />
                   <FarmerListRow
                     icon={<Ionicons name="mail-outline" size={20} color="#2F7A3A" />}
                     iconBg={FARMER_THEME.colors.pastelLime}
-                    title="Postal Code"
-                    subtitle={profileData?.postalCode || 'Not set'}
+                    title={t('auth.postalCode', 'Postal Code')}
+                    subtitle={profileData?.postalCode || t('common.optional', 'Not set')}
                     showChevron={false}
                   />
                   <FarmerListRow
                     icon={<Ionicons name="map-outline" size={20} color="#3B6FB6" />}
                     iconBg={FARMER_THEME.colors.pastelBlue}
-                    title="State"
-                    subtitle={profileData?.state || 'Not set'}
+                    title={t('auth.state', 'State')}
+                    subtitle={profileData?.state || t('common.optional', 'Not set')}
                     showChevron={false}
                   />
                 </FarmerCard>
@@ -430,30 +477,42 @@ const ProfileScreen = () => {
                         style={styles.statusTitle}
                         maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                       >
-                        Account Status
+                        {t('profile.accountStatus', 'Account Status')}
                       </Text>
-                      <View style={{ marginTop: 4 }}>
+                      <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <FarmerBadge
-                          label={profileData?.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                          variant={profileData?.status === 'ACTIVE' ? 'success' : 'error'}
+                          label={(profileData?.status === 'ACTIVE' && profileData?.isActive !== false) ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                          variant={(profileData?.status === 'ACTIVE' && profileData?.isActive !== false) ? 'success' : 'error'}
                         />
+                        {!(profileData?.status === 'ACTIVE' && profileData?.isActive !== false) && (
+                          <Text style={{ fontSize: 12, color: '#C0392B', fontWeight: '600' }}>
+                            {t('profile.productsHidden', 'Products Hidden')}
+                          </Text>
+                        )}
                       </View>
                     </View>
-                    {profileData?.status && (
-                      <Switch
-                        value={profileData.status === 'ACTIVE'}
-                        onValueChange={handleStatusToggleChange}
-                        trackColor={{ false: '#FDE6E2', true: '#BFE3CB' }}
-                        thumbColor={profileData.status === 'ACTIVE' ? '#2A9560' : '#C0392B'}
-                        disabled={statusUpdating}
-                      />
-                    )}
+                    <Switch
+                      value={profileData?.status === 'ACTIVE' && profileData?.isActive !== false}
+                      onValueChange={handleStatusToggleChange}
+                      trackColor={{ false: '#FDE6E2', true: '#BFE3CB' }}
+                      thumbColor={(profileData?.status === 'ACTIVE' && profileData?.isActive !== false) ? '#2A9560' : '#C0392B'}
+                      disabled={statusUpdating}
+                    />
                   </View>
 
-                  {profileData?.status === 'INACTIVE' && profileData?.inactiveReason && (
+                  {(!(profileData?.status === 'ACTIVE' && profileData?.isActive !== false) && profileData?.inactiveReason) && (
                     <View style={styles.farmerReasonBox}>
-                      <Text style={styles.farmerReasonLabel}>Inactive Reason:</Text>
+                      <Text style={styles.farmerReasonLabel}>{t('profile.deactivationReason', 'Deactivation Reason:')}</Text>
                       <Text style={styles.farmerReasonText}>{profileData.inactiveReason}</Text>
+                      {profileData.inactiveSince && (
+                        <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+                          {t('profile.deactivatedOn', {
+                            date: new Date(profileData.inactiveSince).toLocaleDateString(),
+                            time: new Date(profileData.inactiveSince).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            defaultValue: `Deactivated on: ${new Date(profileData.inactiveSince).toLocaleDateString()} at ${new Date(profileData.inactiveSince).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                          })}
+                        </Text>
+                      )}
                     </View>
                   )}
                 </FarmerCard>
@@ -461,13 +520,21 @@ const ProfileScreen = () => {
                 {/* Action Buttons */}
                 <View style={styles.farmerActionsContainer}>
                   <FarmerPrimaryButton
-                    title="Edit Profile"
+                    title={t('profile.editProfile', 'Edit Profile')}
                     onPress={startEditing}
                     icon={<EditIcon size={18} color="#FFFFFF" strokeWidth={2} />}
                     style={{ marginBottom: 12 }}
                   />
                   <FarmerOutlineButton
-                    title="Logout"
+                    title={t('profile.changeLanguage', 'Change Language')}
+                    onPress={() => navigation.navigate('LanguageSelection', { fromSettings: true })}
+                    textColor={FARMER_THEME.colors.primaryGreen}
+                    borderColor={FARMER_THEME.colors.cardBorder}
+                    icon={<Ionicons name="language" size={18} color={FARMER_THEME.colors.primaryGreen} />}
+                    style={{ marginBottom: 12 }}
+                  />
+                  <FarmerOutlineButton
+                    title={t('profile.logout', 'Logout')}
                     onPress={handleLogout}
                     textColor={FARMER_THEME.colors.error}
                     borderColor="#FDE6E2"
@@ -482,49 +549,95 @@ const ProfileScreen = () => {
               visible={isStatusModalVisible}
               transparent={true}
               animationType="fade"
-              onRequestClose={() => setIsStatusModalVisible(false)}
+              onRequestClose={() => {
+                Keyboard.dismiss();
+                setIsStatusModalVisible(false);
+              }}
             >
-              <View style={styles.farmerModalOverlay}>
-                <FarmerCard style={styles.farmerModalContent}>
-                  <Text
-                    style={styles.farmerModalTitle}
-                    maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
-                  >
-                    Set Inactive Status
-                  </Text>
-                  <Text
-                    style={styles.farmerModalSubtitle}
-                    maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
-                  >
-                    Please provide a reason and how many days you will be inactive:
-                  </Text>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={{ flex: 1 }}
+              >
+                <ScrollView
+                  contentContainerStyle={styles.farmerModalOverlay}
+                  bounces={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={styles.farmerModalOverlayTouchable}>
+                      <FarmerCard style={styles.farmerModalContent}>
+                        <Text
+                          style={styles.farmerModalTitle}
+                          maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                        >
+                          {t('profile.confirmDeactivate', 'Confirm Deactivation')}
+                        </Text>
+                        <Text
+                          style={styles.farmerModalSubtitle}
+                          maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                        >
+                          {t('profile.confirmDeactivateDesc', 'Your products will be hidden from customers and orders paused.')}
+                        </Text>
 
-                  <FarmerInput
-                    value={tempInactiveReason}
-                    onChangeText={setTempInactiveReason}
-                    placeholder="E.g., Out of town for 5 days"
-                    multiline
-                  />
+                        <View style={{ marginVertical: 6 }}>
+                          <FarmerInput
+                            value={tempInactiveReason}
+                            onChangeText={setTempInactiveReason}
+                            placeholder={t('profile.explainDeactivate', 'Explain why you are deactivating (10–500 characters)...')}
+                            multiline
+                            maxLength={500}
+                          />
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: tempInactiveReason.trim().length >= 10 ? '#2A9560' : '#DC2626',
+                              textAlign: 'right',
+                              marginTop: 4,
+                            }}
+                          >
+                            {tempInactiveReason.trim().length} / 500 characters (min 10)
+                          </Text>
+                        </View>
 
-                  <View style={styles.farmerModalButtonsRow}>
-                    <FarmerOutlineButton
-                      title="Cancel"
-                      onPress={() => setIsStatusModalVisible(false)}
-                      disabled={statusUpdating}
-                      compact
-                      style={{ flex: 1 }}
-                    />
-                    <FarmerDeepButton
-                      title="Submit"
-                      onPress={() => submitStatusUpdate(false, tempInactiveReason)}
-                      disabled={statusUpdating}
-                      loading={statusUpdating}
-                      compact
-                      style={{ flex: 1 }}
-                    />
-                  </View>
-                </FarmerCard>
-              </View>
+                        <View style={styles.farmerModalButtonsRow}>
+                          <FarmerOutlineButton
+                            title={t('common.cancel', 'Cancel')}
+                            onPress={() => {
+                              Keyboard.dismiss();
+                              setIsStatusModalVisible(false);
+                            }}
+                            disabled={statusUpdating}
+                            compact
+                            style={styles.farmerCancelButton}
+                            textColor={FARMER_THEME.colors.cancelledText}
+                            borderColor="#FCA5A5"
+                            icon={
+                              <Ionicons
+                                name="close-circle-outline"
+                                size={16}
+                                color={FARMER_THEME.colors.cancelledText}
+                              />
+                            }
+                            textStyle={styles.farmerCancelButtonText}
+                          />
+                          <FarmerDeepButton
+                            title={t('profile.confirmDeactivate', 'Confirm Deactivate')}
+                            onPress={() => {
+                              Keyboard.dismiss();
+                              submitStatusUpdate(false, tempInactiveReason);
+                            }}
+                            disabled={statusUpdating || tempInactiveReason.trim().length < 10}
+                            loading={statusUpdating}
+                            compact
+                            style={styles.farmerConfirmButton}
+                            textStyle={styles.farmerConfirmButtonText}
+                          />
+                        </View>
+                      </FarmerCard>
+                    </View>
+                  </TouchableWithoutFeedback>
+                </ScrollView>
+              </KeyboardAvoidingView>
             </Modal>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -536,6 +649,14 @@ const ProfileScreen = () => {
             await logout();
           }}
         />
+        <ProfileSuccessModal
+          visible={successModalVisible}
+          onClose={() => setSuccessModalVisible(false)}
+          title={successModalConfig.title}
+          message={successModalConfig.message}
+          synchronizedOrdersCount={successModalConfig.synchronizedOrdersCount}
+          isFarmer={true}
+        />
       </FarmerPageBackground>
     );
   }
@@ -545,8 +666,8 @@ const ProfileScreen = () => {
     <PageBackground style={{ flex: 1 }}>
       <ThemedHeader
         variant="tab"
-        title="Account"
-        subtitle="Manage your profile & details"
+        title={t('profile.myProfile', 'Account')}
+        subtitle={t('profile.manageCustomer', 'Manage your profile & details')}
       />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -588,74 +709,74 @@ const ProfileScreen = () => {
             <Text style={styles.customerName}>{profileData?.name || user?.name}</Text>
             <Text style={styles.customerEmail}>{profileData?.email || user?.email}</Text>
             <View style={styles.customerRoleBadge}>
-              <Text style={styles.customerRoleText}>🏠 Customer</Text>
+              <Text style={styles.customerRoleText}>🏠 {t('auth.customer', 'Customer')}</Text>
             </View>
           </Card>
 
           {isEditing ? (
             <View style={{ marginTop: 16 }}>
               <Card style={{ marginBottom: 16 }}>
-                <Text style={styles.customerSectionTitle}>Edit Personal Information</Text>
+                <Text style={styles.customerSectionTitle}>{t('profile.editProfile', 'Edit Personal Information')}</Text>
                 <View style={styles.customerInputGroup}>
-                  <Text style={styles.customerInputLabel}>Full Name</Text>
+                  <Text style={styles.customerInputLabel}>{t('auth.fullName', 'Full Name')}</Text>
                   <TextInput
                     style={styles.customerTextInput}
                     value={name}
                     onChangeText={setName}
-                    placeholder="Full Name"
+                    placeholder={t('auth.fullName', 'Full Name')}
                     placeholderTextColor="#A08D7E"
                   />
                 </View>
                 <View style={styles.customerInputGroup}>
-                  <Text style={styles.customerInputLabel}>Mobile Number</Text>
+                  <Text style={styles.customerInputLabel}>{t('auth.mobile', 'Mobile Number')}</Text>
                   <TextInput
                     style={styles.customerTextInput}
                     value={mobile}
                     onChangeText={setMobile}
-                    placeholder="Mobile"
+                    placeholder={t('auth.mobile', 'Mobile')}
                     placeholderTextColor="#A08D7E"
                     keyboardType="phone-pad"
                   />
                 </View>
                 <View style={styles.customerInputGroup}>
-                  <Text style={styles.customerInputLabel}>Village</Text>
+                  <Text style={styles.customerInputLabel}>{t('auth.village', 'Village')}</Text>
                   <TextInput
                     style={styles.customerTextInput}
                     value={village}
                     onChangeText={setVillage}
-                    placeholder="Village"
+                    placeholder={t('auth.village', 'Village')}
                     placeholderTextColor="#A08D7E"
                   />
                 </View>
                 <View style={styles.customerInputGroup}>
-                  <Text style={styles.customerInputLabel}>Address</Text>
+                  <Text style={styles.customerInputLabel}>{t('auth.address', 'Address')}</Text>
                   <TextInput
                     style={[styles.customerTextInput, { minHeight: 70, textAlignVertical: 'top' }]}
                     value={address}
                     onChangeText={setAddress}
-                    placeholder="Address"
+                    placeholder={t('auth.address', 'Address')}
                     placeholderTextColor="#A08D7E"
                     multiline
                   />
                 </View>
                 <View style={styles.customerInputGroup}>
-                  <Text style={styles.customerInputLabel}>Postal Code</Text>
+                  <Text style={styles.customerInputLabel}>{t('auth.postalCode', 'Postal Code')}</Text>
                   <TextInput
                     style={styles.customerTextInput}
                     value={postalCode}
                     onChangeText={setPostalCode}
-                    placeholder="Postal Code"
+                    placeholder={t('auth.postalCode', 'Postal Code')}
                     placeholderTextColor="#A08D7E"
                     keyboardType="number-pad"
                   />
                 </View>
                 <View style={styles.customerInputGroup}>
-                  <Text style={styles.customerInputLabel}>State</Text>
+                  <Text style={styles.customerInputLabel}>{t('auth.state', 'State')}</Text>
                   <TextInput
                     style={styles.customerTextInput}
                     value={stateVal}
                     onChangeText={setStateVal}
-                    placeholder="State"
+                    placeholder={t('auth.state', 'State')}
                     placeholderTextColor="#A08D7E"
                   />
                 </View>
@@ -663,13 +784,13 @@ const ProfileScreen = () => {
 
               <View style={{ marginTop: 8 }}>
                 <PrimaryButton
-                  title={saving ? "Saving..." : "Save Changes"}
+                  title={saving ? t('common.loading', 'Saving...') : t('common.save', 'Save Changes')}
                   onPress={handleSave}
                   disabled={saving}
                   style={{ marginBottom: 12 }}
                 />
                 <OutlineButton
-                  title="Cancel"
+                  title={t('common.cancel', 'Cancel')}
                   onPress={() => {
                     setIsEditing(false);
                     setSelectedPhotoUri(null);
@@ -681,44 +802,50 @@ const ProfileScreen = () => {
           ) : (
             <View style={{ marginTop: 16 }}>
               <View style={styles.customerSectionHeader}>
-                <Text style={styles.customerSectionTitle}>Personal Information</Text>
+                <Text style={styles.customerSectionTitle}>{t('profile.personalInfo', 'Personal Information')}</Text>
               </View>
 
               <CustomerInfoRow
                 icon="call-outline"
-                label="Mobile"
+                label={t('auth.mobile', 'Mobile')}
                 value={profileData?.mobile}
               />
               <CustomerInfoRow
                 icon="location-outline"
-                label="Village"
+                label={t('auth.village', 'Village')}
                 value={profileData?.village}
               />
               <CustomerInfoRow
                 icon="home-outline"
-                label="Address"
+                label={t('auth.address', 'Address')}
                 value={profileData?.address}
               />
               <CustomerInfoRow
                 icon="mail-outline"
-                label="Postal Code"
+                label={t('auth.postalCode', 'Postal Code')}
                 value={profileData?.postalCode}
               />
               <CustomerInfoRow
                 icon="map-outline"
-                label="State"
+                label={t('auth.state', 'State')}
                 value={profileData?.state}
               />
 
               <View style={{ marginTop: 20, marginBottom: 16 }}>
                 <PrimaryButton
-                  title="Edit Profile"
+                  title={t('profile.editProfile', 'Edit Profile')}
                   onPress={startEditing}
                   icon={<Ionicons name="pencil" size={16} color="#FFFFFF" />}
                   style={{ marginBottom: 12 }}
                 />
                 <OutlineButton
-                  title="Logout"
+                  title={t('profile.changeLanguage', 'Change Language')}
+                  onPress={() => navigation.navigate('LanguageSelection', { fromSettings: true })}
+                  icon={<Ionicons name="language" size={16} color={THEME.colors.accent} />}
+                  style={{ marginBottom: 12 }}
+                />
+                <OutlineButton
+                  title={t('profile.logout', 'Logout')}
                   onPress={handleLogout}
                   style={{ borderColor: '#FCA5A5', backgroundColor: '#FFF5F5' }}
                   textStyle={{ color: THEME.colors.error }}
@@ -735,6 +862,14 @@ const ProfileScreen = () => {
           setLogoutModalVisible(false);
           await logout();
         }}
+      />
+      <ProfileSuccessModal
+        visible={successModalVisible}
+        onClose={() => setSuccessModalVisible(false)}
+        title={successModalConfig.title}
+        message={successModalConfig.message}
+        synchronizedOrdersCount={successModalConfig.synchronizedOrdersCount}
+        isFarmer={false}
       />
     </PageBackground>
   );
@@ -1315,36 +1450,64 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   farmerModalOverlay: {
-    flex: 1,
-    backgroundColor: FARMER_THEME.colors.backdrop,
+    flexGrow: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 16,
+  },
+  farmerModalOverlayTouchable: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   farmerModalContent: {
     width: '100%',
-    maxWidth: 340,
-    padding: 20,
+    maxWidth: 350,
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
   },
   farmerModalTitle: {
     fontFamily: FARMER_THEME.fonts.serif,
     fontSize: 20,
     color: FARMER_THEME.colors.headings,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   farmerModalSubtitle: {
     fontFamily: FARMER_THEME.fonts.regular,
     fontSize: 13,
     color: FARMER_THEME.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     lineHeight: 18,
+    paddingHorizontal: 4,
   },
   farmerModalButtonsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 14,
+    gap: 10,
+    marginTop: 12,
+  },
+  farmerCancelButton: {
+    flex: 1,
+    backgroundColor: FARMER_THEME.colors.cancelledBg,
+    borderColor: '#F87171',
+    borderWidth: 1.5,
+    borderRadius: 14,
+  },
+  farmerCancelButtonText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 13,
+    letterSpacing: -0.2,
+  },
+  farmerConfirmButton: {
+    flex: 1.45,
+    borderRadius: 14,
+  },
+  farmerConfirmButtonText: {
+    fontSize: 13,
+    letterSpacing: -0.2,
   },
 });
 export default ProfileScreen;

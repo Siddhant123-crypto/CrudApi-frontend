@@ -16,11 +16,14 @@ import { THEME } from '../constants/theme';
 import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { Card } from '../components/ui/Card';
+import { useTranslation } from 'react-i18next';
+import { formatCategory } from '../utils/categoryUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = (screenWidth - 40 - 12) / 2;
 
 const CategoriesScreen = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { cartCount } = useCart();
@@ -58,9 +61,10 @@ const CategoriesScreen = ({ navigation }: any) => {
   return (
     <PageBackground>
       <ThemedHeader
-        variant="tab"
-        title="Categories"
-        subtitle="Explore fresh farm produce"
+        variant={navigation?.canGoBack?.() ? 'inner' : 'tab'}
+        onBackPress={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
+        title={t('nav.categories', 'Categories')}
+        subtitle={t('categories.subtitle', 'Explore fresh farm produce')}
         titleStyle={{ fontSize: 21 }}
         showCart
         cartCount={cartCount}
@@ -109,7 +113,7 @@ const CategoriesScreen = ({ navigation }: any) => {
                     <Text style={styles.emojiText}>{info.emoji}</Text>
                   </View>
                   <Text style={styles.name} numberOfLines={2}>
-                    {category.name}
+                    {formatCategory(category.name, t)}
                   </Text>
                 </Card>
               );

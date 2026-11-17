@@ -33,10 +33,14 @@ import {
   FarmerOutlineButton,
 } from '../components/farmer/FarmerButtons';
 import { FarmerSuccessModal } from '../components/farmer/FarmerSuccessModal';
+import { useTranslation } from 'react-i18next';
+import { formatCurrency } from '../utils/formatters';
+import { formatOrderStatus } from '../utils/statusUtils';
 
 const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { orderId, initialOrder } = route.params;
+  const { orderId, initialOrder, addressUpdated, previousAddress, newAddress } = route.params || {};
   const [order, setOrder] = useState<any>(initialOrder || null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -60,7 +64,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
     } catch (error) {
       console.log('Error fetching order details:', error);
       if (!initialOrder) {
-        Alert.alert('Error', 'Failed to load order details');
+        Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to load order details'));
         navigation.goBack();
       }
     } finally {
@@ -91,9 +95,9 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
       if (newStatus === 'CONFIRMED') {
         await api.put(`/order/${orderId}/accept`);
         setSuccessModalData({
-          title: 'Order Accepted!',
-          message: 'Order accepted successfully! You can now start preparing the fresh produce for the customer.',
-          buttonText: 'Awesome, Got it!',
+          title: t('farmer.orderAcceptedTitle', 'Order Accepted!'),
+          message: t('farmer.orderAcceptedDesc', 'Order accepted successfully! You can now start preparing the fresh produce for the customer.'),
+          buttonText: t('common.awesomeGotIt', 'Awesome, Got it!'),
         });
         setSuccessModalVisible(true);
       } else if (newStatus === 'CANCELLED') {
@@ -102,26 +106,21 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
           url += `?reason=${encodeURIComponent(declineReason.trim())}`;
         }
         await api.put(url);
-        Alert.alert('Success', 'Order declined successfully');
+        Alert.alert(t('common.success', 'Success'), t('farmer.orderDeclinedSuccess', 'Order declined successfully'));
         setShowDeclineModal(false);
         setDeclineReason('');
       } else {
         await api.put(`/order/${orderId}/status?status=${newStatus}`);
-        const statusMap: Record<string, string> = {
-          PROCESSING: 'Preparing Items',
-          OUT_FOR_DELIVERY: 'Out for Delivery',
-          DELIVERED: 'Delivered',
-        };
         setSuccessModalData({
-          title: 'Status Updated!',
-          message: `Order status has been updated to "${statusMap[newStatus] || newStatus}" successfully.`,
-          buttonText: 'Great, Continue',
+          title: t('farmer.statusUpdatedTitle', 'Status Updated!'),
+          message: `${t('orders.status', 'Order status')}: ${formatOrderStatus(newStatus, t)}`,
+          buttonText: t('common.continue', 'Great, Continue'),
         });
         setSuccessModalVisible(true);
       }
       fetchOrderDetails();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update status');
+      Alert.alert(t('common.error', 'Error'), error.response?.data?.message || t('errors.generic', 'Failed to update status'));
     } finally {
       setUpdating(false);
     }
@@ -132,7 +131,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
       <FarmerPageBackground>
         <FarmerHeader
           variant="inner"
-          title="Customer Product Detail"
+          title={t('orders.orderDetails', 'Order Details')}
           titleAlign="left"
           onBackPress={() => navigation.goBack()}
         />
@@ -162,7 +161,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
               style={styles.btnGradient}
             >
               <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text numberOfLines={1} style={styles.btnText}>Accept Order</Text>
+              <Text numberOfLines={1} style={styles.btnText}>{t('farmer.acceptOrder', 'Accept Order')}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -179,7 +178,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
               style={styles.btnGradient}
             >
               <Ionicons name="close-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text numberOfLines={1} style={styles.btnText}>Decline</Text>
+              <Text numberOfLines={1} style={styles.btnText}>{t('farmer.declineOrder', 'Decline')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -189,7 +188,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
       return (
         <View style={{ width: '100%' }}>
           <FarmerDeepButton
-            title="Start Processing"
+            title={t('farmer.startProcessing', 'Start Processing')}
             onPress={() => updateStatus('PROCESSING')}
             disabled={updating}
           />
@@ -200,7 +199,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
       return (
         <View style={{ width: '100%' }}>
           <FarmerDeepButton
-            title="Mark as Out for Delivery"
+            title={t('farmer.markDispatched', 'Mark as Out for Delivery')}
             onPress={() => updateStatus('OUT_FOR_DELIVERY')}
             disabled={updating}
           />
@@ -211,7 +210,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
       return (
         <View style={{ width: '100%' }}>
           <FarmerDeepButton
-            title="Confirm Delivery"
+            title={t('farmer.markDelivered', 'Confirm Delivery')}
             onPress={() => updateStatus('DELIVERED')}
             disabled={updating}
           />
@@ -226,9 +225,9 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
       {/* Inner FarmerHeader */}
       <FarmerHeader
         variant="inner"
-        title="Customer Product Detail"
+        title={t('orders.orderDetails', 'Order Details')}
         titleAlign="left"
-        subtitle={`Order #${order.orderNumber ? order.orderNumber.substring(0, 10) : order.orderId.substring(0, 8)}`}
+        subtitle={`${t('orders.orderNumber', 'Order #').replace('{{id}}', '')}${order.orderNumber ? order.orderNumber.substring(0, 10) : order.orderId.substring(0, 8)}`}
         onBackPress={() => navigation.goBack()}
       />
 
@@ -254,15 +253,44 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
 
           <View style={styles.divider} />
 
+          {/* Address Updated Banner if navigated from notification or updated */}
+          {(addressUpdated || previousAddress) && (
+            <View style={styles.addressUpdatedNotice}>
+              <View style={styles.addressUpdatedHeader}>
+                <Ionicons name="sparkles" size={15} color="#047857" style={{ marginRight: 6 }} />
+                <Text style={styles.addressUpdatedNoticeTitle}>{t('orders.customerChangedAddress', 'Customer Changed Delivery Address')}</Text>
+              </View>
+              {previousAddress ? (
+                <View style={styles.addressHistoryContainer}>
+                  <Text style={styles.addressHistoryLabel}>{t('orders.previousAddress', 'Previous Address:')}</Text>
+                  <Text style={styles.addressHistoryOldText}>{previousAddress}</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+
           <View style={styles.addressRow}>
             <View style={styles.addressIconTile}>
               <Ionicons name="location" size={16} color={FARMER_THEME.colors.forestGreen} />
             </View>
             <View style={styles.addressTextContainer}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                <Text style={styles.addressLabel}>{t('tracking.deliveryAddress', 'Delivery Address')}</Text>
+                {(addressUpdated || previousAddress) && (
+                  <View style={styles.latestBadge}>
+                    <Text style={styles.latestBadgeText}>{t('orders.latest', 'LATEST')}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.addressText}>{order.deliveryAddress}</Text>
               <Text style={styles.addressSubText}>
                 {order.village}, {order.state} {order.postalCode}
               </Text>
+              {order.deliveryLatitude != null && order.deliveryLongitude != null && (
+                <Text style={styles.coordinatesText}>
+                  📍 {t('orders.coordinates', 'Coordinates')}: {Number(order.deliveryLatitude).toFixed(4)}, {Number(order.deliveryLongitude).toFixed(4)}
+                </Text>
+              )}
             </View>
           </View>
         </FarmerCard>
@@ -270,7 +298,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
         {/* Current Status Timeline Card */}
         <FarmerCard style={styles.sectionCard}>
           <View style={styles.statusSectionHeader}>
-            <Text style={styles.sectionTitle}>Current Status</Text>
+            <Text style={styles.sectionTitle}>{t('orders.status', 'Current Status')}</Text>
             <OrderStatusBadge status={fStatus} variant="farmer" />
           </View>
           <OrderTimeline status={fStatus} isFarmer={true} variant="farmer" />
@@ -281,17 +309,17 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
           <FarmerCard style={styles.cancelledCard}>
             <View style={styles.cancellationHeader}>
               <Ionicons name="alert-circle" size={20} color="#C0392B" />
-              <Text style={styles.cancellationReasonTitle}>Cancellation Reason</Text>
+              <Text style={styles.cancellationReasonTitle}>{t('orders.cancellationReason', 'Cancellation Reason')}</Text>
             </View>
             <Text style={styles.cancellationReasonText}>
-              {order.cancellationReason || 'No specific reason provided by the customer.'}
+              {order.cancellationReason || t('orders.noReasonProvided', 'No specific reason provided by the customer.')}
             </Text>
           </FarmerCard>
         )}
 
         {/* Ordered Items & Bill Summary Card */}
         <FarmerCard style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Ordered Items</Text>
+          <Text style={styles.sectionTitle}>{t('tracking.itemsInOrder', 'Ordered Items')}</Text>
           {order.items &&
             order.items.map((item: any, index: number) => {
               const imageUrl = item.imageUrl ? getProductImageUrl(item.imageUrl) : null;
@@ -310,20 +338,20 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName}>{item.productName}</Text>
                     <Text style={styles.itemMeta}>
-                      {item.quantity} {item.unit} x ₹{item.price}
+                      {item.quantity} {item.unit} x {formatCurrency(item.price)}
                     </Text>
                     <View style={{ marginTop: 6 }}>
                       <OrderStatusBadge status={item.status} variant="farmer" />
                     </View>
                   </View>
-                  <Text style={styles.itemTotal}>₹{item.subtotal?.toFixed(2)}</Text>
+                  <Text style={styles.itemTotal}>{formatCurrency(item.subtotal)}</Text>
                 </View>
               );
             })}
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>₹{order.totalAmount?.toFixed(2)}</Text>
+            <Text style={styles.totalLabel}>{t('cart.totalAmount', 'Total Amount')}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(order.totalAmount)}</Text>
           </View>
 
           <View style={styles.bottomPaymentBadgeRow}>
@@ -356,13 +384,13 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Decline Order</Text>
+              <Text style={styles.modalTitle}>{t('farmer.declineOrder', 'Decline Order')}</Text>
               <Text style={styles.modalSubtitle}>
-                Please provide a reason for declining this order:
+                {t('farmer.declineReasonSubtitle', 'Please provide a reason for declining this order:')}
               </Text>
               <TextInput
                 style={styles.reasonInput}
-                placeholder="e.g. Out of stock, Cannot deliver to this area..."
+                placeholder={t('farmer.declineReasonPlaceholder', 'e.g. Out of stock, Cannot deliver to this area...')}
                 placeholderTextColor={FARMER_THEME.colors.placeholder}
                 value={declineReason}
                 onChangeText={setDeclineReason}
@@ -378,7 +406,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.modalBtnCancelText}>Cancel</Text>
+                  <Text style={styles.modalBtnCancelText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -392,7 +420,7 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
                   {updating ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
-                    <Text style={styles.modalBtnConfirmText}>Decline Order</Text>
+                    <Text style={styles.modalBtnConfirmText}>{t('farmer.declineOrder', 'Decline Order')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -725,6 +753,68 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontFamily: FARMER_THEME.fonts.bold,
+  },
+  addressUpdatedNotice: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#6EE7B7',
+  },
+  addressUpdatedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addressUpdatedNoticeTitle: {
+    fontSize: 13,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#065F46',
+  },
+  addressHistoryContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  addressHistoryLabel: {
+    fontSize: 10.5,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  addressHistoryOldText: {
+    fontSize: 12,
+    fontFamily: FARMER_THEME.fonts.regular,
+    color: '#4B5563',
+    lineHeight: 16,
+  },
+  addressLabel: {
+    fontSize: 11,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  latestBadge: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  latestBadgeText: {
+    fontSize: 9.5,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#FFFFFF',
+  },
+  coordinatesText: {
+    fontSize: 11.5,
+    fontFamily: FARMER_THEME.fonts.regular,
+    color: '#059669',
+    marginTop: 4,
   },
 });
 

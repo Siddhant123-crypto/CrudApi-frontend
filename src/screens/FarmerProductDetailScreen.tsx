@@ -18,6 +18,7 @@ import {
   getProductById,
   getProductVideoUrl,
   updateProduct,
+  toggleProductStatus,
 } from '../services/productService';
 import { getProductReviews } from '../services/reviewService';
 import { StarRating } from '../components/reviews/StarRating';
@@ -29,6 +30,8 @@ import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground'
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
 import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerStatCard, FarmerBadge, FarmerStickyBar, FarmerEmptyState } from '../components/farmer/FarmerUI';
+import { useTranslation } from 'react-i18next';
+import { formatCategory } from '../utils/categoryUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -40,6 +43,7 @@ const formatPrice = (val: any) => {
 };
 
 const FarmerProductDetailScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
   const { product } = route.params;
   const [productData, setProductData] = useState<any>(product);
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
@@ -52,27 +56,25 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
 
   const handleToggleActive = () => {
     const nextStatus = !productData.isActive;
-    const actionText = nextStatus ? 'activate' : 'deactivate';
+    const actionLabel = nextStatus ? t('common.activate') : t('common.deactivate');
     Alert.alert(
-      `${nextStatus ? 'Activate' : 'Deactivate'} Product`,
-      `Are you sure you want to ${actionText} "${productData.productName}"?`,
+      `${actionLabel} ${t('product.category', 'Product')}`,
+      t('product.toggleStatusConfirm', { name: productData.productName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: nextStatus ? 'Activate' : 'Deactivate',
+          text: actionLabel,
           style: nextStatus ? 'default' : 'destructive',
           onPress: async () => {
             setUpdatingStatus(true);
             try {
-              await updateProduct(productData.productId, {
-                ...productData,
-                isActive: nextStatus,
-              });
-              setProductData((prev: any) => ({ ...prev, isActive: nextStatus }));
-              Alert.alert('Success', `Product has been ${nextStatus ? 'activated' : 'deactivated'} successfully.`);
+              const res = await toggleProductStatus(productData.productId);
+              const updatedStatus = res?.isActive !== undefined ? res.isActive : nextStatus;
+              setProductData((prev: any) => ({ ...prev, isActive: updatedStatus, status: res?.status || prev.status }));
+              Alert.alert(t('common.success'), updatedStatus ? t('product.activatedSuccess') : t('product.deactivatedSuccess'));
             } catch (err: any) {
               console.log('Error toggling product status:', err);
-              Alert.alert('Error', err.response?.data?.message || `Failed to ${actionText} product.`);
+              Alert.alert(t('common.error'), err.response?.data?.message || t('product.failedToggleStatus'));
             } finally {
               setUpdatingStatus(false);
             }
@@ -110,7 +112,7 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
       {/* Inner FarmerHeader with back arrow & left aligned title */}
       <FarmerHeader
         variant="inner"
-        title="Product Details"
+        title={t('product.productDetails')}
         titleAlign="left"
         titleStyle={{ marginLeft: 16, fontSize: 17 }}
         onBackPress={() => navigation.goBack()}
@@ -142,21 +144,21 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
             ) : (
               <View style={styles.placeholderImage}>
                 <Ionicons name="leaf-outline" size={64} color={FARMER_THEME.colors.emeraldPrimary} />
-                <Text style={styles.placeholderText}>No photo available</Text>
+                <Text style={styles.placeholderText}>{t('product.noPhotoAvailable')}</Text>
               </View>
             )}
 
             {/* Organic Tag Overlay */}
             <View style={styles.organicTagOverlay}>
               <Ionicons name="leaf" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
-              <Text style={styles.organicTagText}>100% Farm Fresh</Text>
+              <Text style={styles.organicTagText}>{t('farmer.farmFresh100')}</Text>
             </View>
 
             {/* Status Badge Overlay */}
             <View style={styles.statusBadgeOverlay}>
               <FarmerBadge
                 variant={productData.isActive ? 'success' : 'error'}
-                label={productData.isActive ? 'Active' : 'Inactive'}
+                label={productData.isActive ? t('common.active') : t('common.inactive')}
                 size="md"
               />
             </View>
@@ -180,7 +182,7 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
                 : '0.0'}
             </Text>
             <Text style={styles.reviewCount}>
-              ({productData.reviewCount || 0} reviews)
+              ({productData.reviewCount || 0} {productData.reviewCount === 1 ? t('reviews.reviewOne') : t('reviews.reviewOther')})
             </Text>
           </View>
 
@@ -199,7 +201,7 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
                   style={{ marginRight: 4 }}
                 />
                 <Text style={styles.addedTimeText} numberOfLines={1}>
-                  Added {formatAddedTime(productData.createdOn, productData.addedTime)}
+                  {t('farmer.added', 'Added')} {formatAddedTime(productData.createdOn, productData.addedTime)}
                 </Text>
               </View>
             )}
@@ -207,17 +209,17 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
         </FarmerCard>
 
         {/* Product Stats Grid with FarmerStatCard */}
-        <Text style={styles.sectionHeaderTitle}>QUICK SPECIFICATIONS</Text>
+        <Text style={styles.sectionHeaderTitle}>{t('farmer.quickSpecs')}</Text>
         <View style={styles.statsGrid}>
           <FarmerStatCard
-            label="Category"
-            value={productData.category || 'N/A'}
+            label={t('product.category')}
+            value={formatCategory(productData.category, t)}
             icon={<Ionicons name="grid" size={18} color={FARMER_THEME.colors.emeraldPrimary} />}
             iconBg={FARMER_THEME.colors.pastelGreen}
             style={styles.statCardItem}
           />
           <FarmerStatCard
-            label="Available Stock"
+            label={t('product.availableStock')}
             value={`${productData.quantity ?? 0} ${productData.unit || 'KG'}`}
             icon={<Ionicons name="cube" size={18} color="#C98A0C" />}
             iconBg={FARMER_THEME.colors.pastelGold}
@@ -227,15 +229,15 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
 
         <View style={styles.statsGrid}>
           <FarmerStatCard
-            label="Harvest Date"
-            value={productData.harvestDate || 'Freshly Harvested'}
+            label={t('product.harvestDate')}
+            value={productData.harvestDate || t('product.freshlyHarvested')}
             icon={<Ionicons name="calendar" size={18} color="#0D9488" />}
             iconBg={FARMER_THEME.colors.pastelMint}
             style={styles.statCardItem}
           />
           <FarmerStatCard
-            label="Listing Status"
-            value={productData.isActive ? 'Live on Store' : 'Hidden'}
+            label={t('farmer.listingStatus')}
+            value={productData.isActive ? t('farmer.liveOnStore') : t('farmer.hidden')}
             icon={<Ionicons name="radio-button-on" size={18} color={productData.isActive ? '#15803D' : '#DC2626'} />}
             iconBg={productData.isActive ? '#DCFCE7' : '#FEE2E2'}
             style={styles.statCardItem}
@@ -243,22 +245,22 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
         </View>
 
         {/* Product Description */}
-        <Text style={styles.sectionHeaderTitle}>DESCRIPTION</Text>
+        <Text style={styles.sectionHeaderTitle}>{t('product.description')}</Text>
         <FarmerCard style={styles.descriptionCard}>
           <Text style={styles.descriptionContent}>
-            {productData.description || 'No description provided for this farm product.'}
+            {productData.description || t('product.noDescriptionProvided')}
           </Text>
         </FarmerCard>
 
         {/* Customer Photos & Reviews with FarmerCard & stars #F0A020 */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeaderTitle}>CUSTOMER PHOTOS & REVIEWS</Text>
+          <Text style={styles.sectionHeaderTitle}>{t('reviews.customerPhotosAndReviews')}</Text>
           {reviewsList.length > 0 && (
             <TouchableOpacity
               onPress={() => navigation.navigate('FarmerProductReviews', { product: productData })}
               activeOpacity={0.7}
             >
-              <Text style={styles.viewAllReviewsLink}>View All ({reviewsList.length})</Text>
+              <Text style={styles.viewAllReviewsLink}>{t('common.viewAll')} ({reviewsList.length})</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -269,8 +271,8 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
           ) : reviewsList.length === 0 ? (
             <FarmerEmptyState
               icon={<Ionicons name="chatbox-ellipses-outline" size={40} color={FARMER_THEME.colors.sageText} />}
-              title="No customer reviews yet"
-              subtitle="Reviews and customer photos will appear here once buyers place orders."
+              title={t('reviews.noCustomerReviewsYet')}
+              subtitle={t('reviews.noCustomerReviewsDesc')}
             />
           ) : (
             <View style={styles.mediaGalleryContainer}>

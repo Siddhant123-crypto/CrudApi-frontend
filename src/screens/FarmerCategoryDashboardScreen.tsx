@@ -23,6 +23,8 @@ import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground'
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
 import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerBadge, FarmerEmptyState } from '../components/farmer/FarmerUI';
+import { useTranslation } from 'react-i18next';
+import { formatCategory } from '../utils/categoryUtils';
 
 const { width } = Dimensions.get('window');
 const PRODUCT_CARD_WIDTH = (width - 44) / 2;
@@ -44,6 +46,7 @@ interface ProductItem {
 }
 
 export default function FarmerCategoryDashboardScreen({ route, navigation }: any) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { category } = route.params;
   const { user } = useAuth();
@@ -72,7 +75,7 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
       setProducts(visible);
     } catch (error) {
       console.log('Error fetching category products:', error);
-      Alert.alert('Error', 'Could not load products for this category.');
+      Alert.alert(t('common.error'), t('farmer.couldNotLoadCategoryProducts'));
     } finally {
       setLoading(false);
     }
@@ -83,10 +86,10 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
   };
 
   const handleDeleteProduct = (productId: string) => {
-    Alert.alert('Delete Product', 'Are you sure you want to delete this product?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('farmer.deleteProductTitle'), t('farmer.deleteProductConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -94,7 +97,7 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
             fetchFarmerCategoryProducts();
           } catch (error) {
             console.log('Error deleting product', error);
-            Alert.alert('Error', 'Could not delete product');
+            Alert.alert(t('common.error'), t('farmer.couldNotDeleteProduct'));
           }
         },
       },
@@ -182,7 +185,7 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
       {/* Inner FarmerHeader */}
       <FarmerHeader
         variant="inner"
-        title={category}
+        title={formatCategory(category, t)}
         titleAlign="left"
         onBackPress={() => navigation.goBack()}
       />
@@ -197,7 +200,7 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
             style={styles.searchIcon}
           />
           <TextInput
-            placeholder={`Search in ${category}...`}
+            placeholder={t('home.searchInCategory', { category: formatCategory(category, t) })}
             placeholderTextColor={FARMER_THEME.colors.sageText}
             style={styles.searchInput}
             value={searchText}
@@ -227,13 +230,13 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
           ListEmptyComponent={
             <FarmerEmptyState
               icon={<Ionicons name="leaf-outline" size={54} color={FARMER_THEME.colors.emeraldPrimary} />}
-              title="No Products Found"
+              title={t('farmer.noProductsTitle')}
               subtitle={
                 searchText.length > 0
-                  ? `No products matched "${searchText}".`
-                  : `You haven't added any products to ${category} yet.`
+                  ? t('farmer.noCategoryProductsDesc')
+                  : t('farmer.noProducts')
               }
-              buttonTitle="Add Product to Category"
+              buttonTitle={t('farmer.addProduct')}
               onButtonPress={() => navigation.navigate('AddProduct', { category })}
               style={{ marginTop: 40 }}
             />

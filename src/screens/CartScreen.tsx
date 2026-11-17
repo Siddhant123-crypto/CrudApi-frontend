@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext';
 import CartItemCard from '../components/CartItemCard';
 import EmptyState from '../components/EmptyState';
@@ -18,8 +19,10 @@ import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { Card } from '../components/ui/Card';
 import { StickyCheckoutBar } from '../components/ui/StickyCheckoutBar';
+import { formatCurrency, formatNumber } from '../utils/formatters';
 
 const CartScreen = () => {
+  const { t } = useTranslation();
   const { cart, isLoading, refreshCart, clearCart } = useCart();
   const navigation = useNavigation<any>();
   const [refreshing, setRefreshing] = useState(false);
@@ -32,11 +35,11 @@ const CartScreen = () => {
 
   const handleClearCart = () => {
     Alert.alert(
-      'Clear Cart',
-      'Are you sure you want to remove all items from your cart?',
+      t('cart.clearCartTitle', 'Clear Cart'),
+      t('cart.clearCartConfirm', 'Are you sure you want to remove all items from your cart?'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear All', style: 'destructive', onPress: clearCart },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        { text: t('cart.clearAll', 'Clear All'), style: 'destructive', onPress: clearCart },
       ]
     );
   };
@@ -61,7 +64,7 @@ const CartScreen = () => {
   if (isLoading && !refreshing && !cart) {
     return (
       <PageBackground>
-        <ThemedHeader title="My Cart" titleAlign="left" titleStyle={styles.headerTitle} />
+        <ThemedHeader title={t('cart.myCart', 'My Cart')} titleAlign="left" titleStyle={styles.headerTitle} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={THEME.colors.accentDeep} />
         </View>
@@ -72,11 +75,11 @@ const CartScreen = () => {
   if (!cart || cart.items.length === 0) {
     return (
       <PageBackground>
-        <ThemedHeader title="My Cart" titleAlign="left" titleStyle={styles.headerTitle} />
+        <ThemedHeader title={t('cart.myCart', 'My Cart')} titleAlign="left" titleStyle={styles.headerTitle} />
         <EmptyState
-          title="Your cart is empty"
-          subtitle="Looks like you haven't added anything to your cart yet."
-          buttonText="Start Shopping"
+          title={t('cart.emptyCartTitle', 'Your cart is empty')}
+          subtitle={t('cart.emptyCartSubtitle', "Looks like you haven't added anything to your cart yet.")}
+          buttonText={t('cart.startShopping', 'Start Shopping')}
           onButtonPress={() => navigation.navigate('Home')}
           iconName="cart-outline"
         />
@@ -87,7 +90,7 @@ const CartScreen = () => {
   return (
     <PageBackground>
       <ThemedHeader
-        title="My Cart"
+        title={t('cart.myCart', 'My Cart')}
         titleAlign="left"
         titleStyle={styles.headerTitle}
         rightIcon={<Ionicons name="trash-outline" size={20} color={THEME.colors.white} />}
@@ -103,13 +106,13 @@ const CartScreen = () => {
         ListFooterComponent={
           <Card style={styles.billCard}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total Items</Text>
-              <Text style={styles.summaryValue}>{cart.totalItems}</Text>
+              <Text style={styles.summaryLabel}>{t('cart.totalItems', 'Total Items')}</Text>
+              <Text style={styles.summaryValue}>{formatNumber(cart.totalItems)}</Text>
             </View>
             <View style={styles.divider} />
             <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Subtotal</Text>
-              <Text style={styles.totalValue}>₹{cart.totalAmount}</Text>
+              <Text style={styles.totalLabel}>{t('cart.subtotal', 'Subtotal')}</Text>
+              <Text style={styles.totalValue}>{formatCurrency(cart.totalAmount)}</Text>
             </View>
           </Card>
         }
@@ -123,9 +126,9 @@ const CartScreen = () => {
       />
 
       <StickyCheckoutBar
-        label="Total Amount"
+        label={t('cart.totalAmount', 'Total Amount')}
         total={cart.totalAmount}
-        buttonTitle="Checkout"
+        buttonTitle={t('cart.checkout', 'Checkout')}
         onPress={handleCheckout}
       />
     </PageBackground>

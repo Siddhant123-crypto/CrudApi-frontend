@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
@@ -34,6 +35,7 @@ import {
 } from '../../components/admin';
 
 export const AdminCategoriesScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ export const AdminCategoriesScreen: React.FC = () => {
       }
     } catch (e) {
       console.log('Error adding category:', e);
-      Alert.alert('Failed to add category. It may already exist.');
+      Alert.alert(t('common.error'), t('admin.failedAddCategory'));
     } finally {
       setSaving(false);
     }
@@ -121,7 +123,7 @@ export const AdminCategoriesScreen: React.FC = () => {
       }
     } catch (e) {
       console.log('Error editing category:', e);
-      Alert.alert('Failed to edit category.');
+      Alert.alert(t('common.error'), t('admin.failedEditCategory'));
     } finally {
       setSaving(false);
     }
@@ -142,7 +144,7 @@ export const AdminCategoriesScreen: React.FC = () => {
       setIsDeleteModalVisible(false);
     } catch (e) {
       console.log('Error deleting category:', e);
-      Alert.alert('Failed to delete category.');
+      Alert.alert(t('common.error'), t('admin.failedDeleteCategory'));
     }
   };
 
@@ -169,7 +171,7 @@ export const AdminCategoriesScreen: React.FC = () => {
       );
     } catch (e) {
       console.log('Failed to toggle category status', e);
-      Alert.alert('Failed to update category status.');
+      Alert.alert(t('common.error'), t('admin.failedUpdateCategoryStatus'));
     }
   };
 
@@ -283,13 +285,13 @@ export const AdminCategoriesScreen: React.FC = () => {
       {/* 1) TAB ADMIN HEADER WITH NAVY "+" RIGHT ACTION */}
       <AdminHeader
         variant="tab"
-        title="Categories"
+        title={t('admin.categories')}
         titleSize={28}
         showBackButton={true}
         showSearch={true}
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search categories..."
+        searchPlaceholder={t('admin.searchCategoriesPlaceholder', 'Search categories...')}
         rightAction={
           <TouchableOpacity
             activeOpacity={0.7}
@@ -319,8 +321,8 @@ export const AdminCategoriesScreen: React.FC = () => {
       ) : (
         <AdminEmptyState
           icon={<GridIcon size={36} color={ADMIN_THEME.colors.indigo} />}
-          title="No categories found"
-          subtitle="Try adjusting your search query or add a new category."
+          title={t('admin.noCategoriesFound')}
+          subtitle={t('admin.noCategoriesDesc', 'Try adjusting your search query or add a new category.')}
         />
       )}
 
@@ -336,18 +338,18 @@ export const AdminCategoriesScreen: React.FC = () => {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Add New Category</Text>
+              <Text style={styles.modalTitle}>{t('admin.addNewCategory')}</Text>
 
               <AdminInput
-                label="Category Name"
-                placeholder="e.g. Spices, Fresh Fruits"
+                label={t('admin.categoryName')}
+                placeholder={t('admin.categoryNamePlaceholder')}
                 value={newCatName}
                 onChangeText={setNewCatName}
               />
 
               <AdminInput
-                label="Description"
-                placeholder="Category description (optional)"
+                label={t('common.description')}
+                placeholder={t('admin.categoryDescPlaceholder')}
                 value={newCatDesc}
                 onChangeText={setNewCatDesc}
                 multiline={true}
@@ -368,7 +370,7 @@ export const AdminCategoriesScreen: React.FC = () => {
                     style={styles.btnGradient}
                   >
                     <Ionicons name="close-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                    <Text style={styles.btnTextWhite}>Cancel</Text>
+                    <Text style={styles.btnTextWhite}>{t('common.cancel')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
@@ -390,7 +392,7 @@ export const AdminCategoriesScreen: React.FC = () => {
                     ) : (
                       <>
                         <Ionicons name="add-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                        <Text style={styles.btnTextWhite}>Add</Text>
+                        <Text style={styles.btnTextWhite}>{t('common.add')}</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -413,18 +415,18 @@ export const AdminCategoriesScreen: React.FC = () => {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Edit Category</Text>
+              <Text style={styles.modalTitle}>{t('admin.editCategory')}</Text>
 
               <AdminInput
-                label="Category Name"
-                placeholder="Category Name"
+                label={t('admin.categoryName')}
+                placeholder={t('admin.categoryName')}
                 value={newCatName}
                 onChangeText={setNewCatName}
               />
 
               <AdminInput
-                label="Description"
-                placeholder="Description"
+                label={t('common.description')}
+                placeholder={t('common.description')}
                 value={newCatDesc}
                 onChangeText={setNewCatDesc}
                 multiline={true}
@@ -445,7 +447,7 @@ export const AdminCategoriesScreen: React.FC = () => {
                     style={styles.btnGradient}
                   >
                     <Ionicons name="close-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                    <Text style={styles.btnTextWhite}>Cancel</Text>
+                    <Text style={styles.btnTextWhite}>{t('common.cancel')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
@@ -467,7 +469,7 @@ export const AdminCategoriesScreen: React.FC = () => {
                     ) : (
                       <>
                         <Ionicons name="checkmark-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                        <Text style={styles.btnTextWhite}>Save</Text>
+                        <Text style={styles.btnTextWhite}>{t('common.save')}</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -485,9 +487,9 @@ export const AdminCategoriesScreen: React.FC = () => {
             <View style={styles.dialogIconDanger}>
               <TrashIcon size={28} color={ADMIN_THEME.colors.danger} />
             </View>
-            <Text style={styles.dialogTitle}>Delete Category?</Text>
+            <Text style={styles.dialogTitle}>{t('admin.deleteCategoryTitle')}</Text>
             <Text style={styles.dialogSubtitle}>
-              Are you sure you want to delete this category? This action cannot be undone.
+              {t('admin.deleteCategoryConfirm')}
             </Text>
             <View style={styles.modalButtonsRow}>
               {/* Cancel Button - Green Highlighted */}
@@ -503,7 +505,7 @@ export const AdminCategoriesScreen: React.FC = () => {
                   style={styles.btnGradient}
                 >
                   <Ionicons name="close-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.btnTextWhite}>Cancel</Text>
+                  <Text style={styles.btnTextWhite}>{t('common.cancel')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
 
@@ -520,7 +522,7 @@ export const AdminCategoriesScreen: React.FC = () => {
                   style={styles.btnGradient}
                 >
                   <Ionicons name="trash-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.btnTextWhite}>Delete</Text>
+                  <Text style={styles.btnTextWhite}>{t('common.delete')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -569,7 +571,7 @@ export const AdminCategoriesScreen: React.FC = () => {
             </Text>
             <View style={styles.modalButtonsRow}>
               <AdminOutlineButton
-                title="Cancel"
+                title={t('common.cancel')}
                 onPress={() => {
                   setConfirmModalVisible(false);
                   setCategoryToToggle(null);
@@ -577,7 +579,7 @@ export const AdminCategoriesScreen: React.FC = () => {
                 style={styles.modalButtonHalf}
               />
               <AdminPrimaryButton
-                title={`Yes, ${categoryToToggle?.willBeActive ? 'Activate' : 'Deactivate'}`}
+                title={categoryToToggle?.willBeActive ? t('admin.yesActivate') : t('admin.yesDeactivate')}
                 onPress={confirmToggle}
                 style={styles.modalButtonHalf}
               />

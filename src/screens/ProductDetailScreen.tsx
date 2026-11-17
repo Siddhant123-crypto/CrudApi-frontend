@@ -41,6 +41,9 @@ import { PrimaryButton, MaroonButton } from '../components/ui/Buttons';
 import { ThemedBadge } from '../components/ui/ThemedBadge';
 import { HeartIcon, ShareIcon } from '../components/CustomerIcons';
 import ProductCard from '../components/ProductCard';
+import { useTranslation } from 'react-i18next';
+import { formatCurrency } from '../utils/formatters';
+import { formatCategory } from '../utils/categoryUtils';
 
 const formatDisplayPrice = (val: any) => {
   const num = Number(val);
@@ -124,6 +127,7 @@ const AnimatedButton: React.FC<AnimatedButtonProps> = ({
 };
 
 const ProductDetailScreen = ({route, navigation}: any) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {product} = route.params;
   const {user} = useAuth();
@@ -204,9 +208,26 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   const imageUrl = productData.productPhoto
     ? getProductImageUrl(productData.productPhoto)
     : null;
+  const isFarmerInactive = productData.farmerActive === false || productData.farmerStatus === 'INACTIVE';
+
   const handleGoToCart = async () => {
     if (!user) {
-      Alert.alert('Login Required', 'Please log in to add items to cart.');
+      Alert.alert(
+        t('auth.loginRequired', 'Login Required'),
+        t('auth.loginToAddCart', 'Please log in to add items to cart.')
+      );
+      return;
+    }
+    if (isFarmerInactive) {
+      Alert.alert(
+        t('product.tempUnavailable', 'Product Unavailable'),
+        productData.farmerInactiveReason
+          ? t('product.farmerInactiveNoteReason', {
+              reason: productData.farmerInactiveReason,
+              defaultValue: `This farmer is currently inactive (${productData.farmerInactiveReason}). This product cannot be added to your cart.`
+            })
+          : t('product.farmerInactiveNote', 'This farmer is temporarily inactive. This product cannot be added to your cart.')
+      );
       return;
     }
     const finalQuantity = quantity === 0 ? 1 : quantity;
@@ -232,7 +253,22 @@ const ProductDetailScreen = ({route, navigation}: any) => {
 
   const handleBuyNow = () => {
     if (!user) {
-      Alert.alert('Login Required', 'Please log in to place an order.');
+      Alert.alert(
+        t('auth.loginRequired', 'Login Required'),
+        t('auth.loginToOrder', 'Please log in to place an order.')
+      );
+      return;
+    }
+    if (isFarmerInactive) {
+      Alert.alert(
+        t('product.tempUnavailable', 'Product Unavailable'),
+        productData.farmerInactiveReason
+          ? t('product.farmerInactiveNoteReason', {
+              reason: productData.farmerInactiveReason,
+              defaultValue: `This farmer is currently inactive (${productData.farmerInactiveReason}). This product cannot be ordered.`
+            })
+          : t('product.farmerInactiveNote', 'This farmer is temporarily inactive. This product cannot be ordered.')
+      );
       return;
     }
     const finalQuantity = quantity === 0 ? 1 : quantity;
@@ -283,7 +319,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   return (
     <PageBackground>
       <ThemedHeader
-        title="Product Details"
+        title={t('product.details', 'Product Details')}
         titleAlign="left"
         titleStyle={styles.headerTitle}
         rightAction={
@@ -334,7 +370,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
 
             <View style={styles.organicTagOverlay}>
               <Ionicons name="leaf" size={13} color={THEME.colors.success} style={{marginRight: 4}} />
-              <Text style={styles.organicTagText}>100% Fresh & Organic</Text>
+              <Text style={styles.organicTagText}>{t('product.freshAndOrganic', '100% Fresh & Organic')}</Text>
             </View>
           </Card>
         </View>
@@ -342,9 +378,25 @@ const ProductDetailScreen = ({route, navigation}: any) => {
         <View style={styles.contentContainer}>
           <Text style={styles.productName}>{productData.productName}</Text>
           <View style={styles.authorRow}>
-            <Text style={styles.authorText}>by {productData.farmerName || 'Farmer'}</Text>
+            <Text style={styles.authorText}>by {productData.farmerName || t('product.farmer', 'Farmer')}</Text>
             <Ionicons name="checkmark-circle" size={16} color={THEME.colors.success} style={{marginLeft: 4}} />
           </View>
+          {isFarmerInactive && (
+            <View style={styles.inactiveFarmerWarningBanner}>
+              <Ionicons name="alert-circle" size={20} color="#B45309" />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.inactiveFarmerWarningTitle}>{t('product.farmerInactive', 'Farmer Currently Inactive')}</Text>
+                <Text style={styles.inactiveFarmerWarningText}>
+                  {productData.farmerInactiveReason
+                    ? t('product.farmerInactiveNoteReason', {
+                        reason: productData.farmerInactiveReason,
+                        defaultValue: `Farmer note: "${productData.farmerInactiveReason}". This product is temporarily unavailable for purchase.`
+                      })
+                    : t('product.farmerInactiveNote', 'This farmer is temporarily inactive. This product cannot be purchased right now.')}
+                </Text>
+              </View>
+            </View>
+          )}
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color={THEME.colors.star} />
             <Text style={styles.ratingText}>
@@ -353,7 +405,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                 ? productData.averageRating.toFixed(1)
                 : "0.0"}{" "}
               <Text style={styles.reviewCount}>
-                ({productData.reviewCount || 0} reviews)
+                ({productData.reviewCount || 0} {t('product.reviews', 'reviews')})
               </Text>
             </Text>
           </View>
@@ -361,12 +413,12 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           <View style={styles.priceStatusRow}>
             <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
               <Text style={styles.price}>
-                ₹{formatDisplayPrice(productData.price)}
+                {formatCurrency(productData.price)}
               </Text>
-              <Text style={styles.unit}> / {productData.unit || 'KG'}</Text>
+              <Text style={styles.unit}> / {productData.unit || t('common.kg', 'KG')}</Text>
             </View>
             <ThemedBadge
-              label={productData.isActive ? 'Active' : 'Inactive'}
+              label={productData.isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
               variant={productData.isActive ? 'success' : 'neutral'}
             />
           </View>
@@ -374,19 +426,19 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsContainer}>
             <View style={styles.tag}>
               <Ionicons name="nutrition-outline" size={14} color={THEME.colors.accentDeep} />
-              <Text style={styles.tagText}>Fresh & Healthy</Text>
+              <Text style={styles.tagText}>{t('product.freshHealthy', 'Fresh & Healthy')}</Text>
             </View>
             <View style={styles.tag}>
               <Ionicons name="leaf-outline" size={14} color={THEME.colors.accentDeep} />
-              <Text style={styles.tagText}>100% Organic</Text>
+              <Text style={styles.tagText}>{t('product.freshAndOrganic', '100% Organic')}</Text>
             </View>
             <View style={styles.tag}>
               <Ionicons name="shield-checkmark-outline" size={14} color={THEME.colors.accentDeep} />
-              <Text style={styles.tagText}>Pesticide Free</Text>
+              <Text style={styles.tagText}>{t('product.pesticideFree', 'Pesticide Free')}</Text>
             </View>
           </ScrollView>
           {}
-          <Text style={styles.sectionTitle}>Farmer Details</Text>
+          <Text style={styles.sectionTitle}>{t('product.farmerDetails', 'Farmer Details')}</Text>
           <View style={styles.card}>
             <View style={styles.farmerCardContent}>
               <View style={styles.farmerAvatarPlaceholder}>
@@ -394,57 +446,61 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </View>
               <View style={styles.farmerInfo}>
                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                  <Text style={styles.farmerName}>{productData.farmerName || 'Farmer Name'}</Text>
+                  <Text style={styles.farmerName}>{productData.farmerName || t('product.farmer', 'Farmer Name')}</Text>
                   <Ionicons name="checkmark-circle" size={16} color="#4CAF50" style={{marginLeft: 4}} />
                 </View>
-                <Text style={styles.farmerSubtitle}>Experienced Farmer</Text>
+                <Text style={styles.farmerSubtitle}>{t('product.experiencedFarmer', 'Experienced Farmer')}</Text>
                 <View style={styles.iconRow}>
                   <Ionicons name="location-outline" size={14} color="#757575" />
                   <Text style={styles.iconText}>{productData.farmerAddress || 'Nashik, Maharashtra'}</Text>
                 </View>
                 <View style={styles.iconRow}>
                   <Ionicons name="calendar-outline" size={14} color="#757575" />
-                  <Text style={styles.iconText}>Member since Jan 2025</Text>
+                  <Text style={styles.iconText}>{t('product.memberSince', 'Member since Jan 2025')}</Text>
                 </View>
               </View>
             </View>
           </View>
           {}
-          <Text style={styles.sectionTitle}>Product Details</Text>
+          <Text style={styles.sectionTitle}>{t('product.details', 'Product Details')}</Text>
           <View style={styles.card}>
             <View style={styles.detailRow}>
               <View style={styles.detailLabelContainer}>
                 <Ionicons name="grid-outline" size={16} color="#1E3A8A" />
-                <Text style={styles.detailLabel}>Category</Text>
+                <Text style={styles.detailLabel}>{t('farmer.category', 'Category')}</Text>
               </View>
-              <Text style={styles.detailValue}>{productData.category || 'N/A'}</Text>
+              <Text style={styles.detailValue}>
+                {productData.category ? formatCategory(productData.category, t) : 'N/A'}
+              </Text>
             </View>
             <View style={styles.detailRow}>
               <View style={styles.detailLabelContainer}>
                 <Ionicons name="cube-outline" size={16} color="#1E3A8A" />
-                <Text style={styles.detailLabel}>Quantity</Text>
+                <Text style={styles.detailLabel}>{t('common.qty', 'Quantity')}</Text>
               </View>
-              <Text style={styles.detailValue}>{productData.quantity} {productData.unit || 'KG'} Available</Text>
+              <Text style={styles.detailValue}>
+                {productData.quantity} {productData.unit || t('common.kg', 'KG')} {t('product.inStock', 'Available')}
+              </Text>
             </View>
             <View style={styles.detailRow}>
               <View style={styles.detailLabelContainer}>
                 <Ionicons name="ribbon-outline" size={16} color="#1E3A8A" />
-                <Text style={styles.detailLabel}>Quality</Text>
+                <Text style={styles.detailLabel}>{t('product.quality', 'Quality')}</Text>
               </View>
-              <Text style={styles.detailValue}>Premium</Text>
+              <Text style={styles.detailValue}>{t('product.premiumQuality', 'Premium')}</Text>
             </View>
             <View style={styles.detailRow}>
               <View style={styles.detailLabelContainer}>
                 <Ionicons name="calendar-clear-outline" size={16} color="#1E3A8A" />
-                <Text style={styles.detailLabel}>Harvest Date</Text>
+                <Text style={styles.detailLabel}>{t('product.harvestDate', 'Harvest Date')}</Text>
               </View>
-              <Text style={styles.detailValue}>{productData.harvestDate || 'Freshly Harvested'}</Text>
+              <Text style={styles.detailValue}>{productData.harvestDate || t('product.freshlyHarvested', 'Freshly Harvested')}</Text>
             </View>
             {formatAddedTime(productData.createdOn, productData.addedTime) && (
               <View style={styles.detailRow}>
                 <View style={styles.detailLabelContainer}>
                   <Ionicons name="time-outline" size={16} color="#1E3A8A" />
-                  <Text style={styles.detailLabel}>Added</Text>
+                  <Text style={styles.detailLabel}>{t('product.added', 'Added')}</Text>
                 </View>
                 <Text style={styles.detailValue}>{formatAddedTime(productData.createdOn, productData.addedTime)}</Text>
               </View>
@@ -452,7 +508,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
             <View style={[styles.detailRow, {borderBottomWidth: 0, alignItems: 'flex-start', marginTop: 8}]}>
               <View style={styles.detailLabelContainer}>
                 <Ionicons name="document-text-outline" size={16} color="#1E3A8A" />
-                <Text style={styles.detailLabel}>Description</Text>
+                <Text style={styles.detailLabel}>{t('product.description', 'Description')}</Text>
               </View>
               <Text style={[styles.detailValue, {flex: 1, textAlign: 'right', lineHeight: 20}]}>
                 {productData.description || 'Fresh and naturally ripened. Rich in nutrients and great for health.'}
@@ -460,7 +516,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
             </View>
           </View>
           {}
-          <Text style={styles.sectionTitle}>Location</Text>
+          <Text style={styles.sectionTitle}>{t('product.farmLocation', 'Location')}</Text>
           <View style={styles.locationCard}>
             <View style={styles.locationInfo}>
               <View style={styles.locationPinBox}>
@@ -468,19 +524,19 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </View>
               <View style={{marginLeft: 12, flex: 1}}>
                 <Text style={styles.locationCity}>{productData.farmerAddress?.split(',')[0] || 'Nashik'}, Nashik</Text>
-                <Text style={styles.locationSub}>Near Panchavati</Text>
+                <Text style={styles.locationSub}>{productData.farmerAddress?.split(',')[1]?.trim() || productData.farmerVillage || productData.farmerAddress || 'Nashik'}</Text>
               </View>
             </View>
           </View>
           {}
-          <Text style={styles.sectionTitle}>Customer Photos & Videos</Text>
+          <Text style={styles.sectionTitle}>{t('product.customerMedia', 'Customer Photos & Videos')}</Text>
           <View style={styles.reviewsSection}>
             {reviewsLoading ? (
               <ActivityIndicator size="small" color={THEME.colors.accentDeep} style={{ marginVertical: 20 }} />
             ) : reviewsList.length === 0 ? (
               <View style={styles.emptyReviewsContainer}>
                 <Ionicons name="chatbox-ellipses-outline" size={40} color={THEME.colors.textMuted} />
-                <Text style={styles.emptyReviewsText}>No reviews yet for this product.</Text>
+                <Text style={styles.emptyReviewsText}>{t('product.noReviews', 'No reviews yet for this product.')}</Text>
               </View>
             ) : (
               <View style={styles.mediaGalleryContainer}>
@@ -515,7 +571,9 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                   )}
                 </ScrollView>
                 <TouchableOpacity style={styles.viewAllBtn}>
-                  <Text style={styles.viewAllBtnText}>Read All {reviewsList.length} Reviews</Text>
+                  <Text style={styles.viewAllBtnText}>
+                    {t('product.readAllReviews', { count: reviewsList.length, defaultValue: `Read All ${reviewsList.length} Reviews` })}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -523,7 +581,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           {}
           {similarProducts.length > 0 && (
             <View style={styles.similarSection}>
-              <Text style={styles.sectionTitle}>Explore More Products</Text>
+              <Text style={styles.sectionTitle}>{t('product.exploreMore', 'Explore More Products')}</Text>
               {}
               <View style={styles.searchWrapper}>
                 <View style={[styles.searchContainer, searchFocused && styles.searchContainerFocused]}>
@@ -532,7 +590,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                   </View>
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="Search..."
+                    placeholder={t('common.search', 'Search...')}
                     placeholderTextColor={THEME.colors.placeholder}
                     value={searchText}
                     onChangeText={setSearchText}
@@ -552,7 +610,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                 >
                   <Ionicons name="options-outline" size={17} color={THEME.colors.accentDeep} />
                   <Text style={styles.categoryFilterBtnText} numberOfLines={1}>
-                    {selectedCategoryFilter}
+                    {selectedCategoryFilter === 'All' ? t('common.all', 'All') : formatCategory(selectedCategoryFilter, t)}
                   </Text>
                   <Ionicons name="chevron-down" size={14} color={THEME.colors.accentDeep} style={{marginLeft: 2}} />
                 </TouchableOpacity>
@@ -561,7 +619,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               <View style={styles.priceFilterWrapper}>
                 <View style={styles.priceFilterHeader}>
                   <Ionicons name="pricetag" size={15} color={THEME.colors.accentDeep} />
-                  <Text style={styles.priceFilterTitle}>Price Filter</Text>
+                  <Text style={styles.priceFilterTitle}>{t('product.priceFilter', 'Price Filter')}</Text>
                 </View>
                 <ScrollView
                   horizontal
@@ -610,50 +668,59 @@ const ProductDetailScreen = ({route, navigation}: any) => {
       {}
       {isCustomer && (
         <View style={[styles.themedStickyBar, { paddingBottom: Math.max(insets.bottom + 10, 26) }]}>
-          <View style={styles.bottomBarRow}>
-            {/* Quantity Stepper */}
-            <View style={styles.quantityStepper}>
-              <TouchableOpacity
-                style={styles.stepperActionBtn}
-                onPress={() => setQuantity(q => Math.max(0, q - 1))}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="remove" size={14} color={THEME.colors.selectedText} />
-              </TouchableOpacity>
-              <Text style={styles.stepperQuantityText}>{quantity === 0 ? 1 : quantity}</Text>
-              <TouchableOpacity
-                style={styles.stepperActionBtn}
-                onPress={() => setQuantity(q => (q === 0 ? 2 : q + 1))}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="add" size={14} color={THEME.colors.selectedText} />
-              </TouchableOpacity>
+          {isFarmerInactive ? (
+            <View style={styles.inactiveBarContainer}>
+              <Ionicons name="lock-closed" size={16} color="#DC2626" style={{ marginRight: 8 }} />
+              <Text style={styles.inactiveBarText}>
+                {t('product.tempUnavailable', 'Temporarily Unavailable (Farmer Inactive)')}
+              </Text>
             </View>
+          ) : (
+            <View style={styles.bottomBarRow}>
+              {/* Quantity Stepper */}
+              <View style={styles.quantityStepper}>
+                <TouchableOpacity
+                  style={styles.stepperActionBtn}
+                  onPress={() => setQuantity(q => Math.max(0, q - 1))}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="remove" size={14} color={THEME.colors.selectedText} />
+                </TouchableOpacity>
+                <Text style={styles.stepperQuantityText}>{quantity === 0 ? 1 : quantity}</Text>
+                <TouchableOpacity
+                  style={styles.stepperActionBtn}
+                  onPress={() => setQuantity(q => (q === 0 ? 2 : q + 1))}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="add" size={14} color={THEME.colors.selectedText} />
+                </TouchableOpacity>
+              </View>
 
-            {/* Add to Cart Button */}
-            <View style={{ flex: 1.15 }}>
-              <PrimaryButton
-                title={goToCartLoading ? 'Adding...' : 'Add to Cart'}
-                onPress={handleGoToCart}
-                loading={goToCartLoading}
-                style={{ height: 46 }}
-                contentStyle={{ paddingHorizontal: 6 }}
-                textStyle={{ fontSize: 13, letterSpacing: 0 }}
-              />
-            </View>
+              {/* Add to Cart Button */}
+              <View style={{ flex: 1.15 }}>
+                <PrimaryButton
+                  title={goToCartLoading ? t('common.loading', 'Adding...') : t('product.addToCart', 'Add to Cart')}
+                  onPress={handleGoToCart}
+                  loading={goToCartLoading}
+                  style={{ height: 46 }}
+                  contentStyle={{ paddingHorizontal: 6 }}
+                  textStyle={{ fontSize: 13, letterSpacing: 0 }}
+                />
+              </View>
 
-            {/* Buy Now Button */}
-            <View style={{ flex: 1 }}>
-              <MaroonButton
-                title={buyNowLoading ? 'Please wait...' : 'Buy Now'}
-                onPress={handleBuyNow}
-                loading={buyNowLoading}
-                style={{ height: 46 }}
-                contentStyle={{ paddingHorizontal: 6 }}
-                textStyle={{ fontSize: 13, letterSpacing: 0 }}
-              />
+              {/* Buy Now Button */}
+              <View style={{ flex: 1 }}>
+                <MaroonButton
+                  title={buyNowLoading ? t('common.loading', 'Please wait...') : t('product.buyNow', 'Buy Now')}
+                  onPress={handleBuyNow}
+                  loading={buyNowLoading}
+                  style={{ height: 46 }}
+                  contentStyle={{ paddingHorizontal: 6 }}
+                  textStyle={{ fontSize: 13, letterSpacing: 0 }}
+                />
+              </View>
             </View>
-          </View>
+          )}
         </View>
       )}
       {isFarmer && (
@@ -664,16 +731,16 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               onPress={() => navigation.navigate('AddProduct', {product: productData})}
             >
               <Ionicons name="pencil" size={18} color="#2E7D32" style={{marginRight: 8}} />
-              <Text style={styles.editButtonText}>Edit Product</Text>
+              <Text style={styles.editButtonText}>{t('farmer.editProduct', 'Edit Product')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.deactivateButton}>
               <Ionicons name="power" size={18} color="#FFF" style={{marginRight: 8}} />
-              <Text style={styles.deactivateButtonText}>Deactivate</Text>
+              <Text style={styles.deactivateButtonText}>{t('farmer.deactivateAccount', 'Deactivate')}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.helpTextRow}>
             <Ionicons name="information-circle-outline" size={14} color="#757575" />
-            <Text style={styles.helpText}>You can edit product details anytime.</Text>
+            <Text style={styles.helpText}>{t('farmer.editProductDesc', 'You can edit product details anytime.')}</Text>
           </View>
         </View>
       )}
@@ -702,7 +769,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           onPress={() => setCategoryDropdownVisible(false)}
         >
           <View style={styles.dropdownContainer}>
-            <Text style={styles.dropdownTitle}>Select Category</Text>
+            <Text style={styles.dropdownTitle}>{t('product.selectCategory', 'Select Category')}</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {availableCategories.map(cat => (
                 <TouchableOpacity
@@ -717,7 +784,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                     styles.dropdownItemText,
                     selectedCategoryFilter === cat && styles.dropdownItemTextActive
                   ]}>
-                    {cat}
+                    {cat === 'All' ? t('common.all', 'All') : formatCategory(cat, t)}
                   </Text>
                   {selectedCategoryFilter === cat && (
                     <Ionicons name="checkmark" size={18} color="#1E3A8A" />
@@ -1479,6 +1546,44 @@ const styles = StyleSheet.create({
   },
   similarCardWrapper: {
     width: '50%',
+  },
+  inactiveFarmerWarningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 10,
+  },
+  inactiveFarmerWarningTitle: {
+    fontSize: 13.5,
+    fontFamily: THEME.fonts.bold,
+    color: '#92400E',
+    marginBottom: 2,
+  },
+  inactiveFarmerWarningText: {
+    fontSize: 12,
+    fontFamily: THEME.fonts.regular,
+    color: '#78350F',
+    lineHeight: 17,
+  },
+  inactiveBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  inactiveBarText: {
+    fontSize: 13.5,
+    fontFamily: THEME.fonts.bold,
+    color: '#DC2626',
   },
 });
 export default ProductDetailScreen;

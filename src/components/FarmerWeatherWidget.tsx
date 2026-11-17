@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Location from 'expo-location';
 import api from '../services/api';
@@ -16,6 +17,7 @@ const getWeatherIcon = (code: number) => {
 };
 
 const FarmerWeatherWidget = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [weather, setWeather] = useState<any>(null);
@@ -86,7 +88,7 @@ const FarmerWeatherWidget = () => {
       <TouchableOpacity style={styles.container} onPress={fetchWeather}>
         <View style={styles.errorRow}>
           <Ionicons name="cloud-offline" size={24} color="#94A3B8" />
-          <Text style={styles.errorText}>Tap to load weather</Text>
+          <Text style={styles.errorText}>{t('weather.tapToLoad', 'Tap to load weather')}</Text>
         </View>
       </TouchableOpacity>
     );

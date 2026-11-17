@@ -1,13 +1,39 @@
 import React from 'react';
 import { StatusBar, Text, TextInput } from 'react-native';
 import { NavigationContainer, LinkingOptions, DefaultTheme } from '@react-navigation/native';
-import { useFonts, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
+import { useFonts, Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  NotoSansDevanagari_500Medium,
+  NotoSansDevanagari_700Bold,
+} from '@expo-google-fonts/noto-sans-devanagari';
+import {
+  NotoSansTamil_500Medium,
+  NotoSansTamil_700Bold,
+} from '@expo-google-fonts/noto-sans-tamil';
+import {
+  NotoSansBengali_500Medium,
+  NotoSansBengali_700Bold,
+} from '@expo-google-fonts/noto-sans-bengali';
+import {
+  NotoSansKannada_500Medium,
+  NotoSansKannada_700Bold,
+} from '@expo-google-fonts/noto-sans-kannada';
+import {
+  NotoSansOriya_500Medium,
+  NotoSansOriya_700Bold,
+} from '@expo-google-fonts/noto-sans-oriya';
+import {
+  NotoSansTelugu_500Medium,
+  NotoSansTelugu_700Bold,
+} from '@expo-google-fonts/noto-sans-telugu';
+import './src/i18n';
+import { initAppLanguage } from './src/i18n';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { CartProvider } from './src/context/CartContext';
@@ -57,11 +83,28 @@ const linking: LinkingOptions<any> = {
 const App = () => {
   const [fontsLoaded] = useFonts({
     Fraunces_600SemiBold,
+    Fraunces_700Bold,
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
+    NotoSansDevanagari_500Medium,
+    NotoSansDevanagari_700Bold,
+    NotoSansTamil_500Medium,
+    NotoSansTamil_700Bold,
+    NotoSansBengali_500Medium,
+    NotoSansBengali_700Bold,
+    NotoSansKannada_500Medium,
+    NotoSansKannada_700Bold,
+    NotoSansOriya_500Medium,
+    NotoSansOriya_700Bold,
+    NotoSansTelugu_500Medium,
+    NotoSansTelugu_700Bold,
   });
+
+  React.useEffect(() => {
+    initAppLanguage();
+  }, []);
 
   if (!fontsLoaded) {
     return null;

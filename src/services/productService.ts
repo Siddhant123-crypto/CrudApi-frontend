@@ -41,6 +41,10 @@ export const updateProduct = async (id: number | string, productData: any) => {
   const response = await api.put(`/product/update/${id}`, productData);
   return response.data;
 };
+export const toggleProductStatus = async (id: number | string) => {
+  const response = await api.patch(`/product/toggleStatus/${id}`);
+  return response.data;
+};
 export const deleteProduct = async (id: number | string) => {
   const response = await api.delete(`/product/delete/${id}`);
   return response.data;

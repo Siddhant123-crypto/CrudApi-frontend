@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -22,6 +23,7 @@ import {
 } from '../../components/admin';
 
 export const AdminCustomerDetailsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute<any>();
   const { customerId } = route.params || {};
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
   if (loading) {
     return (
       <AdminPageBackground>
-        <AdminHeader variant="inner" title="Customer Details" />
+        <AdminHeader variant="inner" title={t('admin.customerDetails', 'Customer Details')} />
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={ADMIN_THEME.colors.indigo} />
         </View>
@@ -102,9 +104,9 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
   if (!customer) {
     return (
       <AdminPageBackground>
-        <AdminHeader variant="inner" title="Customer Details" />
+        <AdminHeader variant="inner" title={t('admin.customerDetails', 'Customer Details')} />
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Customer not found.</Text>
+          <Text style={styles.emptyText}>{t('admin.customerNotFound', 'Customer not found.')}</Text>
         </View>
       </AdminPageBackground>
     );
@@ -119,7 +121,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
 
   return (
     <AdminPageBackground>
-      <AdminHeader variant="inner" title="Customer Details" />
+      <AdminHeader variant="inner" title={t('admin.customerDetails', 'Customer Details')} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* 1) PROFILE ADMIN CARD (72px avatar, 3px white ring, shadow, Fraunces 22 name) */}
@@ -137,14 +139,14 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
 
         {/* 2) FULL INFORMATION */}
         <AdminCard style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>Full Information</Text>
+          <Text style={styles.sectionTitle}>{t('admin.fullInformation', 'Full Information')}</Text>
 
           <View style={styles.infoRow}>
             <View style={styles.infoIconBox}>
               <UserIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Name</Text>
+              <Text style={styles.infoLabel}>{t('common.name', 'Name')}</Text>
               <Text style={styles.infoValue}>{customer.name || 'N/A'}</Text>
             </View>
           </View>
@@ -154,7 +156,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
               <MailIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoLabel}>{t('common.email', 'Email')}</Text>
               <Text style={styles.infoValue}>{customer.email || 'N/A'}</Text>
             </View>
           </View>
@@ -164,7 +166,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
               <PhoneIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Mobile No.</Text>
+              <Text style={styles.infoLabel}>{t('common.phone', 'Mobile No.')}</Text>
               <Text style={styles.infoValue}>{customer.mobile || 'N/A'}</Text>
             </View>
           </View>
@@ -174,7 +176,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
               <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Address</Text>
+              <Text style={styles.infoLabel}>{t('common.address', 'Address')}</Text>
               <Text style={styles.infoValue}>{customer.address || 'N/A'}</Text>
             </View>
           </View>
@@ -184,7 +186,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
               <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>State & Village</Text>
+              <Text style={styles.infoLabel}>{t('admin.stateAndVillage', 'State & Village')}</Text>
               <Text style={styles.infoValue}>
                 {[customer.village, customer.state].filter(Boolean).join(', ') || 'N/A'}
               </Text>
@@ -196,7 +198,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
               <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Postal Code</Text>
+              <Text style={styles.infoLabel}>{t('admin.pincode', 'Postal Code')}</Text>
               <Text style={styles.infoValue}>{customer.postalCode || 'N/A'}</Text>
             </View>
           </View>
@@ -205,23 +207,23 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
         {/* 3) CUSTOMER ACTIVITY STATS */}
         {statistics && (
           <AdminCard style={styles.statsCard}>
-            <Text style={styles.sectionTitle}>Customer Activity</Text>
+            <Text style={styles.sectionTitle}>{t('admin.customerActivity', 'Customer Activity')}</Text>
             <View style={styles.statsGrid}>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>{statistics.totalOrders || 0}</Text>
-                <Text style={styles.statLabel}>Total Orders</Text>
+                <Text style={styles.statLabel}>{t('admin.totalOrders', 'Total Orders')}</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>{formatCurrency(statistics.totalSpent || 0)}</Text>
-                <Text style={styles.statLabel}>Total Spent</Text>
+                <Text style={styles.statLabel}>{t('admin.totalSpent', 'Total Spent')}</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>{statistics.deliveredOrders || 0}</Text>
-                <Text style={styles.statLabel}>Delivered</Text>
+                <Text style={styles.statLabel}>{t('orders.statusDelivered', 'Delivered')}</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>{statistics.cancelledOrders || 0}</Text>
-                <Text style={styles.statLabel}>Cancelled</Text>
+                <Text style={styles.statLabel}>{t('orders.statusCancelled', 'Cancelled')}</Text>
               </View>
             </View>
           </AdminCard>
@@ -229,7 +231,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
 
         {/* 4) ORDER HISTORY */}
         <AdminCard style={styles.ordersCard}>
-          <Text style={styles.sectionTitle}>Order History</Text>
+          <Text style={styles.sectionTitle}>{t('admin.orderHistory', 'Order History')}</Text>
           {orders.length > 0 ? (
             orders.map((order) => (
               <React.Fragment key={order.orderId}>
@@ -237,7 +239,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
               </React.Fragment>
             ))
           ) : (
-            <Text style={styles.emptyTextSmall}>No orders yet.</Text>
+            <Text style={styles.emptyTextSmall}>{t('orders.noOrders', 'No orders yet.')}</Text>
           )}
         </AdminCard>
       </ScrollView>

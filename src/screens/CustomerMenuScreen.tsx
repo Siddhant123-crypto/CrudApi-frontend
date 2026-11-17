@@ -19,8 +19,10 @@ import { BASE_URL } from '../services/api';
 import { THEME } from '../constants/theme';
 import { LogoutModal } from '../components/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const CustomerMenuScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -47,12 +49,13 @@ const CustomerMenuScreen: React.FC = () => {
   }
 
   const menuItems = [
-    { title: 'Home', icon: 'home-outline', route: 'Home' },
-    { title: 'Categories', icon: 'grid-outline', route: 'Categories' },
-    { title: 'Wishlist', icon: 'heart-outline', route: 'Wishlist' },
-    { title: 'My Orders', icon: 'receipt-outline', route: 'Orders' },
-    { title: 'Message Farmer', icon: 'chatbox-ellipses-outline', route: 'CustomerMessageFarmer' },
-    { title: 'My Profile', icon: 'person-outline', route: 'Profile' },
+    { title: t('nav.home', 'Home'), icon: 'home-outline', route: 'Home' },
+    { title: t('nav.categories', 'Categories'), icon: 'grid-outline', route: 'Categories' },
+    { title: t('nav.wishlist', 'Wishlist'), icon: 'heart-outline', route: 'Wishlist' },
+    { title: t('nav.orders', 'My Orders'), icon: 'receipt-outline', route: 'Orders' },
+    { title: t('profile.changeLanguage', 'Change Language'), icon: 'language-outline', route: 'LanguageSelection' },
+    { title: t('nav.messageFarmer', 'Message Farmer'), icon: 'chatbox-ellipses-outline', route: 'CustomerMessageFarmer' },
+    { title: t('profile.myProfile', 'My Profile'), icon: 'person-outline', route: 'Profile' },
   ];
 
   const handleLogout = () => {
@@ -97,10 +100,10 @@ const CustomerMenuScreen: React.FC = () => {
                 )}
                 <View style={styles.userTextContainer}>
                   <Text style={styles.userName} numberOfLines={1}>
-                    {user?.name || 'Guest User'}
+                    {user?.name || t('common.guestUser', 'Guest User')}
                   </Text>
                   <Text style={styles.userRole} numberOfLines={1}>
-                    {user?.email || 'Farm2Home Customer'}
+                    {user?.email || t('common.customerRole', 'Farm2Home Customer')}
                   </Text>
                 </View>
               </View>
@@ -130,7 +133,9 @@ const CustomerMenuScreen: React.FC = () => {
                   style={[styles.menuItem, isActive && styles.menuItemActive]}
                   activeOpacity={0.75}
                   onPress={() => {
-                    if (item.route === 'CustomerMessageFarmer') {
+                    if (item.route === 'LanguageSelection') {
+                      navigation.navigate('LanguageSelection', { fromSettings: true });
+                    } else if (item.route === 'CustomerMessageFarmer') {
                       navigation.navigate(item.route);
                     } else if (item.route === 'Home') {
                       navigation.navigate('CustomerMain', { screen: 'Home' });
@@ -169,7 +174,7 @@ const CustomerMenuScreen: React.FC = () => {
                 <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}>
                   <Ionicons name="log-out-outline" size={19} color={THEME.colors.error} />
                 </View>
-                <Text style={styles.logoutText}>Log Out</Text>
+                <Text style={styles.logoutText}>{t('profile.logout', 'Log Out')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#FCA5A5" />
             </TouchableOpacity>

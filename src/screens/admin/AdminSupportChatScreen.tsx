@@ -18,6 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { adminSupportService, SupportRequestResponse } from '../../services/adminSupportService';
@@ -35,6 +36,7 @@ interface SupportMessage {
 }
 
 export const AdminSupportChatScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
@@ -125,7 +127,7 @@ export const AdminSupportChatScreen = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching support request:', error);
-      Alert.alert('Error', 'Could not fetch support history.');
+      Alert.alert(t('common.error'), t('support.couldNotFetchHistory'));
       setLoading(false);
     }
   };
@@ -221,7 +223,7 @@ export const AdminSupportChatScreen = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'Could not send message.');
+      Alert.alert(t('common.error'), t('admin.couldNotSendMessage'));
     } finally {
       setSending(false);
       isSendingRef.current = false;
@@ -230,13 +232,13 @@ export const AdminSupportChatScreen = () => {
 
   const confirmDeleteSelected = () => {
     Alert.alert(
-      'Delete Message',
+      t('chat.deleteMessage', 'Delete Message'),
       `Are you sure you want to delete ${
         selectedMessageIds.length > 1 ? 'these messages' : 'this message'
       }?`,
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', onPress: handleDeleteSelected, style: 'destructive' },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.delete'), onPress: handleDeleteSelected, style: 'destructive' },
       ]
     );
   };
@@ -262,7 +264,7 @@ export const AdminSupportChatScreen = () => {
     try {
       setLoading(true);
       await adminSupportService.assignSupportRequest(supportRequestId);
-      Alert.alert('Success', 'Conversation assigned to you successfully.');
+      Alert.alert(t('common.success'), t('admin.conversationAssignedSuccess'));
       setSupportRequest((prev) =>
         prev ? { ...prev, assignedAdminId: user?.userId || '' } : prev
       );
@@ -280,23 +282,23 @@ export const AdminSupportChatScreen = () => {
 
   const handleResolve = () => {
     if (!supportRequestId) {
-      Alert.alert('No Active Request', 'The farmer has not opened an active support request yet.');
+      Alert.alert(t('admin.noActiveRequest'), t('admin.noActiveRequestDesc'));
       return;
     }
-    Alert.alert('Resolve Conversation', 'Are you sure you want to resolve this conversation?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('admin.resolveConversation'), t('admin.resolveConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Resolve',
+        text: t('admin.resolve'),
         style: 'default',
         onPress: async () => {
           try {
             setLoading(true);
             await adminSupportService.resolveSupportRequest(supportRequestId);
-            Alert.alert('Success', 'Conversation resolved successfully.');
+            Alert.alert(t('common.success'), t('admin.resolvedSuccess'));
             navigation.goBack();
           } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Could not resolve the conversation.');
+            Alert.alert(t('common.error'), t('admin.couldNotResolve'));
           } finally {
             setLoading(false);
           }
@@ -307,10 +309,10 @@ export const AdminSupportChatScreen = () => {
 
   const handleReopen = () => {
     if (!supportRequestId) return;
-    Alert.alert('Reopen Conversation', 'Are you sure you want to reopen this conversation?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('admin.reopenConversation'), t('admin.reopenConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Reopen',
+        text: t('admin.reopen'),
         style: 'default',
         onPress: async () => {
           try {
@@ -324,10 +326,10 @@ export const AdminSupportChatScreen = () => {
                 ? { ...prev, status: 'IN_PROGRESS', assignedAdminId: user?.userId || '' }
                 : prev
             );
-            Alert.alert('Success', 'Conversation reopened and moved to your chats.');
+            Alert.alert(t('common.success'), t('admin.reopenedSuccess'));
           } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Could not reopen the conversation.');
+            Alert.alert(t('common.error'), t('admin.couldNotReopen'));
           } finally {
             setLoading(false);
           }
@@ -446,7 +448,7 @@ export const AdminSupportChatScreen = () => {
           activeOpacity={0.8}
         >
           <Ionicons name="refresh" size={13} color="#FFFFFF" />
-          <Text style={styles.statusActionBtnText}>Reopen</Text>
+          <Text style={styles.statusActionBtnText}>{t('admin.reopen')}</Text>
         </TouchableOpacity>
       );
     }
@@ -458,7 +460,7 @@ export const AdminSupportChatScreen = () => {
         activeOpacity={0.8}
       >
         <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
-        <Text style={styles.statusActionBtnText}>Resolve</Text>
+        <Text style={styles.statusActionBtnText}>{t('admin.resolve')}</Text>
       </TouchableOpacity>
     );
   };
@@ -476,7 +478,7 @@ export const AdminSupportChatScreen = () => {
           title={
             selectedMessageIds.length > 0
               ? `${selectedMessageIds.length} Selected`
-              : farmerName || 'Support'
+              : farmerName || t('admin.support')
           }
           subtitle={selectedMessageIds.length > 0 ? 'Tap trash to delete' : getSubtitle()}
           onBack={() => {
@@ -516,9 +518,9 @@ export const AdminSupportChatScreen = () => {
             ListEmptyComponent={
               <View style={styles.centerContainer}>
                 <Ionicons name="chatbubbles-outline" size={48} color="#C9CEF5" />
-                <Text style={styles.emptyText}>No active support conversation.</Text>
+                <Text style={styles.emptyText}>{t('admin.noConversations')}</Text>
                 <Text style={styles.emptySubText}>
-                  The farmer has not opened a support request yet.
+                  {t('admin.noActiveRequestDesc')}
                 </Text>
               </View>
             }
@@ -540,7 +542,7 @@ export const AdminSupportChatScreen = () => {
             ref={textInputRef}
             style={styles.input}
             value={inputText}
-            placeholder="Type your message..."
+            placeholder={t('admin.typeYourMessage')}
             placeholderTextColor="#8A93AB"
             onChangeText={handleTextChange}
             multiline

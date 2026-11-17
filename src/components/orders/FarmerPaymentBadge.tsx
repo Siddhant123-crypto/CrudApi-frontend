@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { PaymentMethod, PaymentStatus } from '../../types';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 
@@ -13,11 +14,15 @@ export const FarmerPaymentBadge: React.FC<FarmerPaymentBadgeProps> = ({
   paymentMethod,
   paymentStatus,
 }) => {
+  const { t } = useTranslation();
+
   if (paymentMethod === 'COD') {
     return (
       <View style={[styles.badge, styles.codBadge]}>
         <Ionicons name="cash-outline" size={13} color="#B8860B" style={styles.icon} />
-        <Text style={[styles.text, styles.codText]}>Cash on Delivery: collect cash on delivery</Text>
+        <Text style={[styles.text, styles.codText]}>
+          {t('payments.farmerBadgeCod', 'Cash on Delivery: collect cash on delivery')}
+        </Text>
       </View>
     );
   }
@@ -26,7 +31,9 @@ export const FarmerPaymentBadge: React.FC<FarmerPaymentBadgeProps> = ({
     return (
       <View style={[styles.badge, styles.paidBadge]}>
         <Ionicons name="checkmark-circle-outline" size={13} color={FARMER_THEME.colors.deliveredText} style={styles.icon} />
-        <Text style={[styles.text, styles.paidText]}>Paid online</Text>
+        <Text style={[styles.text, styles.paidText]}>
+          {t('payments.farmerBadgePaidOnline', 'Paid online')}
+        </Text>
       </View>
     );
   }

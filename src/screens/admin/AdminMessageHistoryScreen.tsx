@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -22,6 +23,7 @@ import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import { MessageIcon } from '../../components/admin/AdminIcons';
 
 export default function AdminMessageHistoryScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +146,7 @@ export default function AdminMessageHistoryScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons name="chatbubble-ellipses" size={16} color="#FFFFFF" />
-                <Text style={styles.chatButtonText}>Reply</Text>
+                <Text style={styles.chatButtonText}>{t('notifications.reply', 'Reply')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -157,8 +159,8 @@ export default function AdminMessageHistoryScreen() {
     <AdminPageBackground>
       <AdminHeader
         variant="inner"
-        title="Message History"
-        subtitle="Sent communications & broadcasts"
+        title={t('admin.messageHistory', 'Message History')}
+        subtitle={t('admin.messageHistory', 'Sent communications & broadcasts')}
         onBack={() => navigation.goBack()}
       />
 
@@ -183,8 +185,8 @@ export default function AdminMessageHistoryScreen() {
           }
           ListEmptyComponent={
             <AdminEmptyState
-              title="No Message History"
-              message="You haven't sent any messages or notifications yet."
+              title={t('admin.noMessageHistory', 'No Message History')}
+              message={t('admin.noMessageHistory', "You haven't sent any messages or notifications yet.")}
               icon={<MessageIcon size={36} color="#4F5BD5" />}
             />
           }

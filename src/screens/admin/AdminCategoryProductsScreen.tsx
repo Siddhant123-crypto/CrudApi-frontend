@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -24,6 +25,7 @@ import {
 } from '../../components/admin';
 
 export const AdminCategoryProductsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { category } = route.params || { category: 'Products' };
@@ -172,7 +174,7 @@ export const AdminCategoryProductsScreen: React.FC = () => {
       ) : (
         <AdminEmptyState
           icon={<CubeIcon size={36} color={ADMIN_THEME.colors.indigo} />}
-          title="No products found"
+          title={t('admin.noProductsFound', 'No products found')}
           subtitle={`No products found in ${category}.`}
         />
       )}

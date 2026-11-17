@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { createAdminMarket, updateAdminMarket } from '../../services/adminService';
 import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
 import { AdminHeader } from '../../components/admin/AdminHeader';
@@ -21,6 +22,7 @@ import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import { CheckIcon } from '../../components/admin/AdminIcons';
 
 export const AdminAddEditMarketScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const market = route.params?.market;
@@ -51,29 +53,29 @@ export const AdminAddEditMarketScreen: React.FC = () => {
 
   const validate = () => {
     if (!formData.marketName.trim()) {
-      Alert.alert('Validation Error', 'Market Name is required.');
+      Alert.alert(t('common.validationError'), t('admin.marketNameRequired'));
       return false;
     }
 
     if (formData.latitude) {
       const lat = parseFloat(formData.latitude);
       if (isNaN(lat) || lat < -90 || lat > 90) {
-        Alert.alert('Validation Error', 'Latitude must be a valid number between -90 and 90.');
+        Alert.alert(t('common.validationError'), t('admin.latValidRange'));
         return false;
       }
     } else {
-      Alert.alert('Validation Error', 'Latitude is required.');
+      Alert.alert(t('common.validationError'), t('admin.latRequired'));
       return false;
     }
 
     if (formData.longitude) {
       const lon = parseFloat(formData.longitude);
       if (isNaN(lon) || lon < -180 || lon > 180) {
-        Alert.alert('Validation Error', 'Longitude must be a valid number between -180 and 180.');
+        Alert.alert(t('common.validationError'), t('admin.lngValidRange'));
         return false;
       }
     } else {
-      Alert.alert('Validation Error', 'Longitude is required.');
+      Alert.alert(t('common.validationError'), t('admin.lngRequired'));
       return false;
     }
 
@@ -151,13 +153,13 @@ export const AdminAddEditMarketScreen: React.FC = () => {
 
       if (isEdit) {
         await updateAdminMarket(market.id, payload);
-        Alert.alert('Success', 'Market updated successfully.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('common.success'), t('admin.marketUpdatedSuccess'), [
+          { text: t('common.ok'), onPress: () => navigation.goBack() },
         ]);
       } else {
         await createAdminMarket(payload);
-        Alert.alert('Success', 'Market created successfully.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('common.success'), t('admin.marketCreatedSuccess'), [
+          { text: t('common.ok'), onPress: () => navigation.goBack() },
         ]);
       }
     } catch (error: any) {
@@ -166,8 +168,8 @@ export const AdminAddEditMarketScreen: React.FC = () => {
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         error?.message ||
-        'Failed to save market.';
-      Alert.alert('Error', serverMsg);
+        t('admin.failedSaveMarket');
+      Alert.alert(t('common.error'), serverMsg);
     } finally {
       setLoading(false);
     }
@@ -188,8 +190,8 @@ export const AdminAddEditMarketScreen: React.FC = () => {
       >
         <AdminHeader
           variant="inner"
-          title={isEdit ? 'Edit Market' : 'Add Market'}
-          subtitle={isEdit ? market?.marketName : 'Register a new APMC / mandi'}
+          title={isEdit ? t('admin.editMarket') : t('admin.addMarket')}
+          subtitle={isEdit ? market?.marketName : t('admin.newApmc')}
           onBack={() => navigation.goBack()}
         />
 
@@ -199,18 +201,18 @@ export const AdminAddEditMarketScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           {/* Basic Information */}
-          {renderSectionHeader('BASIC INFORMATION')}
+          {renderSectionHeader(t('admin.basicInfo'))}
           <AdminCard style={styles.card}>
             <AdminInput
-              label="Market Name"
+              label={t('admin.marketName')}
               required
-              placeholder="e.g. APMC Vashi"
+              placeholder={t('admin.egApmcVashi')}
               value={formData.marketName}
               onChangeText={(text) => handleChange('marketName', text)}
             />
             <AdminInput
-              label="Description"
-              placeholder="Optional market details..."
+              label={t('common.description')}
+              placeholder={t('admin.descPlaceholder')}
               value={formData.description}
               onChangeText={(text) => handleChange('description', text)}
               multiline
@@ -219,19 +221,19 @@ export const AdminAddEditMarketScreen: React.FC = () => {
           </AdminCard>
 
           {/* Location Details */}
-          {renderSectionHeader('LOCATION DETAILS')}
+          {renderSectionHeader(t('admin.locationDetails'))}
           <AdminCard style={styles.card}>
             <AdminInput
-              label="Address"
-              placeholder="Street or area address"
+              label={t('common.address')}
+              placeholder={t('admin.streetAreaPlaceholder')}
               value={formData.address}
               onChangeText={(text) => handleChange('address', text)}
             />
             <View style={styles.row}>
               <View style={styles.flex1}>
                 <AdminInput
-                  label="Village"
-                  placeholder="Village"
+                  label={t('admin.village')}
+                  placeholder={t('admin.village')}
                   value={formData.village}
                   onChangeText={(text) => handleChange('village', text)}
                 />
@@ -239,8 +241,8 @@ export const AdminAddEditMarketScreen: React.FC = () => {
               <View style={styles.spacing} />
               <View style={styles.flex1}>
                 <AdminInput
-                  label="Taluka"
-                  placeholder="Taluka"
+                  label={t('admin.taluka')}
+                  placeholder={t('admin.taluka')}
                   value={formData.taluka}
                   onChangeText={(text) => handleChange('taluka', text)}
                 />
@@ -249,8 +251,8 @@ export const AdminAddEditMarketScreen: React.FC = () => {
             <View style={styles.row}>
               <View style={styles.flex1}>
                 <AdminInput
-                  label="District"
-                  placeholder="District"
+                  label={t('admin.district')}
+                  placeholder={t('admin.district')}
                   value={formData.district}
                   onChangeText={(text) => handleChange('district', text)}
                 />
@@ -258,16 +260,16 @@ export const AdminAddEditMarketScreen: React.FC = () => {
               <View style={styles.spacing} />
               <View style={styles.flex1}>
                 <AdminInput
-                  label="State"
-                  placeholder="State"
+                  label={t('admin.state')}
+                  placeholder={t('admin.state')}
                   value={formData.state}
                   onChangeText={(text) => handleChange('state', text)}
                 />
               </View>
             </View>
             <AdminInput
-              label="Pincode"
-              placeholder="e.g. 400703"
+              label={t('admin.pincode')}
+              placeholder={t('admin.egPincode')}
               value={formData.pincode}
               onChangeText={(text) => handleChange('pincode', text)}
               keyboardType="numeric"
@@ -276,14 +278,14 @@ export const AdminAddEditMarketScreen: React.FC = () => {
           </AdminCard>
 
           {/* Map Coordinates */}
-          {renderSectionHeader('MAP COORDINATES')}
+          {renderSectionHeader(t('admin.mapCoordinates'))}
           <AdminCard style={styles.card}>
             <View style={styles.row}>
               <View style={styles.flex1}>
                 <AdminInput
-                  label="Latitude"
+                  label={t('admin.lat')}
                   required
-                  placeholder="e.g. 19.0760"
+                  placeholder={t('admin.egLat')}
                   value={formData.latitude}
                   onChangeText={(text) => handleChange('latitude', text)}
                   keyboardType="numeric"
@@ -293,9 +295,9 @@ export const AdminAddEditMarketScreen: React.FC = () => {
               <View style={styles.spacing} />
               <View style={styles.flex1}>
                 <AdminInput
-                  label="Longitude"
+                  label={t('admin.lng')}
                   required
-                  placeholder="e.g. 72.8777"
+                  placeholder={t('admin.egLng')}
                   value={formData.longitude}
                   onChangeText={(text) => handleChange('longitude', text)}
                   keyboardType="numeric"
@@ -306,13 +308,13 @@ export const AdminAddEditMarketScreen: React.FC = () => {
           </AdminCard>
 
           {/* Operations & Contact */}
-          {renderSectionHeader('OPERATIONS & CONTACT')}
+          {renderSectionHeader(t('admin.operationsContact'))}
           <AdminCard style={styles.card}>
             <View style={styles.row}>
               <View style={styles.flex1}>
                 <AdminInput
-                  label="Opening Time"
-                  placeholder="e.g. 06:00 AM"
+                  label={t('admin.openingTime')}
+                  placeholder={t('admin.egTimeAm')}
                   value={formData.openingTime}
                   onChangeText={(text) => handleChange('openingTime', text)}
                 />
@@ -320,22 +322,22 @@ export const AdminAddEditMarketScreen: React.FC = () => {
               <View style={styles.spacing} />
               <View style={styles.flex1}>
                 <AdminInput
-                  label="Closing Time"
-                  placeholder="e.g. 06:00 PM"
+                  label={t('admin.closingTime')}
+                  placeholder={t('admin.egTimePm')}
                   value={formData.closingTime}
                   onChangeText={(text) => handleChange('closingTime', text)}
                 />
               </View>
             </View>
             <AdminInput
-              label="Contact Person"
-              placeholder="Name of market manager"
+              label={t('admin.contactPerson')}
+              placeholder={t('admin.marketManagerName')}
               value={formData.marketContactName}
               onChangeText={(text) => handleChange('marketContactName', text)}
             />
             <AdminInput
-              label="Contact Number"
-              placeholder="Phone number"
+              label={t('admin.contactNumber')}
+              placeholder={t('admin.phoneNumber')}
               value={formData.contactNumber}
               onChangeText={(text) => handleChange('contactNumber', text)}
               keyboardType="phone-pad"
@@ -344,15 +346,15 @@ export const AdminAddEditMarketScreen: React.FC = () => {
           </AdminCard>
 
           {/* Status */}
-          {renderSectionHeader('MARKET STATUS')}
+          {renderSectionHeader(t('admin.marketStatus'))}
           <AdminCard style={styles.card}>
             <View style={styles.statusRow}>
               <View style={styles.statusInfo}>
-                <Text style={styles.statusLabel}>Market Active</Text>
+                <Text style={styles.statusLabel}>{t('admin.marketActive')}</Text>
                 <Text style={styles.statusSubtext}>
                   {formData.isActive
-                    ? 'Visible to farmers and active in listings'
-                    : 'Hidden from market discovery'}
+                    ? t('admin.marketActiveVisible')
+                    : t('admin.marketActiveHidden')}
                 </Text>
               </View>
               <TouchableOpacity
@@ -372,7 +374,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
                       : styles.toggleBadgeTextInactive,
                   ]}
                 >
-                  {formData.isActive ? 'Active' : 'Inactive'}
+                  {formData.isActive ? t('common.active') : t('common.inactive')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -381,7 +383,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
 
         <AdminStickyBar>
           <AdminPrimaryButton
-            title={isEdit ? 'Update Market' : 'Save Market'}
+            title={isEdit ? t('admin.updateMarket') : t('admin.saveMarket')}
             onPress={handleSave}
             loading={loading}
           />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -27,6 +28,7 @@ import { ChatIcon } from '../../components/admin/AdminIcons';
 type Tab = 'UNASSIGNED' | 'MY_CHATS' | 'RESOLVED';
 
 export const AdminSupportInboxScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const {
     refreshUnreadCount,
@@ -89,13 +91,13 @@ export const AdminSupportInboxScreen = () => {
     try {
       setLoading(true);
       await adminSupportService.assignSupportRequest(requestId);
-      Alert.alert('Success', 'Conversation assigned to you successfully.');
+      Alert.alert(t('common.success', 'Success'), t('admin.assignedSuccess', 'Conversation assigned to you successfully.'));
       setActiveTab('MY_CHATS');
       refreshUnreadCount();
     } catch (error: any) {
       console.error(error);
       Alert.alert(
-        'Assignment Failed',
+        t('common.error', 'Assignment Failed'),
         error?.response?.data?.message || 'Conversation may have been assigned to another admin.'
       );
       fetchRequests();
@@ -112,7 +114,7 @@ export const AdminSupportInboxScreen = () => {
       setAdmins(response.data || []);
     } catch (e) {
       console.log('Failed to fetch admins for transfer', e);
-      Alert.alert('Error', 'Failed to fetch available admins.');
+      Alert.alert(t('common.error', 'Error'), t('admin.failedFetchAdmins', 'Failed to fetch available admins.'));
     }
   };
 
@@ -122,13 +124,13 @@ export const AdminSupportInboxScreen = () => {
       setTransferModalVisible(false);
       setLoading(true);
       await adminSupportService.transferSupportRequest(requestToTransfer, newAdminId);
-      Alert.alert('Success', 'Conversation transferred successfully.');
+      Alert.alert(t('common.success', 'Success'), t('admin.conversationTransferredSuccess', 'Conversation transferred successfully.'));
       fetchRequests();
       refreshUnreadCount();
     } catch (error: any) {
       console.error(error);
       Alert.alert(
-        'Transfer Failed',
+        t('common.error', 'Transfer Failed'),
         error?.response?.data?.message || 'Could not transfer the conversation.'
       );
     } finally {
@@ -217,7 +219,7 @@ export const AdminSupportInboxScreen = () => {
           <View style={styles.actionContainer}>
             {activeTab === 'UNASSIGNED' && (
               <AdminPrimaryButton
-                title="Assign to Me"
+                title={t('admin.assignToMe', 'Assign to Me')}
                 onPress={() => handleAssignToMe(item.supportRequestId)}
                 icon={<Ionicons name="person-add-outline" size={13} color="#FFFFFF" />}
                 compact
@@ -227,10 +229,10 @@ export const AdminSupportInboxScreen = () => {
             {activeTab === 'MY_CHATS' && (
               <View style={styles.myChatActionContainer}>
                 <View style={styles.myChatIndicators}>
-                  <AdminBadge label="Assigned to You" variant="info" size="small" />
+                  <AdminBadge label={t('admin.assignedToYou', 'Assigned to You')} variant="info" size="small" />
                 </View>
                 <AdminOutlineButton
-                  title="Transfer"
+                  title={t('admin.transfer', 'Transfer')}
                   onPress={() => handleOpenTransferModal(item.supportRequestId)}
                   icon={<Ionicons name="swap-horizontal" size={13} color="#4F5BD5" />}
                   compact
@@ -240,7 +242,7 @@ export const AdminSupportInboxScreen = () => {
 
             {activeTab === 'RESOLVED' && (
               <AdminOutlineButton
-                title="View Chat"
+                title={t('admin.viewChat', 'View Chat')}
                 onPress={() => handleOpenChat(item)}
                 icon={<Ionicons name="chatbubble-ellipses-outline" size={13} color="#4F5BD5" />}
                 compact
@@ -256,16 +258,16 @@ export const AdminSupportInboxScreen = () => {
     <AdminPageBackground>
       <AdminHeader
         variant="inner"
-        title="Support Inbox"
+        title={t('admin.supportInbox', 'Support Inbox')}
         titleAlign="left"
         titleSize={18}
         onBack={() => navigation.goBack()}
       />
 
       <View style={styles.tabsContainer}>
-        {renderTab('Unassigned', 'UNASSIGNED', adminSupportUnassignedCount)}
+        {renderTab(t('orders.statusPending', 'Unassigned'), 'UNASSIGNED', adminSupportUnassignedCount)}
         {renderTab('My Chats', 'MY_CHATS', adminSupportUnreadCount)}
-        {renderTab('Resolved', 'RESOLVED')}
+        {renderTab(t('admin.resolve', 'Resolved'), 'RESOLVED')}
       </View>
 
       {loading && !refreshing ? (
@@ -289,7 +291,7 @@ export const AdminSupportInboxScreen = () => {
           }
           ListEmptyComponent={
             <AdminEmptyState
-              title="No Conversations"
+              title={t('admin.noConversations', 'No Conversations')}
               message={
                 activeTab === 'UNASSIGNED'
                   ? 'There are no pending unassigned support queries.'
@@ -314,7 +316,7 @@ export const AdminSupportInboxScreen = () => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Transfer Conversation</Text>
+                <Text style={styles.modalTitle}>{t('admin.transferConversation', 'Transfer Conversation')}</Text>
                 <Text style={styles.modalSubtitle}>
                   Select an admin to transfer this support chat to:
                 </Text>
@@ -323,7 +325,7 @@ export const AdminSupportInboxScreen = () => {
                 style={styles.modalCloseTextButton}
                 onPress={() => setTransferModalVisible(false)}
               >
-                <Text style={styles.modalCloseText}>Cancel</Text>
+                <Text style={styles.modalCloseText}>{t('common.cancel', 'Cancel')}</Text>
               </TouchableOpacity>
             </View>
 

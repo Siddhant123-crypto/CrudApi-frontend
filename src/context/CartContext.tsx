@@ -3,6 +3,7 @@ import { cartService } from '../services/cartService';
 import { CartResponse, CartItemResponse } from '../types';
 import { useAuth } from './AuthContext';
 import { Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 interface CartContextType {
   cart: CartResponse | null;
   isLoading: boolean;
@@ -15,6 +16,7 @@ interface CartContextType {
 }
 const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const [cart, setCart] = useState<CartResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isLoggedIn, user } = useAuth();
@@ -46,20 +48,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addToCart = async (productId: string, quantity: number = 1, showNotification: boolean = true): Promise<boolean> => {
     try {
       if (!isLoggedIn) {
-        Alert.alert('Login Required', 'Please login to add items to cart.');
+        Alert.alert(t('auth.signInToContinue', 'Login Required'), t('cart.loginRequiredMessage', 'Please login to add items to cart.'));
         return false;
       }
       setIsLoading(true);
       const updatedCart = await cartService.addToCart(productId, quantity);
       setCart(updatedCart);
       if (showNotification) {
-        Alert.alert('Success', 'Product added to cart!');
+        Alert.alert(t('common.success', 'Success'), t('cart.productAdded', 'Product added to cart!'));
       }
       return true;
     } catch (error: any) {
       console.log('Error adding to cart:', error);
       if (showNotification) {
-        Alert.alert('Error', error?.response?.data?.message || 'Failed to add product to cart');
+        Alert.alert(t('common.error', 'Error'), t('cart.addToCartFailed', 'Failed to add product to cart'));
       }
       return false;
     } finally {
@@ -74,7 +76,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCart(updatedCart);
     } catch (error: any) {
       console.log('Error updating cart quantity:', error);
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to update quantity');
+      Alert.alert(t('common.error', 'Error'), t('cart.updateQuantityFailed', 'Failed to update quantity'));
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +88,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await refreshCart();
     } catch (error: any) {
       console.log('Error removing from cart:', error);
-      Alert.alert('Error', 'Failed to remove product from cart');
+      Alert.alert(t('common.error', 'Error'), t('cart.removeFromCartFailed', 'Failed to remove product from cart'));
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +100,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCart(null);
     } catch (error: any) {
       console.log('Error clearing cart:', error);
-      Alert.alert('Error', 'Failed to clear cart');
+      Alert.alert(t('common.error', 'Error'), t('cart.clearCartFailed', 'Failed to clear cart'));
     } finally {
       setIsLoading(false);
     }

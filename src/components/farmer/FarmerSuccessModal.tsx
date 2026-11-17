@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 
 interface FarmerSuccessModalProps {
@@ -24,13 +25,18 @@ interface FarmerSuccessModalProps {
 
 export const FarmerSuccessModal: React.FC<FarmerSuccessModalProps> = ({
   visible,
-  title = 'Order Accepted!',
-  message = 'You have successfully accepted this order. You can now prepare the fresh produce.',
+  title,
+  message,
   orderNumber,
   customerName,
-  buttonText = 'Awesome, Got it!',
+  buttonText,
   onClose,
 }) => {
+  const { t } = useTranslation();
+  const effectiveTitle = title || t('farmer.orderAcceptedTitle', 'Order Accepted!');
+  const effectiveMessage = message || t('farmer.orderAcceptedDesc', 'You have successfully accepted this order. You can now prepare the fresh produce.');
+  const effectiveButtonText = buttonText || t('common.awesomeGotIt', 'Awesome, Got it!');
+
   return (
     <Modal
       visible={visible}
@@ -64,19 +70,19 @@ export const FarmerSuccessModal: React.FC<FarmerSuccessModalProps> = ({
           {/* Micro Status Chip */}
           <View style={styles.statusPill}>
             <Ionicons name="sparkles" size={13} color="#15803D" style={{ marginRight: 4 }} />
-            <Text style={styles.statusPillText}>SUCCESS</Text>
+            <Text style={styles.statusPillText}>{t('common.success', 'SUCCESS')}</Text>
           </View>
 
           {/* Title & Message */}
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={styles.modalMessage}>{message}</Text>
+          <Text style={styles.modalTitle}>{effectiveTitle}</Text>
+          <Text style={styles.modalMessage}>{effectiveMessage}</Text>
 
           {/* Order Snapshot Card */}
           {(orderNumber || customerName) && (
             <View style={styles.orderSnapshot}>
               {orderNumber ? (
                 <View style={styles.snapshotRow}>
-                  <Text style={styles.snapshotLabel}>Order ID</Text>
+                  <Text style={styles.snapshotLabel}>{t('orders.orderIdLabel', 'Order ID')}</Text>
                   <Text style={styles.snapshotValue} numberOfLines={1}>
                     #{orderNumber.length > 14 ? orderNumber.substring(0, 14) + '...' : orderNumber}
                   </Text>
@@ -84,7 +90,7 @@ export const FarmerSuccessModal: React.FC<FarmerSuccessModalProps> = ({
               ) : null}
               {customerName ? (
                 <View style={[styles.snapshotRow, { marginTop: 6 }]}>
-                  <Text style={styles.snapshotLabel}>Customer</Text>
+                  <Text style={styles.snapshotLabel}>{t('orders.customer', 'Customer')}</Text>
                   <Text style={styles.snapshotValue} numberOfLines={1}>
                     {customerName}
                   </Text>
@@ -111,7 +117,7 @@ export const FarmerSuccessModal: React.FC<FarmerSuccessModalProps> = ({
                 color="#FFFFFF"
                 style={{ marginRight: 6 }}
               />
-              <Text style={styles.btnText}>{buttonText}</Text>
+              <Text style={styles.btnText}>{effectiveButtonText}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>

@@ -29,6 +29,7 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { useTranslation } from 'react-i18next';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
@@ -125,6 +126,7 @@ const FarmerSproutIcon = () => (
 // ─── COMPONENT ─────────────────────────────────────────────────────────────
 
 const RoleSelectionScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
   const params = route?.params || {};
 
   const [fontsLoaded] = useFonts({
@@ -222,7 +224,7 @@ const RoleSelectionScreen = ({ route, navigation }: any) => {
             activeOpacity={0.8}
           >
             <HomeIcon />
-            <Text style={styles.homeButtonText}>Home</Text>
+            <Text style={styles.homeButtonText}>{t('nav.home', 'Home')}</Text>
           </TouchableOpacity>
 
           {/* Logo Block, centered horizontally, top = 84 + statusBarHeight */}
@@ -230,15 +232,15 @@ const RoleSelectionScreen = ({ route, navigation }: any) => {
             <View style={styles.logoCircle}>
               <LogoIcon />
             </View>
-            <Text style={styles.brandTitle}>Farm2Home</Text>
-            <Text style={styles.brandSubTitle}>FRESH • LOCAL • DELIVERED</Text>
+            <Text style={styles.brandTitle}>{t('common.appName', 'Farm2Home')}</Text>
+            <Text style={styles.brandSubTitle}>{t('auth.freshLocalDelivered', 'Fresh • Local • Delivered')}</Text>
           </View>
         </View>
 
         {/* ─── 2) WHITE SHEET (starts at y=300 + statusBarHeight) ─── */}
         <View style={styles.whiteSheet}>
-          <Text style={styles.heading}>Select your role</Text>
-          <Text style={styles.subtitle}>Choose how you want to continue</Text>
+          <Text style={styles.heading}>{t('auth.selectRole', 'Select your role')}</Text>
+          <Text style={styles.subtitle}>{t('auth.selectRoleDesc', 'Choose how you want to continue')}</Text>
 
           {/* Card 1 - Customer */}
           <Pressable
@@ -263,9 +265,9 @@ const RoleSelectionScreen = ({ route, navigation }: any) => {
 
               {/* Text Column */}
               <View style={styles.textColumn}>
-                <Text style={styles.cardTitle}>I am a Customer</Text>
+                <Text style={styles.cardTitle}>{t('auth.customer', 'I am a Customer')}</Text>
                 <Text style={styles.cardDescription}>
-                  {"Order fresh produce\ndelivered to your home"}
+                  {t('auth.customerRoleDesc', 'Order fresh produce delivered to your home')}
                 </Text>
               </View>
 
@@ -301,9 +303,9 @@ const RoleSelectionScreen = ({ route, navigation }: any) => {
 
               {/* Text Column */}
               <View style={styles.textColumn}>
-                <Text style={styles.cardTitle}>I am a Farmer</Text>
+                <Text style={styles.cardTitle}>{t('auth.farmer', 'I am a Farmer')}</Text>
                 <Text style={styles.cardDescription}>
-                  {"Sell your harvest\ndirectly to customers"}
+                  {t('auth.farmerRoleDesc', 'Sell your harvest directly to customers')}
                 </Text>
               </View>
 
@@ -320,7 +322,7 @@ const RoleSelectionScreen = ({ route, navigation }: any) => {
             onPress={() => navigation.navigate('NewUserLogin')}
             activeOpacity={0.7}
           >
-            <Text style={styles.backLinkText}>← Back to sign in</Text>
+            <Text style={styles.backLinkText}>← {t('auth.backToLogin', 'Back to sign in')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

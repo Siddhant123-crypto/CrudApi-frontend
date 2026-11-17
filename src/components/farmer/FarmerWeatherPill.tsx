@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import api from '../../services/api';
 import { FARMER_THEME } from '../../constants/farmerTheme';
@@ -95,6 +96,7 @@ const getWeatherInfo = (code: number, desc?: string) => {
 export const FarmerWeatherPill: React.FC<FarmerWeatherPillProps> = ({
   refreshTrigger,
 }) => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const { width: windowWidth } = useWindowDimensions();
@@ -111,69 +113,96 @@ export const FarmerWeatherPill: React.FC<FarmerWeatherPillProps> = ({
   const weatherDataRef = useRef<any>(null);
   weatherDataRef.current = weatherData;
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const fetchWeather = useCallback(async () => {
     try {
-      if (!weatherDataRef.current) {
+      if (!weatherDataRef.current && isMountedRef.current) {
         setLoading(true);
       }
 
-      // 10 second timeout controller
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        clearTimeout(timeoutId);
-        if (!weatherDataRef.current) {
+        if (!weatherDataRef.current && isMountedRef.current) {
           setHasError(true);
         }
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const lat = location.coords.latitude;
-      const lon = location.coords.longitude;
-      setLocationCoords({ lat, lon });
+      // Fast-path: try last known position first for instant coordinates, otherwise acquire current position
+      let lat: number | undefined;
+      let lon: number | undefined;
 
-      // Reverse geocode to get city name if possible
-      try {
-        const geocode = await Location.reverseGeocodeAsync({
-          latitude: lat,
-          longitude: lon,
+      const lastLoc = await Location.getLastKnownPositionAsync().catch(() => null);
+      if (lastLoc && lastLoc.coords) {
+        lat = lastLoc.coords.latitude;
+        lon = lastLoc.coords.longitude;
+      } else {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
         });
-        if (geocode && geocode.length > 0) {
-          const place = geocode[0];
-          setLocationName(
-            place.city || place.district || place.region || 'Current Location'
-          );
-        }
-      } catch (e) {
-        // Fallback to Current Location
+        lat = location.coords.latitude;
+        lon = location.coords.longitude;
       }
+
+      if (!lat || !lon) {
+        if (!weatherDataRef.current && isMountedRef.current) {
+          setHasError(true);
+        }
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (isMountedRef.current) {
+        setLocationCoords({ lat, lon });
+      }
+
+      // Reverse geocode asynchronously without blocking the weather request
+      Location.reverseGeocodeAsync({ latitude: lat, longitude: lon })
+        .then(geocode => {
+          if (geocode && geocode.length > 0 && isMountedRef.current) {
+            const place = geocode[0];
+            setLocationName(
+              place.city || place.district || place.region || 'Current Location'
+            );
+          }
+        })
+        .catch(() => {});
 
       let fetched: any = null;
 
-      // 1. Try backend endpoint first
+      // 1. Try backend endpoint first (with its own 8-second network timeout)
       try {
         const response = await api.get(
           `/weather?latitude=${lat}&longitude=${lon}`,
-          { signal: controller.signal }
+          { timeout: 8000 }
         );
         if (response.data && response.data.data) {
           fetched = response.data.data;
         }
       } catch (err) {
-        // Fallback to Open-Meteo
+        // Backend request failed or timed out — fall through to direct Open-Meteo
       }
 
       // 2. Fallback to Open-Meteo if backend did not return
       if (!fetched) {
         try {
+          const omController = new AbortController();
+          const omTimeout = setTimeout(() => omController.abort(), 8000);
           const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
-          const omRes = await fetch(omUrl, { signal: controller.signal });
+          const omRes = await fetch(omUrl, { signal: omController.signal });
+          clearTimeout(omTimeout);
           const omData = await omRes.json();
           if (omData && omData.current) {
             fetched = {
@@ -190,7 +219,7 @@ export const FarmerWeatherPill: React.FC<FarmerWeatherPillProps> = ({
         }
       }
 
-      clearTimeout(timeoutId);
+      if (!isMountedRef.current) return;
 
       if (fetched && fetched.current) {
         setWeatherData(fetched);
@@ -199,11 +228,13 @@ export const FarmerWeatherPill: React.FC<FarmerWeatherPillProps> = ({
         setHasError(true);
       }
     } catch (err) {
-      if (!weatherDataRef.current) {
+      if (!weatherDataRef.current && isMountedRef.current) {
         setHasError(true);
       }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -279,7 +310,7 @@ export const FarmerWeatherPill: React.FC<FarmerWeatherPillProps> = ({
           <CloudOffIcon size={18} color="#6B7A6F" strokeWidth={1.9} />
         </View>
         <Text style={styles.errorText} numberOfLines={1}>
-          Weather unavailable • Tap to retry
+          {t('weather.unavailableTapToRetry', 'Weather unavailable • Tap to retry')}
         </Text>
       </Pressable>
     );

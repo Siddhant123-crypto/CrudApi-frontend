@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../../services/api';
@@ -40,9 +41,15 @@ interface Farmer {
   location: string;
   status: string;
   profilePhoto?: string | null;
+  isSelfDeactivated?: boolean;
+  inactiveReason?: string | null;
+  inactiveSince?: string | null;
+  inactiveSource?: string | null;
+  blockReason?: string | null;
 }
 
 export const AdminFarmersScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [userType, setUserType] = useState<'Farmers' | 'Customers'>('Farmers');
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,27 +110,36 @@ export const AdminFarmersScreen: React.FC = () => {
       setLoading(true);
       const response = await api.get('/admin/farmers');
       if (response.data && response.data.data) {
-        const mappedFarmers = response.data.data.map((f: any) => ({
-          id: f.farmerId,
-          name: f.name || 'Unknown Farmer',
-          farm: f.farmName || 'No Farm Name',
-          location: `${f.village || ''}, ${f.state || ''}`.replace(/^, | , $/g, '').trim(),
-          status:
-            f.status === 'ACTIVE'
-              ? 'Active'
-              : f.status === 'PENDING'
-              ? 'Pending'
-              : f.status === 'INACTIVE'
-              ? 'Blocked'
-              : 'Inactive',
-          profilePhoto: f.profilePhoto,
-        }));
+        const mappedFarmers = response.data.data.map((f: any) => {
+          const isBlocked = !!f.blockReason || !!f.blockedUntil;
+          const isSelfDeactivated = (f.status === 'INACTIVE' || f.isActive === false) && !isBlocked;
+          return {
+            id: f.farmerId,
+            name: f.name || 'Unknown Farmer',
+            farm: f.farmName || 'No Farm Name',
+            location: `${f.village || ''}, ${f.state || ''}`.replace(/^, | , $/g, '').trim(),
+            status:
+              f.status === 'ACTIVE' && f.isActive !== false
+                ? 'Active'
+                : f.status === 'PENDING'
+                ? 'Pending'
+                : isBlocked
+                ? 'Blocked'
+                : 'Inactive',
+            isSelfDeactivated,
+            inactiveReason: f.inactiveReason,
+            inactiveSince: f.inactiveSince,
+            inactiveSource: f.inactiveSource,
+            blockReason: f.blockReason,
+            profilePhoto: f.profilePhoto,
+          };
+        });
         setFarmers(mappedFarmers);
         fetchUnreadCounts();
       }
     } catch (error) {
       console.error('Failed to fetch farmers:', error);
-      Alert.alert('Error', 'Failed to fetch farmers from backend.');
+      Alert.alert(t('common.error'), t('admin.failedFetchFarmers'));
     } finally {
       setLoading(false);
     }
@@ -186,24 +202,30 @@ export const AdminFarmersScreen: React.FC = () => {
     return (
       <AdminListRow
         title={item.name}
-        subtitle={item.farm}
+        subtitle={item.isSelfDeactivated && item.inactiveReason ? `Reason: ${item.inactiveReason}` : item.farm}
         metaText={item.location}
         avatarText={item.name}
         avatarUri={item.profilePhoto ? item.profilePhoto : undefined}
         onPress={() => navigation.navigate('AdminFarmerDetails', { farmerId: item.id })}
         rightElement={
           <View style={styles.rowRightActions}>
-            {/* 1) Status Pill matching Farmer Details (Vibrant green/red gradient with white dot & text) */}
+            {/* 1) Status Pill matching Farmer Details */}
             <View
               style={[
                 styles.statusPillWrapper,
-                item.status === 'Blocked' ? styles.statusBlockedShadow : styles.statusActiveShadow,
+                item.status === 'Blocked'
+                  ? styles.statusBlockedShadow
+                  : item.isSelfDeactivated
+                  ? styles.statusBlockedShadow
+                  : styles.statusActiveShadow,
               ]}
             >
               <LinearGradient
                 colors={
                   item.status === 'Blocked'
                     ? ['#EF4444', '#DC2626']
+                    : item.isSelfDeactivated
+                    ? ['#F59E0B', '#D97706']
                     : item.status === 'Inactive'
                     ? ['#6B7280', '#4B5563']
                     : ['#10B981', '#059669']
@@ -214,12 +236,16 @@ export const AdminFarmersScreen: React.FC = () => {
               >
                 <View style={styles.statusDotWhite} />
                 <Text style={styles.statusTextWhite}>
-                  {item.status ? item.status.toUpperCase() : 'ACTIVE'}
+                  {item.isSelfDeactivated
+                    ? 'SELF-DEACTIVATED'
+                    : item.status
+                    ? item.status.toUpperCase()
+                    : 'ACTIVE'}
                 </Text>
               </LinearGradient>
             </View>
 
-            {/* 2) Action Button Row (Block / Unblock / Chat) */}
+            {/* 2) Action Button Row (Block / Unblock / Activate / Chat) */}
             <View style={styles.actionButtonsRow}>
               {item.status === 'Blocked' && (
                 <TouchableOpacity
@@ -250,42 +276,32 @@ export const AdminFarmersScreen: React.FC = () => {
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={item.status === 'Blocked' ? styles.unblockButtonWrapper : styles.blockButtonWrapper}
-                onPress={() => {
-                  const newStatus = item.status === 'Blocked' ? 'ACTIVE' : 'INACTIVE';
-                  const actionText = item.status === 'Blocked' ? 'Unblock' : 'Block';
-
-                  if (newStatus === 'INACTIVE') {
-                    setSelectedFarmer(item);
-                    setBlockReason('');
-                    setBlockUntilDate('');
-                    setIsBlockModalVisible(true);
-                  } else {
+              {item.status === 'Blocked' ? (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.unblockButtonWrapper}
+                  onPress={() => {
                     Alert.alert(
-                      `${actionText} Farmer`,
-                      `Are you sure you want to ${actionText.toLowerCase()} this farmer?`,
+                      t('admin.unblockFarmer'),
+                      t('admin.unblockFarmerConfirm'),
                       [
-                        { text: 'Cancel', style: 'cancel' },
+                        { text: t('common.cancel'), style: 'cancel' },
                         {
-                          text: actionText,
+                          text: t('admin.unblock'),
                           style: 'default',
                           onPress: async () => {
                             try {
                               await api.put(`/admin/farmers/${item.id}/unblock`);
                               fetchFarmers();
                             } catch (error) {
-                              Alert.alert('Error', `Failed to ${actionText.toLowerCase()} farmer.`);
+                              Alert.alert(t('common.error'), t('admin.failedUnblockFarmer'));
                             }
                           },
                         },
                       ]
                     );
-                  }
-                }}
-              >
-                {item.status === 'Blocked' ? (
+                  }}
+                >
                   <LinearGradient
                     colors={['#10B981', '#059669']}
                     start={{ x: 0, y: 0 }}
@@ -293,9 +309,57 @@ export const AdminFarmersScreen: React.FC = () => {
                     style={styles.actionGradient}
                   >
                     <CheckIcon size={11} color="#FFFFFF" strokeWidth={2.4} />
-                    <Text style={styles.actionGradientText}>Unblock</Text>
+                    <Text style={styles.actionGradientText}>{t('admin.unblock')}</Text>
                   </LinearGradient>
-                ) : (
+                </TouchableOpacity>
+              ) : item.isSelfDeactivated || item.status === 'Inactive' ? (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.unblockButtonWrapper}
+                  onPress={() => {
+                    Alert.alert(
+                      t('admin.activateFarmer'),
+                      t('admin.activateFarmerConfirm', { name: item.name }),
+                      [
+                        { text: t('common.cancel'), style: 'cancel' },
+                        {
+                          text: t('admin.activate'),
+                          style: 'default',
+                          onPress: async () => {
+                            try {
+                              await api.put(`/admin/farmers/${item.id}/activate`);
+                              Alert.alert(t('common.success'), t('admin.farmerActivatedSuccess'));
+                              fetchFarmers();
+                            } catch (error) {
+                              Alert.alert(t('common.error'), t('admin.failedActivateFarmer'));
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.actionGradient}
+                  >
+                    <CheckIcon size={11} color="#FFFFFF" strokeWidth={2.4} />
+                    <Text style={styles.actionGradientText}>{t('admin.activate')}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.blockButtonWrapper}
+                  onPress={() => {
+                    setSelectedFarmer(item);
+                    setBlockReason('');
+                    setBlockUntilDate('');
+                    setIsBlockModalVisible(true);
+                  }}
+                >
                   <LinearGradient
                     colors={['#FF4D4D', '#DC2626']}
                     start={{ x: 0, y: 0 }}
@@ -303,10 +367,10 @@ export const AdminFarmersScreen: React.FC = () => {
                     style={styles.actionGradient}
                   >
                     <BanIcon size={11} color="#FFFFFF" strokeWidth={2.4} />
-                    <Text style={styles.actionGradientText}>Block</Text>
+                    <Text style={styles.actionGradientText}>{t('admin.block')}</Text>
                   </LinearGradient>
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         }
@@ -348,14 +412,14 @@ export const AdminFarmersScreen: React.FC = () => {
       {/* 2) ROLE CHIPS ROW */}
       <View style={styles.roleChipsRow}>
         <AdminChip
-          label="Farmers"
+          label={t('admin.farmers')}
           count={farmers.length}
           active={userType === 'Farmers'}
           onPress={() => setUserType('Farmers')}
           style={styles.roleChip}
         />
         <AdminChip
-          label="Customers"
+          label={t('admin.customers')}
           count={customers.length}
           active={userType === 'Customers'}
           onPress={() => setUserType('Customers')}
@@ -419,7 +483,7 @@ export const AdminFarmersScreen: React.FC = () => {
                   <View style={styles.modalIconCircle}>
                     <BanIcon size={20} color="#DC2626" strokeWidth={2.4} />
                   </View>
-                  <Text style={styles.modalTitle}>Block Farmer</Text>
+                  <Text style={styles.modalTitle}>{t('admin.blockFarmer')}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setIsBlockModalVisible(false)}
@@ -431,13 +495,13 @@ export const AdminFarmersScreen: React.FC = () => {
               </View>
 
               <Text style={styles.modalDescription}>
-                Please provide a reason for blocking <Text style={styles.farmerHighlightText}>{selectedFarmer?.name}</Text>. This reason will be shown to the farmer.
+                {t('admin.blockFarmerDesc', { name: selectedFarmer?.name || '' })}
               </Text>
 
               <AdminInput
-                label="Block Reason"
+                label={t('admin.blockReason')}
                 required
-                placeholder="Enter block reason..."
+                placeholder={t('admin.enterBlockReason')}
                 multiline
                 numberOfLines={4}
                 value={blockReason}
@@ -445,9 +509,9 @@ export const AdminFarmersScreen: React.FC = () => {
               />
 
               <AdminInput
-                label="Block Until Date"
+                label={t('admin.blockUntilDate')}
                 required
-                placeholder="e.g. 31-12-2026 (DD-MM-YYYY)"
+                placeholder={t('admin.egDate')}
                 value={blockUntilDate}
                 onChangeText={setBlockUntilDate}
                 maxLength={10}
@@ -465,7 +529,7 @@ export const AdminFarmersScreen: React.FC = () => {
                     end={{ x: 1, y: 0 }}
                     style={styles.cancelGradient}
                   >
-                    <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                    <Text style={styles.modalCancelBtnText}>{t('common.cancel')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
@@ -487,7 +551,7 @@ export const AdminFarmersScreen: React.FC = () => {
                       setIsBlockModalVisible(false);
                       fetchFarmers();
                     } catch (error) {
-                      Alert.alert('Error', 'Failed to block farmer.');
+                      Alert.alert(t('common.error'), t('admin.failedBlockFarmer'));
                     }
                   }}
                 >
@@ -519,7 +583,7 @@ export const AdminFarmersScreen: React.FC = () => {
                         !isBlockReady && styles.modalConfirmBtnTextFaint,
                       ]}
                     >
-                      Confirm Block
+                      {t('admin.confirmBlock')}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>

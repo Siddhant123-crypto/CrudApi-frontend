@@ -9,12 +9,14 @@ import {
 import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 import { BoxIcon } from './FarmerIcons';
+import { useTranslation } from 'react-i18next';
 
 interface FarmerEmptyOrdersProps {
   style?: StyleProp<ViewStyle>;
 }
 
 export const FarmerEmptyOrders: React.FC<FarmerEmptyOrdersProps> = ({ style }) => {
+  const { t } = useTranslation();
   return (
     <View style={[styles.card, style]}>
       <View style={styles.iconCircleContainer}>
@@ -30,9 +32,9 @@ export const FarmerEmptyOrders: React.FC<FarmerEmptyOrdersProps> = ({ style }) =
         <BoxIcon size={30} color={FARMER_THEME.colors.primaryGreen} strokeWidth={1.7} />
       </View>
 
-      <Text style={styles.title}>No new orders yet</Text>
+      <Text style={styles.title}>{t('farmer.noNewOrders', 'No new orders yet')}</Text>
       <Text style={styles.subtitle}>
-        New orders from customers will show up here
+        {t('farmer.noNewOrdersDesc', 'New orders from customers will show up here')}
       </Text>
     </View>
   );

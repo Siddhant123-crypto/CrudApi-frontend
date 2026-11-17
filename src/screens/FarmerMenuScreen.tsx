@@ -20,10 +20,12 @@ import { FARMER_THEME } from '../constants/farmerTheme';
 import { BASE_URL } from '../services/api';
 import { getFarmerById } from '../services/farmerService';
 import { LogoutModal } from '../components/ui';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 const FarmerMenuScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { user, logout, updateUserData } = useAuth();
@@ -76,21 +78,22 @@ const FarmerMenuScreen: React.FC = () => {
   );
 
   const menuItems = [
-    { title: 'Dashboard', icon: 'grid-outline', route: 'Dashboard' },
-    { title: 'Add Product', icon: 'add-circle-outline', route: 'AddProduct' },
-    { title: 'Category', icon: 'list-circle-outline', route: 'FarmerCategories' },
-    { title: 'My Farm', icon: 'leaf-outline', route: 'MyFarm' },
-    { title: 'Market', icon: 'storefront-outline', route: 'Market' },
-    { title: 'My Orders', icon: 'receipt-outline', route: 'Orders' },
+    { title: t('nav.dashboard', 'Dashboard'), icon: 'grid-outline', route: 'Dashboard' },
+    { title: t('farmer.addProduct', 'Add Product'), icon: 'add-circle-outline', route: 'AddProduct' },
+    { title: t('nav.categories', 'Category'), icon: 'list-circle-outline', route: 'FarmerCategories' },
+    { title: t('farmer.myFarm', 'My Farm'), icon: 'leaf-outline', route: 'MyFarm' },
+    { title: t('nav.market', 'Market'), icon: 'storefront-outline', route: 'Market' },
+    { title: t('nav.orders', 'My Orders'), icon: 'receipt-outline', route: 'Orders' },
+    { title: t('profile.changeLanguage', 'Change Language'), icon: 'language-outline', route: 'LanguageSelection' },
     { 
-      title: 'Messages', 
+      title: t('nav.messages', 'Messages'), 
       icon: 'chatbubbles-outline', 
       subItems: [
-        { title: 'Message Admin', icon: 'shield-checkmark-outline', route: 'FarmerSupportChatScreen' },
-        { title: 'Message Customer', icon: 'people-outline', route: 'FarmerMessageCustomer' }
+        { title: t('support.messageAdmin', 'Message Admin'), icon: 'shield-checkmark-outline', route: 'FarmerSupportChatScreen' },
+        { title: t('support.messageCustomer', 'Message Customer'), icon: 'people-outline', route: 'FarmerMessageCustomer' }
       ] 
     },
-    { title: 'My Profile', icon: 'person-outline', route: 'Profile' },
+    { title: t('profile.myProfile', 'My Profile'), icon: 'person-outline', route: 'Profile' },
   ];
 
   const handleLogout = () => {
@@ -160,7 +163,7 @@ const FarmerMenuScreen: React.FC = () => {
                   {farmerDisplayName}
                 </Text>
                 <Text style={styles.userRole} numberOfLines={1} ellipsizeMode="tail">
-                  {user?.email || 'Farm2Home Producer'}
+                  {user?.email || t('common.farmerRole', 'Farm2Home Producer')}
                 </Text>
               </View>
             </View>
@@ -192,7 +195,9 @@ const FarmerMenuScreen: React.FC = () => {
                   if (item.subItems) {
                     setExpandedItem(expandedItem === item.title ? null : item.title);
                   } else if (item.route) {
-                    if (item.route === 'FarmerSupportChatScreen' || item.route === 'FarmerMessageCustomer' || item.route === 'AddProduct' || item.route === 'FarmerCategories') {
+                    if (item.route === 'LanguageSelection') {
+                      navigation.navigate('LanguageSelection', { fromSettings: true });
+                    } else if (item.route === 'FarmerSupportChatScreen' || item.route === 'FarmerMessageCustomer' || item.route === 'AddProduct' || item.route === 'FarmerCategories' || item.route === 'MyFarm') {
                       navigation.navigate(item.route);
                     } else {
                       navigation.navigate('FarmerMain', { screen: item.route });
@@ -243,7 +248,7 @@ const FarmerMenuScreen: React.FC = () => {
               <View style={[styles.iconContainer, { backgroundColor: '#FDE6E2' }]}>
                 <Ionicons name="log-out-outline" size={20} color="#C0392B" />
               </View>
-              <Text style={styles.logoutText}>Log Out</Text>
+              <Text style={styles.logoutText}>{t('profile.logout', 'Log Out')}</Text>
             </View>
           </TouchableOpacity>
         </ScrollView>

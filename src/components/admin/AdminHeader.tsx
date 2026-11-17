@@ -10,10 +10,12 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { useNotification } from '../../context/NotificationContext';
+import { useFarmVerificationPendingCount } from '../../hooks/useFarmVerificationPendingCount';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
   MenuIcon,
@@ -66,12 +68,15 @@ const AdminHeaderComponent: React.FC<AdminHeaderProps> = ({
   showSearch = false,
   searchValue = '',
   onSearchChange,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder,
   onFilterPress,
 }) => {
+  const { t } = useTranslation();
+  const effectivePlaceholder = searchPlaceholder || t('common.search', 'Search...');
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { unreadCount, blockedFarmerUnreadCount, hasNewAdminGroupMsg } = useNotification();
+  const { pendingCount } = useFarmVerificationPendingCount();
   const isBackVisible = showBackButton || showBack;
 
   const handleBack = () => {
@@ -129,6 +134,9 @@ const AdminHeaderComponent: React.FC<AdminHeaderProps> = ({
                 <ChevronLeftIcon size={22} color="#FFFFFF" strokeWidth={2.2} />
               ) : (
                 <MenuIcon size={24} color="#FFFFFF" strokeWidth={2.2} />
+              )}
+              {!showBackButton && pendingCount > 0 && (
+                <View style={styles.menuRedDot} />
               )}
             </TouchableOpacity>
 
@@ -453,6 +461,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 6,
+    position: 'relative',
   },
   wordmarkWrapper: {
     flex: 1,
@@ -610,23 +619,51 @@ const styles = StyleSheet.create({
   },
   bellUnreadDot: {
     position: 'absolute',
-    top: 8,
-    right: 9,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF6B6B',
-    borderWidth: 1.5,
-    borderColor: '#1B2A5E',
+    top: 6,
+    right: 7,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.7,
+    shadowRadius: 3,
+    elevation: 4,
   },
   redDot: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF6B6B',
+    top: 6,
+    right: 6,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.7,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  menuRedDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E53935',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 2,
+    elevation: 3,
   },
 
   // Search Bar inside Header

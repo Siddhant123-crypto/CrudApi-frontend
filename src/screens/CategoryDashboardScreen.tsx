@@ -22,6 +22,8 @@ import { ThemedChip } from '../components/ui/ThemedChip';
 import { ThemedEmptyState } from '../components/ui/ThemedEmptyState';
 import ProductCard from '../components/ProductCard';
 import { SearchIcon, CloseIcon } from '../components/CustomerIcons';
+import { useTranslation } from 'react-i18next';
+import { formatCategory } from '../utils/categoryUtils';
 
 const PRICE_PRESETS = [
   { label: 'All', min: 0, max: 99999 },
@@ -49,6 +51,7 @@ interface ProductItem {
 }
 
 export default function CategoryDashboardScreen({ route, navigation }: any) {
+  const { t } = useTranslation();
   const { category } = route.params;
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { addToCart, cartCount } = useCart();
@@ -93,7 +96,7 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
     const product = allProducts.find(p => p.productId === productId);
     if (product) {
       if (product.status === 'INACTIVE') {
-        Alert.alert('Inactive', 'This product is inactive');
+        Alert.alert(t('status.inactive', 'Inactive'), t('product.inactiveProduct', 'This product is inactive'));
         return;
       }
       navigation.navigate('ProductDetail', { product });
@@ -127,7 +130,7 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
           <SearchIcon size={18} color={THEME.colors.textMuted} strokeWidth={2} />
           <TextInput
             style={styles.searchInput}
-            placeholder={`Search in ${category}...`}
+            placeholder={t('home.searchInCategory', { category: formatCategory(category, t), defaultValue: `Search in ${category}...` })}
             placeholderTextColor={THEME.colors.placeholder}
             value={searchText}
             onChangeText={setSearchText}
@@ -152,7 +155,7 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
           {PRICE_PRESETS.map((preset, index) => (
             <ThemedChip
               key={preset.label}
-              label={preset.label}
+              label={preset.label === 'All' ? t('common.all', 'All') : preset.label}
               selected={index === activePriceIndex}
               onPress={() => setActivePriceIndex(index)}
               style={styles.chipSpacing}
@@ -164,7 +167,7 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
       {/* Results Count Bar */}
       <View style={styles.resultsBar}>
         <Text style={styles.resultsText}>
-          {displayedProducts.length} product{displayedProducts.length !== 1 ? 's' : ''} available
+          {t('home.productsAvailable', { count: displayedProducts.length, defaultValue: `${displayedProducts.length} products available` })}
         </Text>
       </View>
 
@@ -176,9 +179,9 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
       ) : displayedProducts.length === 0 ? (
         <ThemedEmptyState
           icon={<Ionicons name="basket-outline" size={48} color={THEME.colors.accent} />}
-          title="No products found"
-          subtitle="Try adjusting your search or price filters"
-          buttonTitle="Clear Filters"
+          title={t('categories.noProductsFound', 'No products found')}
+          subtitle={t('home.noProductsDesc', 'Try adjusting your search or price filters')}
+          buttonTitle={t('home.clearFilters', 'Clear Filters')}
           onButtonPress={() => {
             setSearchText('');
             setActivePriceIndex(0);

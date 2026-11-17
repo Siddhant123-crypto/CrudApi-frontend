@@ -526,4 +526,12 @@ export const CameraIcon: React.FC<IconProps> = ({ size = 20, color = '#17663F', 
   </Svg>
 );
 
+export const AiSparkleIcon: React.FC<IconProps> = ({ size = 24, color = '#F2B544' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M10 2c0 4.418-3.582 8-8 8 4.418 0 8 3.582 8 8 0-4.418 3.582-8 8-8-4.418 0-8-3.582-8-8z" />
+    <Path d="M18.5 13.5c0 2.209-1.791 4-4 4 2.209 0 4 1.791 4 4 0-2.209 1.791-4 4-4-2.209 0-4-1.791-4-4z" />
+  </Svg>
+);
+
+
 

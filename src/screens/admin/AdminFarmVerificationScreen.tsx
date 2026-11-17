@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { View, StyleSheet, FlatList, ScrollView, Text } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getVerificationFarmers } from '../../services/adminService';
-import { ADMIN_THEME } from '../../constants/adminTheme';
+import { refreshFarmVerificationPendingCount } from '../../hooks/useFarmVerificationPendingCount';
+import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
   AdminPageBackground,
   AdminHeader,
@@ -10,10 +12,12 @@ import {
   AdminListRow,
   AdminEmptyState,
   AdminListSkeleton,
+  AdminBadge,
   ShieldCheckIcon,
 } from '../../components/admin';
 
 export const AdminFarmVerificationScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('Pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [verifications, setVerifications] = useState<any[]>([]);
@@ -30,6 +34,7 @@ export const AdminFarmVerificationScreen: React.FC = () => {
   const fetchFarmers = async () => {
     try {
       setLoading(true);
+      refreshFarmVerificationPendingCount();
       const res = await getVerificationFarmers();
       if (res && res.data) {
         const mapped = res.data.map((f: any) => {
@@ -37,17 +42,29 @@ export const AdminFarmVerificationScreen: React.FC = () => {
           if (f.status === 'VERIFIED') mappedStatus = 'Verified';
           else if (f.status === 'REJECTED') mappedStatus = 'Rejected';
 
+          const submissionDate = f.lastSubmittedAt || f.verificationRequestedOn;
+
           return {
             id: f.farmerId,
             farmer: f.farmerName || 'Unknown',
             farm: f.farmName || 'Unnamed Farm',
-            date: f.verificationRequestedOn
-              ? new Date(f.verificationRequestedOn).toLocaleDateString()
+            date: submissionDate
+              ? new Date(submissionDate).toLocaleDateString()
               : 'Recent',
             status: mappedStatus,
             verifiedBy: f.verifiedBy,
+            submissionType: f.submissionType || 'NEW',
+            lastSubmittedAt: submissionDate,
           };
         });
+
+        // Sort most recently submitted first
+        mapped.sort((a: any, b: any) => {
+          const aTime = a.lastSubmittedAt ? new Date(a.lastSubmittedAt).getTime() : 0;
+          const bTime = b.lastSubmittedAt ? new Date(b.lastSubmittedAt).getTime() : 0;
+          return bTime - aTime;
+        });
+
         setVerifications(mapped);
       }
     } catch (error) {
@@ -73,6 +90,7 @@ export const AdminFarmVerificationScreen: React.FC = () => {
   const renderItem = ({ item }: { item: any }) => {
     const subtitle = item.farmer ? `Farmer: ${item.farmer} • ${item.date}` : item.date;
     const metaText = item.status === 'Verified' && item.verifiedBy ? `✓ Verified by: ${item.verifiedBy}` : undefined;
+    const isUpdated = item.submissionType === 'UPDATED';
 
     return (
       <AdminListRow
@@ -80,7 +98,18 @@ export const AdminFarmVerificationScreen: React.FC = () => {
         subtitle={subtitle}
         metaText={metaText}
         avatarText={item.farm}
-        badgeStatus={item.status}
+        rightElement={
+          <View style={styles.badgeColumn}>
+            <AdminBadge status={item.status} />
+            {item.status === 'Pending' && (
+              <View style={[styles.typeBadge, isUpdated ? styles.updatedBadge : styles.newBadge]}>
+                <Text style={[styles.typeBadgeText, isUpdated ? styles.updatedBadgeText : styles.newBadgeText]}>
+                  {isUpdated ? 'Updated' : 'New'}
+                </Text>
+              </View>
+            )}
+          </View>
+        }
         onPress={() =>
           navigation.navigate('AdminFarmVerificationDetails', { verificationId: item.id })
         }
@@ -93,12 +122,12 @@ export const AdminFarmVerificationScreen: React.FC = () => {
       <AdminHeader
         variant="tab"
         showBackButton={true}
-        title="Farm Verification"
-        subtitle="Review and approve farm verification requests"
+        title={t('admin.farmVerification', 'Farm Verification')}
+        subtitle={t('admin.verificationSubtitle', 'Review and approve farm verification requests')}
         showSearch={true}
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search farms or farmers..."
+        searchPlaceholder={t('admin.searchProductFarmer', 'Search farms or farmers...')}
       />
 
       {/* STATUS TABS */}
@@ -129,11 +158,11 @@ export const AdminFarmVerificationScreen: React.FC = () => {
           ListEmptyComponent={
             <AdminEmptyState
               icon={<ShieldCheckIcon size={46} color={ADMIN_THEME.colors.indigo} strokeWidth={1.8} />}
-              title="No verification requests"
+              title={t('admin.noVerificationRequests', 'No verification requests')}
               subtitle={
                 searchQuery
-                  ? `No verification requests matching "${searchQuery}".`
-                  : `There are currently no ${activeTab.toLowerCase()} verification requests.`
+                  ? t('admin.noVerificationDesc', `No verification requests matching "${searchQuery}".`)
+                  : t('admin.noVerificationDesc', `There are currently no ${activeTab.toLowerCase()} verification requests.`)
               }
             />
           }
@@ -161,5 +190,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 130,
+  },
+  badgeColumn: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  typeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  newBadge: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#93C5FD',
+  },
+  updatedBadge: {
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FDBA74',
+  },
+  typeBadgeText: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  newBadgeText: {
+    color: '#1D4ED8',
+  },
+  updatedBadgeText: {
+    color: '#C2410C',
   },
 });

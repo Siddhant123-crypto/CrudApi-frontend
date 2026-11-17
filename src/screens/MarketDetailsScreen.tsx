@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Market } from '../services/marketService';
 
@@ -44,6 +45,7 @@ const HANDLE_HEIGHT = 80;
 const COLLAPSED_OFFSET = SHEET_HEIGHT - HANDLE_HEIGHT;
 
 export const MarketDetailsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const market: Market = route.params?.market;
@@ -86,9 +88,9 @@ export const MarketDetailsScreen: React.FC = () => {
       return (
         <AdminPageBackground style={styles.centerContainer}>
           <AdminCard style={styles.adminErrorCard}>
-            <Text style={styles.adminErrorText}>Market details not found.</Text>
+            <Text style={styles.adminErrorText}>{t('farmer.marketNotFound', 'Market details not found.')}</Text>
             <AdminOutlineButton
-              title="Go Back"
+              title={t('common.goBack', 'Go Back')}
               onPress={() => navigation.goBack()}
               style={{ marginTop: 16 }}
             />
@@ -99,9 +101,9 @@ export const MarketDetailsScreen: React.FC = () => {
     return (
       <FarmerPageBackground style={styles.centerContainer}>
         <FarmerCard style={styles.errorCard}>
-          <Text style={styles.errorText}>Market details not found.</Text>
+          <Text style={styles.errorText}>{t('farmer.marketNotFound', 'Market details not found.')}</Text>
           <FarmerOutlineButton
-            title="Go Back"
+            title={t('common.goBack', 'Go Back')}
             onPress={() => navigation.goBack()}
             style={{ marginTop: 16 }}
           />
@@ -113,7 +115,7 @@ export const MarketDetailsScreen: React.FC = () => {
   const handleCall = () => {
     if (market.contactNumber) {
       Linking.openURL(`tel:${market.contactNumber}`).catch(() => {
-        Alert.alert('Error', 'Could not open dialer.');
+        Alert.alert(t('common.error', 'Error'), t('farmer.couldNotDial', 'Could not open dialer.'));
       });
     }
   };
@@ -126,11 +128,11 @@ export const MarketDetailsScreen: React.FC = () => {
       });
       if (url) {
         Linking.openURL(url).catch(() => {
-          Alert.alert('Error', 'Could not open maps.');
+          Alert.alert(t('common.error', 'Error'), t('farmer.couldNotOpenMaps', 'Could not open maps.'));
         });
       }
     } else {
-      Alert.alert('Error', 'Location coordinates are not available for this market.');
+      Alert.alert(t('common.error', 'Error'), t('farmer.noCoordsForMarket', 'Location coordinates are not available for this market.'));
     }
   };
 
@@ -152,8 +154,8 @@ export const MarketDetailsScreen: React.FC = () => {
       <AdminPageBackground>
         <AdminHeader
           variant="inner"
-          title={market.marketName || 'Market Details'}
-          subtitle="APMC / Mandi Information"
+          title={market.marketName || t('farmer.marketDetails', 'Market Details')}
+          subtitle={t('farmer.apmcInfo', 'APMC / Mandi Information')}
           onBack={() => navigation.goBack()}
         />
 
@@ -187,7 +189,7 @@ export const MarketDetailsScreen: React.FC = () => {
         ) : (
           <View style={[styles.mapContainer, styles.adminMapPlaceholder]}>
             <Ionicons name="map-outline" size={40} color={ADMIN_THEME.colors.placeholder} />
-            <Text style={styles.adminMapPlaceholderText}>No map coordinates available</Text>
+            <Text style={styles.adminMapPlaceholderText}>{t('farmer.noCoordinates', 'No map coordinates available')}</Text>
           </View>
         )}
 
@@ -221,7 +223,7 @@ export const MarketDetailsScreen: React.FC = () => {
             {market.distance !== undefined && (
               <View style={styles.distanceBadgeRow}>
                 <AdminBadge
-                  label={`${market.distance.toFixed(1)} ${market.distanceUnit || 'km'} away`}
+                  label={t('farmer.kmAway', { distance: market.distance.toFixed(1), unit: market.distanceUnit || 'km' })}
                   variant="info"
                 />
               </View>
@@ -238,8 +240,8 @@ export const MarketDetailsScreen: React.FC = () => {
                   <LocationIcon size={18} color="#4F5BD5" strokeWidth={2} />
                 </View>
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.adminInfoLabel}>Address</Text>
-                  <Text style={styles.adminInfoValue}>{getFullAddress() || 'Not specified'}</Text>
+                  <Text style={styles.adminInfoLabel}>{t('common.address', 'Address')}</Text>
+                  <Text style={styles.adminInfoValue}>{getFullAddress() || t('common.notSpecified', 'Not specified')}</Text>
                 </View>
               </View>
 
@@ -248,7 +250,7 @@ export const MarketDetailsScreen: React.FC = () => {
                   <ClockIcon size={18} color="#4F5BD5" strokeWidth={2} />
                 </View>
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.adminInfoLabel}>Operating Hours</Text>
+                  <Text style={styles.adminInfoLabel}>{t('farmer.operatingHours', 'Operating Hours')}</Text>
                   <Text style={styles.adminInfoValue}>
                     {market.openingTime ? market.openingTime : 'N/A'} -{' '}
                     {market.closingTime ? market.closingTime : 'N/A'}
@@ -262,7 +264,7 @@ export const MarketDetailsScreen: React.FC = () => {
                     <PhoneIcon size={18} color="#4F5BD5" strokeWidth={2} />
                   </View>
                   <View style={styles.infoTextWrapper}>
-                    <Text style={styles.adminInfoLabel}>Contact Person</Text>
+                    <Text style={styles.adminInfoLabel}>{t('farmer.contactPerson', 'Contact Person')}</Text>
                     <Text style={styles.adminInfoValue}>
                       {market.marketContactName ? `${market.marketContactName}` : ''}
                       {market.marketContactName && market.contactNumber ? ' • ' : ''}
@@ -277,7 +279,7 @@ export const MarketDetailsScreen: React.FC = () => {
             <View style={styles.actionButtonsRow}>
               {market.latitude && market.longitude && (
                 <AdminPrimaryButton
-                  title="Directions"
+                  title={t('farmer.directions', 'Directions')}
                   onPress={handleDirections}
                   icon={<Ionicons name="navigate-outline" size={18} color="#FFFFFF" />}
                   style={{ flex: 1 }}
@@ -286,7 +288,7 @@ export const MarketDetailsScreen: React.FC = () => {
 
               {market.contactNumber && (
                 <AdminGoldButton
-                  title="Call Market"
+                  title={t('farmer.callMarket', 'Call Market')}
                   onPress={handleCall}
                   icon={<Ionicons name="call-outline" size={18} color="#0B1326" />}
                   style={{ flex: 1 }}
@@ -307,7 +309,7 @@ export const MarketDetailsScreen: React.FC = () => {
       {/* Emerald Inner Header */}
       <FarmerHeader
         variant="inner"
-        title={market.marketName || 'Market Details'}
+        title={market.marketName || t('farmer.marketDetails', 'Market Details')}
         onBackPress={() => navigation.goBack()}
       />
 
@@ -341,7 +343,7 @@ export const MarketDetailsScreen: React.FC = () => {
       ) : (
         <View style={[styles.mapContainer, styles.mapPlaceholder]}>
           <Ionicons name="map-outline" size={40} color={FARMER_THEME.colors.placeholder} />
-          <Text style={styles.mapPlaceholderText}>No map coordinates available</Text>
+          <Text style={styles.mapPlaceholderText}>{t('farmer.noCoordinates', 'No map coordinates available')}</Text>
         </View>
       )}
 
@@ -381,7 +383,7 @@ export const MarketDetailsScreen: React.FC = () => {
           {market.distance !== undefined && (
             <View style={styles.distanceBadgeRow}>
               <FarmerBadge
-                label={`${market.distance.toFixed(1)} ${market.distanceUnit || 'km'} away`}
+                label={t('farmer.kmAway', { distance: market.distance.toFixed(1), unit: market.distanceUnit || 'km' })}
                 variant="success"
               />
             </View>
@@ -403,12 +405,12 @@ export const MarketDetailsScreen: React.FC = () => {
                 <PinIcon size={18} color={FARMER_THEME.colors.primaryGreen} strokeWidth={2} />
               </View>
               <View style={styles.infoTextWrapper}>
-                <Text style={styles.infoLabel}>Address</Text>
+                <Text style={styles.infoLabel}>{t('common.address', 'Address')}</Text>
                 <Text
                   style={styles.infoValue}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  {getFullAddress() || 'Not specified'}
+                  {getFullAddress() || t('common.notSpecified', 'Not specified')}
                 </Text>
               </View>
             </View>
@@ -418,7 +420,7 @@ export const MarketDetailsScreen: React.FC = () => {
                 <Ionicons name="time-outline" size={18} color={FARMER_THEME.colors.warning} />
               </View>
               <View style={styles.infoTextWrapper}>
-                <Text style={styles.infoLabel}>Operating Hours</Text>
+                <Text style={styles.infoLabel}>{t('farmer.operatingHours', 'Operating Hours')}</Text>
                 <Text
                   style={styles.infoValue}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
@@ -435,7 +437,7 @@ export const MarketDetailsScreen: React.FC = () => {
                   <Ionicons name="person-outline" size={18} color={FARMER_THEME.colors.tealGreen} />
                 </View>
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.infoLabel}>Contact Person</Text>
+                  <Text style={styles.infoLabel}>{t('farmer.contactPerson', 'Contact Person')}</Text>
                   <Text
                     style={styles.infoValue}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
@@ -453,7 +455,7 @@ export const MarketDetailsScreen: React.FC = () => {
           <View style={styles.actionButtonsRow}>
             {market.latitude && market.longitude && (
               <FarmerPrimaryButton
-                title="Directions"
+                title={t('farmer.directions', 'Directions')}
                 onPress={handleDirections}
                 icon={<Ionicons name="navigate-outline" size={18} color="#FFFFFF" />}
                 style={{ flex: 1 }}
@@ -462,7 +464,7 @@ export const MarketDetailsScreen: React.FC = () => {
 
             {market.contactNumber && (
               <FarmerGoldButton
-                title="Call Market"
+                title={t('farmer.callMarket', 'Call Market')}
                 onPress={handleCall}
                 icon={<Ionicons name="call-outline" size={18} color={FARMER_THEME.colors.headings} />}
                 style={{ flex: 1 }}

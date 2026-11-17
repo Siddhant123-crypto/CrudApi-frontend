@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { NotificationCard } from '../components/NotificationCard';
 import { NotificationGroup } from '../components/NotificationGroupCard';
 import { NotificationService } from '../services/NotificationService';
@@ -23,6 +24,7 @@ import { AdminHeader } from '../components/admin/AdminHeader';
 import { AdminEmptyState } from '../components/admin/AdminEmptyState';
 
 const NotificationThreadScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { user } = useAuth();
@@ -77,24 +79,28 @@ const NotificationThreadScreen = () => {
 
   const handleNotificationDelete = (notification: NotificationResponse) => {
     import('react-native').then(({ Alert }) => {
-      Alert.alert('Delete Message', 'Are you sure you want to delete this message?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setNotifications((prev) =>
-                prev.filter((n) => n.notificationId !== notification.notificationId)
-              );
-              const api = (await import('../services/api')).default;
-              await api.delete(`/notifications/${notification.notificationId}`);
-            } catch (error) {
-              console.log('Failed to delete notification:', error);
-            }
+      Alert.alert(
+        t('notifications.deleteMessageTitle', 'Delete Message'),
+        t('notifications.deleteMessageConfirm', 'Are you sure you want to delete this message?'),
+        [
+          { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+          {
+            text: t('common.delete', 'Delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setNotifications((prev) =>
+                  prev.filter((n) => n.notificationId !== notification.notificationId)
+                );
+                const api = (await import('../services/api')).default;
+                await api.delete(`/notifications/${notification.notificationId}`);
+              } catch (error) {
+                console.log('Failed to delete notification:', error);
+              }
+            },
           },
-        },
-      ]);
+        ]
+      );
     });
   };
 
@@ -158,8 +164,8 @@ const NotificationThreadScreen = () => {
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           ListEmptyComponent={
             <FarmerEmptyState
-              title="No messages"
-              subtitle="No messages in this thread yet."
+              title={t('notifications.noMessages', 'No messages')}
+              subtitle={t('notifications.noMessagesThread', 'No messages in this thread yet.')}
             />
           }
         />
@@ -173,7 +179,7 @@ const NotificationThreadScreen = () => {
       <AdminHeader
         variant="inner"
         title={group.senderName}
-        subtitle="Notification Conversation"
+        subtitle={t('notifications.notificationConversation', 'Notification Conversation')}
         onBack={() => navigation.goBack()}
       />
       <View style={styles.adminMainContent}>
@@ -192,8 +198,8 @@ const NotificationThreadScreen = () => {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <AdminEmptyState
-              title="No messages"
-              message="No messages in this thread yet."
+              title={t('notifications.noMessages', 'No messages')}
+              message={t('notifications.noMessagesThread', 'No messages in this thread yet.')}
               icon={<Ionicons name="chatbubbles-outline" size={40} color="#4F5BD5" />}
             />
           }

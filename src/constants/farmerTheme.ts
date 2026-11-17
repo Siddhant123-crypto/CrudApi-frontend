@@ -29,8 +29,8 @@ export const FARMER_THEME = {
 
     // Gold accents
     goldLight: '#F5D77A', // Header labels, pin icon, chip text
-    goldDot: '#F5C84B', // Notification dot
-    goldDotBorder: '#0F4A31',
+    goldDot: '#EF4444', // Notification dot (highlighted red)
+    goldDotBorder: '#FFFFFF',
     ctaGoldGradient: ['#F8DF86', '#DDA520'] as const,
     ctaGoldShadow: '#DDA520',
 

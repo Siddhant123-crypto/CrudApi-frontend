@@ -3,6 +3,7 @@ import { wishlistService } from '../services/wishlistService';
 import { WishlistResponse } from '../types';
 import { useAuth } from './AuthContext';
 import { Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 interface WishlistContextType {
   wishlist: WishlistResponse[];
   isLoading: boolean;
@@ -13,6 +14,7 @@ interface WishlistContextType {
 }
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const [wishlist, setWishlist] = useState<WishlistResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isLoggedIn, user } = useAuth();
@@ -46,35 +48,35 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [wishlist]);
   const toggleWishlist = async (productId: string) => {
     if (!isLoggedIn) {
-      Alert.alert('Login Required', 'Please login to manage wishlist.');
+      Alert.alert(t('auth.signInToContinue', 'Login Required'), t('wishlist.loginRequiredMessage', 'Please login to manage wishlist.'));
       return;
     }
     try {
       const exists = isInWishlist(productId);
       if (exists) {
         await wishlistService.removeFromWishlist(productId);
-        Alert.alert('Success', 'Removed from product wishlist');
+        Alert.alert(t('common.success', 'Success'), t('wishlist.removedSuccess', 'Removed from product wishlist'));
       } else {
         await wishlistService.addToWishlist(productId);
-        Alert.alert('Success', 'Added to product wishlist');
+        Alert.alert(t('common.success', 'Success'), t('wishlist.addedSuccess', 'Added to product wishlist'));
       }
       await refreshWishlist();
     } catch (error: any) {
       console.log('Error toggling wishlist:', error);
-      Alert.alert('Error', 'Failed to update wishlist');
+      Alert.alert(t('common.error', 'Error'), t('wishlist.updateFailed', 'Failed to update wishlist'));
     }
   };
   const removeFromWishlist = async (productId: string, showNotification: boolean = true) => {
     try {
       await wishlistService.removeFromWishlist(productId);
       if (showNotification) {
-        Alert.alert('Success', 'Removed from product wishlist');
+        Alert.alert(t('common.success', 'Success'), t('wishlist.removedSuccess', 'Removed from product wishlist'));
       }
       await refreshWishlist();
     } catch (error: any) {
       console.log('Error removing from wishlist:', error);
       if (showNotification) {
-        Alert.alert('Error', 'Failed to remove from wishlist');
+        Alert.alert(t('common.error', 'Error'), t('wishlist.removeFailed', 'Failed to remove from wishlist'));
       }
     }
   };

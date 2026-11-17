@@ -4,6 +4,7 @@ import { Review } from '../../types';
 import { StarRating } from './StarRating';
 import { getProductImageUrl } from '../../services/productService';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { THEME } from '../../constants/theme';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 
@@ -25,6 +26,7 @@ export const ReviewCard = ({
   onVideoPress,
   variant = 'default',
 }: ReviewCardProps) => {
+  const { t } = useTranslation();
   const isCustomer = variant === 'customer';
   const isFarmer = variant === 'farmer';
   const formattedDate = review.createdAt
@@ -56,7 +58,9 @@ export const ReviewCard = ({
         {review.isVerifiedPurchase && (
           <View style={isCustomer ? styles.verifiedBadgeThemed : isFarmer ? styles.farmerVerifiedBadge : styles.verifiedBadge}>
             <Ionicons name="checkmark-circle" size={14} color={isCustomer ? '#2E7D4F' : isFarmer ? '#17663F' : '#15803D'} />
-            <Text style={isCustomer ? styles.verifiedTextThemed : isFarmer ? styles.farmerVerifiedText : styles.verifiedText}>Verified Purchase</Text>
+            <Text style={isCustomer ? styles.verifiedTextThemed : isFarmer ? styles.farmerVerifiedText : styles.verifiedText}>
+              {t('reviews.verifiedPurchase', 'Verified Purchase')}
+            </Text>
           </View>
         )}
       </View>
@@ -102,13 +106,13 @@ export const ReviewCard = ({
           {onEdit && (
             <TouchableOpacity style={styles.actionBtn} onPress={onEdit}>
               <Ionicons name="pencil-outline" size={16} color={isCustomer ? '#B8470F' : '#15803D'} />
-              <Text style={[styles.actionText, isCustomer && { color: '#B8470F' }]}>Edit</Text>
+              <Text style={[styles.actionText, isCustomer && { color: '#B8470F' }]}>{t('common.edit', 'Edit')}</Text>
             </TouchableOpacity>
           )}
           {onDelete && (
             <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={onDelete}>
               <Ionicons name="trash-outline" size={16} color="#DC2626" />
-              <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
+              <Text style={[styles.actionText, styles.deleteText]}>{t('common.delete', 'Delete')}</Text>
             </TouchableOpacity>
           )}
         </View>

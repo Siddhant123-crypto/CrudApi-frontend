@@ -23,8 +23,12 @@ import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground'
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
 import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerChip, FarmerBadge } from '../components/farmer/FarmerUI';
+import { useTranslation } from 'react-i18next';
+import { formatOrderStatus, formatPaymentMethod } from '../utils/statusUtils';
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 const FarmerOrdersScreen = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,13 +36,13 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
   const [filter, setFilter] = useState('All');
 
   const tabs = [
-    { id: 'All', label: 'All', statuses: [] },
-    { id: 'New', label: 'New', statuses: ['PENDING'] },
-    { id: 'Confirmed', label: 'Confirmed', statuses: ['CONFIRMED'] },
-    { id: 'Processing', label: 'Processing', statuses: ['PROCESSING'] },
-    { id: 'Delivery', label: 'Delivery', statuses: ['OUT_FOR_DELIVERY'] },
-    { id: 'Completed', label: 'Completed', statuses: ['DELIVERED'] },
-    { id: 'Cancelled', label: 'Cancelled', statuses: ['CANCELLED'] },
+    { id: 'All', label: t('farmer.allOrders', 'All'), statuses: [] },
+    { id: 'New', label: t('farmer.pendingOrders', 'New'), statuses: ['PENDING'] },
+    { id: 'Confirmed', label: t('farmer.confirmedOrders', 'Confirmed'), statuses: ['CONFIRMED'] },
+    { id: 'Processing', label: t('status.processing', 'Processing'), statuses: ['PROCESSING'] },
+    { id: 'Delivery', label: t('farmer.dispatchedOrders', 'Delivery'), statuses: ['OUT_FOR_DELIVERY'] },
+    { id: 'Completed', label: t('status.delivered', 'Completed'), statuses: ['DELIVERED'] },
+    { id: 'Cancelled', label: t('status.cancelled', 'Cancelled'), statuses: ['CANCELLED'] },
   ];
 
   const fetchOrders = async (isRefresh = false) => {
@@ -130,7 +134,7 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
     const fStatus = getFarmerItemsStatus(item.items || []);
     const isNew = fStatus === 'PENDING';
 
-    const orderIdLabel = `Order #${
+    const orderIdLabel = `${t('orders.orderNumber', 'Order #').replace('{{id}}', '')}${
       item.orderNumber ? item.orderNumber.substring(0, 12) : item.orderId.substring(0, 8)
     }`;
 
@@ -151,17 +155,17 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
             <View style={styles.orderIdRow}>
               {isNew && (
                 <View style={styles.newBadge}>
-                  <Text style={styles.newBadgeText}>NEW</Text>
+                  <Text style={styles.newBadgeText}>{t('status.pending', 'NEW')}</Text>
                 </View>
               )}
               <Text style={styles.orderNumber}>{orderIdLabel}</Text>
             </View>
             <View style={styles.headerRight}>
               <Text style={styles.orderDate}>
-                {item.createdOn ? new Date(item.createdOn).toLocaleDateString() : ''}
+                {item.createdOn ? formatDate(item.createdOn) : ''}
               </Text>
               <FarmerBadge
-                label={fStatus}
+                label={formatOrderStatus(fStatus, t)}
                 variant={getBadgeVariant(fStatus)}
                 size="sm"
               />
@@ -170,7 +174,7 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
 
           {/* Customer & Address Row */}
           <View style={styles.customerInfo}>
-            <Text style={styles.customerName}>Ordered by: {item.customerName}</Text>
+            <Text style={styles.customerName}>{t('orders.customer', 'Ordered by')}: {item.customerName}</Text>
             <Text style={styles.deliveryLocation} numberOfLines={1}>
               {item.village || item.deliveryAddress?.split(',')[0]}
             </Text>
@@ -203,16 +207,16 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
                 <View style={styles.moreItemsBadge}>
                   <Ionicons name="layers-outline" size={12} color={FARMER_THEME.colors.forestGreen} />
                   <Text style={styles.moreItemsText}>
-                    +{moreItemsCount} more item{moreItemsCount > 1 ? 's' : ''}
+                    +{moreItemsCount} {t('orders.moreItems', 'more item(s)')}
                   </Text>
                 </View>
               )}
             </View>
 
             <View style={styles.amountContainer}>
-              <Text style={styles.totalAmount}>₹{item.totalAmount?.toFixed(2)}</Text>
+              <Text style={styles.totalAmount}>{formatCurrency(item.totalAmount)}</Text>
               <View style={styles.paymentMethodPill}>
-                <Text style={styles.paymentMethod}>{item.paymentMethod}</Text>
+                <Text style={styles.paymentMethod}>{formatPaymentMethod(item.paymentMethod, t)}</Text>
               </View>
             </View>
           </View>
@@ -226,8 +230,8 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
       {/* Tab FarmerHeader */}
       <FarmerHeader
         variant="tab"
-        title="Order Management"
-        subtitle="Track & fulfill incoming customer orders"
+        title={t('farmer.ordersTitle', 'Order Management')}
+        subtitle={t('farmer.manageOrders', 'Track & fulfill incoming customer orders')}
         onBackPress={() => {
           if (navigation?.canGoBack()) {
             navigation.goBack();
@@ -283,8 +287,8 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
           ListEmptyComponent={
             <OrderEmptyState
               variant="farmer"
-              title="No Orders Found"
-              subtitle="You don't have any orders in this category right now."
+              title={t('orders.noOrdersTitle', 'No Orders Found')}
+              subtitle={t('orders.noOrdersSubtitle', "You don't have any orders in this category right now.")}
             />
           }
         />

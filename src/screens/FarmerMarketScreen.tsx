@@ -24,6 +24,7 @@ import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerBadge, FarmerEmptyState } from '../components/farmer/FarmerUI';
 import { FarmerPrimaryButton } from '../components/farmer/FarmerButtons';
 import { PinIcon, ChevronRightIcon } from '../components/farmer/FarmerIcons';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 const LIST_HEIGHT = height * 0.55;
@@ -31,6 +32,7 @@ const MIN_HEADER_HEIGHT = 64;
 const COLLAPSED_HEIGHT = 200;
 
 export const FarmerMarketScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +75,7 @@ export const FarmerMarketScreen: React.FC = () => {
       setMarkets(marketsArray);
     } catch (error) {
       console.log('Error fetching nearby markets:', error);
-      Alert.alert('Error', 'Failed to fetch nearby markets.');
+      Alert.alert(t('common.error'), t('market.failedFetchNearby'));
     } finally {
       setLoading(false);
     }
@@ -98,7 +100,7 @@ export const FarmerMarketScreen: React.FC = () => {
       setMarkets(marketsArray);
     } catch (error) {
       console.log('Error searching markets:', error);
-      Alert.alert('Error', 'Failed to search markets.');
+      Alert.alert(t('common.error'), t('market.failedSearch'));
     } finally {
       setLoading(false);
     }
@@ -266,7 +268,7 @@ export const FarmerMarketScreen: React.FC = () => {
               style={styles.sectionTitle}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              {isSearching ? 'Search Results' : 'Nearby Markets'}
+              {isSearching ? t('common.searchResults') : t('market.nearbyMarkets')}
             </Text>
             <Ionicons
               name={isCollapsed ? 'chevron-up' : 'chevron-down'}
@@ -287,11 +289,11 @@ export const FarmerMarketScreen: React.FC = () => {
           ) : (Array.isArray(markets) ? markets : []).length === 0 ? (
             <FarmerEmptyState
               icon={<Ionicons name="storefront-outline" size={44} color={FARMER_THEME.colors.primaryGreen} />}
-              title="No markets found"
+              title={t('market.noMarketsFound')}
               subtitle={
                 isSearching
-                  ? 'Try searching with a different name or town'
-                  : 'No markets located in your immediate radius'
+                  ? t('market.noMarketsFoundSearchDesc')
+                  : t('market.noMarketsFoundNearbyDesc')
               }
             />
           ) : (

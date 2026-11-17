@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import api, { BASE_URL } from '../../services/api';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
@@ -24,6 +25,7 @@ import {
 } from '../../components/admin';
 
 export const AdminProductsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<any[]>([]);
@@ -119,7 +121,7 @@ export const AdminProductsScreen: React.FC = () => {
             <Text style={styles.unitText}>/ {item.unit || 'unit'}</Text>
           </Text>
           <Text style={styles.stock}>
-            Stock: {item.quantity || 0} {item.unit || 'units'}
+            {t('farmer.stock', 'Stock')}: {item.quantity || 0} {item.unit || 'units'}
           </Text>
         </View>
       </View>
@@ -131,13 +133,13 @@ export const AdminProductsScreen: React.FC = () => {
       {/* 1) TAB ADMIN HEADER WITH SEARCH */}
       <AdminHeader
         variant="tab"
-        title="Products"
-        subtitle="All products & inventory"
+        title={t('admin.allProducts', 'Products')}
+        subtitle={t('admin.productsSubtitle', 'All products & inventory')}
         showBackButton={true}
         showSearch={true}
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search by product or farmer..."
+        searchPlaceholder={t('admin.searchProductFarmer', 'Search by product or farmer...')}
       />
 
       {/* 2) CHIP CATEGORY / STATUS FILTERS */}
@@ -150,7 +152,7 @@ export const AdminProductsScreen: React.FC = () => {
           {tabs.map(tab => (
             <AdminChip
               key={tab}
-              label={tab === 'All' ? 'All' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+              label={tab === 'All' ? t('common.all', 'All') : tab === 'Active' ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
               active={activeTab === tab}
               onPress={() => setActiveTab(tab)}
             />
@@ -172,8 +174,8 @@ export const AdminProductsScreen: React.FC = () => {
       ) : (
         <AdminEmptyState
           icon={<CubeIcon size={36} color={ADMIN_THEME.colors.indigo} />}
-          title="No products found"
-          subtitle="No products matched your search or status filter."
+          title={t('admin.noProductsFound', 'No products found')}
+          subtitle={t('admin.noProductsMatched', 'No products matched your search or status filter.')}
         />
       )}
     </AdminPageBackground>

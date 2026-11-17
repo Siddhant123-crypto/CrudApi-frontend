@@ -14,6 +14,7 @@ import {
   StatusBar,
   Dimensions,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,9 +39,12 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { SUPPORTED_LANGUAGES } from '../i18n';
 import {
   newUserLogin,
   googleLogin,
+  linkGoogleAccount,
   adminLogin,
 } from '../services/authService';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -196,6 +200,7 @@ const GoogleIcon = () => (
 const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
 
 const NewUserLoginScreen = ({ navigation }: any) => {
+  const { t, i18n } = useTranslation();
   const [fontsLoaded] = useFonts({
     Fraunces_600SemiBold,
     Fraunces_500Medium_Italic,
@@ -213,6 +218,15 @@ const NewUserLoginScreen = ({ navigation }: any) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkAccountData, setLinkAccountData] = useState<{
+    email: string;
+    idToken: string;
+    name?: string;
+  } | null>(null);
+  const [linkPassword, setLinkPassword] = useState('');
+  const [showLinkPassword, setShowLinkPassword] = useState(false);
+  const [linkingLoading, setLinkingLoading] = useState(false);
   const [errors, setErrors] = useState<{
     identifier?: string | null;
     password?: string | null;
@@ -240,10 +254,10 @@ const NewUserLoginScreen = ({ navigation }: any) => {
   const validate = () => {
     const newErrors: Record<string, string | null> = {};
     if (!identifier.trim()) {
-      newErrors.identifier = 'Email or Mobile is required';
+      newErrors.identifier = t('validation.emailRequired', 'Email or Mobile is required');
     }
     if (!password.trim()) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('validation.passwordRequired', 'Password is required');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -270,14 +284,14 @@ const NewUserLoginScreen = ({ navigation }: any) => {
             userId: data.adminId,
           };
           if (!data.token) {
-            Alert.alert('Login Error', 'Login successful but access token was not received.');
+            Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
             return;
           }
           await login(userData, data.token);
           console.log('ADMIN LOGIN COMPLETED');
           return;
         } else {
-          Alert.alert('Login Failed', result?.message || 'Invalid credentials');
+          Alert.alert(t('auth.loginFailed', 'Login Failed'), result?.message || t('auth.invalidCredentials', 'Invalid credentials'));
           return;
         }
       } else {
@@ -297,7 +311,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
               userId: data.adminId,
             };
             if (!data.token) {
-              Alert.alert('Login Error', 'Login successful but access token was not received.');
+              Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
               return;
             }
             await login(userData, data.token);
@@ -308,7 +322,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
             adminResult.message !== 'Account not found' &&
             adminResult.message !== 'Email not found'
           ) {
-            Alert.alert('Login Failed', adminResult.message);
+            Alert.alert(t('auth.loginFailed', 'Login Failed'), adminResult.message);
             return;
           }
         }
@@ -328,22 +342,22 @@ const NewUserLoginScreen = ({ navigation }: any) => {
         console.log('NORMAL LOGIN USER:', userData);
         console.log('NORMAL LOGIN TOKEN:', result.accessToken ? 'YES' : 'NO');
         if (!result.accessToken) {
-          Alert.alert('Login Error', 'Login successful but access token was not received.');
+          Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
           return;
         }
         await login(userData, result.accessToken);
         console.log('NORMAL LOGIN COMPLETED');
         return;
       }
-      Alert.alert('Login Failed', result?.message || 'Invalid credentials');
+      Alert.alert(t('auth.loginFailed', 'Login Failed'), result?.message || t('auth.invalidCredentials', 'Invalid credentials'));
     } catch (error: any) {
       console.log('Normal Login Error:', error);
       const msg =
         error?.response?.data?.message ||
         error?.response?.data ||
         error?.message ||
-        'Unable to connect to server.';
-      Alert.alert('Login Error', typeof msg === 'string' ? msg : 'Login failed');
+        t('errors.networkError', 'Unable to connect to server.');
+      Alert.alert(t('auth.loginError', 'Login Error'), typeof msg === 'string' ? msg : t('auth.loginFailed', 'Login failed'));
     } finally {
       setLoading(false);
     }
@@ -367,7 +381,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
       console.log('GOOGLE RESULT:', googleResult);
       const idToken = googleResult.data?.idToken;
       if (!idToken) {
-        Alert.alert('Google Login Failed', 'Google ID token was not received.');
+        Alert.alert(t('auth.googleLoginFailed', 'Google Login Failed'), t('auth.googleTokenNotReceived', 'Google ID token was not received.'));
         return;
       }
       console.log('GOOGLE ID TOKEN RECEIVED');
@@ -388,7 +402,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
         console.log('GOOGLE EXISTING USER:', userData);
         console.log('GOOGLE JWT:', backendResult.accessToken ? 'YES' : 'NO');
         if (!backendResult.accessToken) {
-          Alert.alert('Google Login Error', 'Backend login successful but JWT token was not received.');
+          Alert.alert(t('auth.googleLoginError', 'Google Login Error'), t('auth.backendTokenNotReceived', 'Backend login successful but JWT token was not received.'));
           return;
         }
         await login(userData, backendResult.accessToken);
@@ -400,17 +414,86 @@ const NewUserLoginScreen = ({ navigation }: any) => {
         navigation.navigate('RoleSelection', {
           email: backendResult.response.email,
           name: backendResult.response.name,
+          googleSub: backendResult.response.googleSub,
+          googleRegistrationToken: backendResult.response.googleRegistrationToken,
           isGoogleSignUp: true,
         });
         return;
       }
-      Alert.alert('Google Login Failed', backendResult?.message || 'Google login failed.');
+      if (backendResult?.message === 'ACCOUNT_EXISTS_LINK_REQUIRED' && backendResult?.response) {
+        console.log('ACCOUNT_EXISTS_LINK_REQUIRED for:', backendResult.response.email);
+        setLinkAccountData({
+          email: backendResult.response.email,
+          idToken: idToken,
+          name: backendResult.response.name,
+        });
+        setShowLinkModal(true);
+        return;
+      }
+      if (backendResult?.message === 'ACCOUNT_LINKED_TO_ANOTHER_GOOGLE') {
+        Alert.alert(
+          t('auth.accountLinkingError', 'Account Linking Error'),
+          t('auth.accountLinkedAnotherGoogle', 'This email is already associated with another Google account. Please log in with your email and password.')
+        );
+        return;
+      }
+      Alert.alert(t('auth.googleLoginFailed', 'Google Login Failed'), backendResult?.message || t('auth.googleLoginFailed', 'Google login failed.'));
     } catch (error: any) {
       console.log('Google Login Error:', error);
-      Alert.alert('Google Login Error', error?.message || 'Unable to login with Google.');
+      if (error?.code === 'SIGN_IN_CANCELLED' || error?.message?.includes('cancelled')) {
+        return;
+      }
+      Alert.alert(t('auth.googleLoginError', 'Google Login Error'), error?.message || t('auth.unableLinkAccount', 'Unable to login with Google.'));
     } finally {
       setGoogleLoading(false);
     }
+  };
+
+  const handleLinkGoogleAccount = async () => {
+    if (!linkAccountData || !linkPassword.trim()) {
+      Alert.alert(t('auth.passwordRequired', 'Password Required'), t('auth.linkAccountPasswordRequired', 'Please enter your Farm2Home password to link your account.'));
+      return;
+    }
+    setLinkingLoading(true);
+    try {
+      const linkResult = await linkGoogleAccount(
+        linkAccountData.email,
+        linkPassword,
+        linkAccountData.idToken
+      );
+      if (linkResult?.message?.includes('Login Successful') && linkResult?.response) {
+        const response = linkResult.response;
+        const isFarmer = response.role === 'FARMER' || response.role === 'Farmer';
+        const isAdmin = response.role === 'ADMIN' || response.role === 'Admin';
+        const userData: UserData = {
+          name: response.name,
+          email: response.email,
+          role: isAdmin ? 'ADMIN' : isFarmer ? 'FARMER' : 'USER',
+          farmerId: isFarmer ? response.farmerId || response.id : undefined,
+          userId: !isFarmer && !isAdmin ? response.userId || response.id : undefined,
+          profilePhoto: response.profilePhoto,
+        };
+        setShowLinkModal(false);
+        setLinkPassword('');
+        setLinkAccountData(null);
+        await login(userData, linkResult.accessToken);
+        return;
+      }
+      Alert.alert(t('auth.linkingFailed', 'Linking Failed'), linkResult?.message || t('auth.failedLinkGoogle', 'Failed to link Google account.'));
+    } catch (err: any) {
+      console.log('Account Linking Error:', err);
+      const msg = err?.response?.data?.message || err?.message || t('auth.unableLinkAccount', 'Unable to link account.');
+      Alert.alert(t('auth.linkingError', 'Linking Error'), typeof msg === 'string' ? msg : t('auth.unableLinkAccount', 'Unable to link account.'));
+    } finally {
+      setLinkingLoading(false);
+    }
+  };
+
+  const handleForgotPasswordFromLinkModal = () => {
+    const emailToPass = linkAccountData?.email;
+    setShowLinkModal(false);
+    setLinkPassword('');
+    navigation.navigate('ForgotPassword', { email: emailToPass });
   };
 
   if (!fontsLoaded) {
@@ -499,30 +582,41 @@ const NewUserLoginScreen = ({ navigation }: any) => {
               />
             </Svg>
 
+            {/* Top-right Language Switch Button */}
+            <TouchableOpacity
+              style={[styles.langPill, { top: 12 + statusBarHeight }]}
+              onPress={() => navigation.navigate('LanguageSelection', { fromSettings: true })}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.langPillText}>
+                🌐 {SUPPORTED_LANGUAGES.find((l) => l.code === i18n.language)?.nativeName || 'English'}
+              </Text>
+            </TouchableOpacity>
+
             {/* Brand Pill & Tagline Overlay */}
             <View style={styles.heroOverlay}>
               <View style={styles.brandPill}>
                 <View style={styles.leafCircle}>
                   <LeafIcon />
                 </View>
-                <Text style={styles.brandTitle}>Farm2Home</Text>
+                <Text style={styles.brandTitle}>{t('common.appName', 'Farm2Home')}</Text>
               </View>
 
               <Text style={styles.tagline}>
-                Fresh from the farm, straight to your home
+                {t('common.tagline', 'Fresh from the farm, straight to your home')}
               </Text>
             </View>
           </View>
 
           {/* ─── 2) WHITE SHEET (starts at y=218) ─── */}
           <View style={styles.whiteSheet}>
-            <Text style={styles.welcomeTitle}>Welcome back</Text>
+            <Text style={styles.welcomeTitle}>{t('auth.welcomeBack', 'Welcome back')}</Text>
             <Text style={styles.welcomeSubtitle}>
-              Sign in to continue to your account.
+              {t('auth.signInToContinue', 'Sign in to continue to your account.')}
             </Text>
 
             {/* Email or mobile */}
-            <Text style={styles.inputLabel}>Email or mobile</Text>
+            <Text style={styles.inputLabel}>{t('auth.emailOrMobile', 'Email or mobile')}</Text>
             <View style={styles.inputContainer}>
               <PersonIcon />
               <TextInput
@@ -539,7 +633,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
                     scrollViewRef.current?.scrollTo({ y: 160, animated: true });
                   }, 120);
                 }}
-                placeholder="Enter email or mobile"
+                placeholder={t('auth.emailOrMobilePlaceholder', 'Enter email or mobile')}
                 placeholderTextColor="#8E9A90"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -555,7 +649,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
             <View style={{ height: 16 }} />
 
             {/* Password */}
-            <Text style={styles.inputLabel}>Password</Text>
+            <Text style={styles.inputLabel}>{t('auth.password', 'Password')}</Text>
             <View style={styles.inputContainer}>
               <LockIcon />
               <TextInput
@@ -572,7 +666,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
                     scrollViewRef.current?.scrollTo({ y: 240, animated: true });
                   }, 120);
                 }}
-                placeholder="Enter your password"
+                placeholder={t('auth.passwordPlaceholder', 'Enter your password')}
                 placeholderTextColor="#8E9A90"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
@@ -595,10 +689,14 @@ const NewUserLoginScreen = ({ navigation }: any) => {
             {/* Forgot password? */}
             <TouchableOpacity
               style={styles.forgotPasswordButton}
-              onPress={() => navigation.navigate('ForgotPassword')}
+              onPress={() =>
+                navigation.navigate('ForgotPassword', {
+                  email: identifier.includes('@') ? identifier.trim() : undefined,
+                })
+              }
               activeOpacity={0.7}
             >
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword', 'Forgot password?')}</Text>
             </TouchableOpacity>
 
             {/* Sign in Button */}
@@ -617,7 +715,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
                 {loading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.signInButtonText}>Sign in</Text>
+                  <Text style={styles.signInButtonText}>{t('auth.signIn', 'Sign in')}</Text>
                 )}
               </LinearGradient>
             </Pressable>
@@ -625,7 +723,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
             {/* Divider */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.orText}>OR</Text>
+              <Text style={styles.orText}>{t('auth.or', 'OR')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -638,23 +736,103 @@ const NewUserLoginScreen = ({ navigation }: any) => {
             >
               <GoogleIcon />
               <Text style={styles.googleButtonText}>
-                {googleLoading ? 'Signing in...' : 'Continue with Google'}
+                {googleLoading ? t('common.loading', 'Signing in...') : t('auth.continueWithGoogle', 'Continue with Google')}
               </Text>
             </TouchableOpacity>
 
             {/* Footer */}
             <View style={styles.footerRow}>
-              <Text style={styles.footerRegularText}>New to Farm2Home? </Text>
+              <Text style={styles.footerRegularText}>{t('auth.dontHaveAccount', 'New to Farm2Home? ')}</Text>
               <TouchableOpacity
                 onPress={() => navigation.navigate('RoleSelection')}
                 activeOpacity={0.7}
               >
-                <Text style={styles.footerLinkText}>Create account</Text>
+                <Text style={styles.footerLinkText}>{t('auth.createAccount', 'Create account')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Account Linking Modal */}
+      <Modal
+        visible={showLinkModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!linkingLoading) {
+            setShowLinkModal(false);
+            setLinkPassword('');
+            setLinkAccountData(null);
+          }
+        }}
+      >
+        <View style={styles.linkModalOverlay}>
+          <View style={styles.linkModalContent}>
+            <Text style={styles.linkModalTitle}>{t('auth.linkingTitle', 'Link Google Account')}</Text>
+            <Text style={styles.linkModalSubtitle}>
+              {t('auth.linkingDesc', 'An existing account was found with this email. Enter your Farm2Home password to link your Google login.')}
+            </Text>
+
+            <View style={[styles.inputContainer, { marginTop: 12, marginBottom: 8 }]}>
+              <LockIcon />
+              <TextInput
+                style={styles.textInput}
+                value={linkPassword}
+                onChangeText={setLinkPassword}
+                placeholder={t('auth.passwordPlaceholder', 'Enter your Farm2Home password')}
+                placeholderTextColor="#8E9A90"
+                secureTextEntry={!showLinkPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowLinkPassword((prev) => !prev)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                {showLinkPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={{ alignSelf: 'flex-end', paddingVertical: 6, marginBottom: 16 }}
+              onPress={handleForgotPasswordFromLinkModal}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 13, color: '#D9651B', fontWeight: '600' }}>
+                {t('auth.forgotPassword', 'Forgot Farm2Home password?')}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+              <TouchableOpacity
+                style={[styles.linkModalCancelButton, { flex: 1 }]}
+                onPress={() => {
+                  setShowLinkModal(false);
+                  setLinkPassword('');
+                  setLinkAccountData(null);
+                }}
+                disabled={linkingLoading}
+              >
+                <Text style={styles.linkModalCancelText}>{t('common.cancel', 'Cancel')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.linkModalConfirmButton, { flex: 1 }, linkingLoading && { opacity: 0.8 }]}
+                onPress={handleLinkGoogleAccount}
+                disabled={linkingLoading}
+              >
+                {linkingLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.linkModalConfirmText}>{t('auth.linkAndSignIn', 'Link & Sign In')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -685,6 +863,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+  },
+  langPill: {
+    position: 'absolute',
+    right: 18,
+    zIndex: 20,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#D3E5D8',
+    shadowColor: '#0E3B29',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  langPillText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    color: '#17663F',
   },
   brandPill: {
     flexDirection: 'row',
@@ -866,6 +1065,62 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 14,
     color: '#17663F',
+  },
+  linkModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  linkModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  linkModalTitle: {
+    fontFamily: 'Fraunces_600SemiBold',
+    fontSize: 20,
+    color: '#1C3121',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  linkModalSubtitle: {
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#556358',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  linkModalCancelButton: {
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  linkModalCancelText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#4B5563',
+  },
+  linkModalConfirmButton: {
+    backgroundColor: '#17663F',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  linkModalConfirmText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 });
 

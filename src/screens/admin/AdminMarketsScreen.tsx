@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -27,6 +28,7 @@ import {
 } from '../../components/admin';
 
 export const AdminMarketsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [markets, setMarkets] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export const AdminMarketsScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch markets:', error);
-      Alert.alert('Error', 'Failed to fetch markets.');
+      Alert.alert(t('common.error', 'Error'), t('admin.failedFetchMarkets', 'Failed to fetch markets.'));
     } finally {
       setLoading(false);
     }
@@ -55,21 +57,21 @@ export const AdminMarketsScreen: React.FC = () => {
 
   const handleToggleStatus = (id: string, currentStatus: boolean) => {
     Alert.alert(
-      'Confirm Status Change',
-      `Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this market?`,
+      t('farmer.toggleStatusConfirmTitle', 'Confirm Status Change'),
+      t('farmer.toggleStatusConfirmDesc', `Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this market?`),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Confirm',
+          text: t('common.confirm', 'Confirm'),
           onPress: async () => {
             try {
               setLoading(true);
               await updateAdminMarketStatus(id, !currentStatus);
               await fetchMarkets();
-              Alert.alert('Success', `Market ${currentStatus ? 'deactivated' : 'activated'} successfully.`);
+              Alert.alert(t('common.success', 'Success'), currentStatus ? t('admin.marketDeactivatedSuccess', 'Market deactivated successfully.') : t('admin.marketActivatedSuccess', 'Market activated successfully.'));
             } catch (e) {
               console.log(e);
-              Alert.alert('Error', 'Failed to update status.');
+              Alert.alert(t('common.error', 'Error'), t('admin.failedUpdateStatus', 'Failed to update status.'));
               setLoading(false);
             }
           },
@@ -80,22 +82,22 @@ export const AdminMarketsScreen: React.FC = () => {
 
   const handleDelete = (id: string) => {
     Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this market? This action cannot be undone.',
+      t('common.delete', 'Confirm Delete'),
+      t('admin.confirmDeleteMarket', 'Are you sure you want to delete this market? This action cannot be undone.'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               setLoading(true);
               await deleteAdminMarket(id);
               await fetchMarkets();
-              Alert.alert('Success', 'Market deleted successfully.');
+              Alert.alert(t('common.success', 'Success'), t('admin.marketDeletedSuccess', 'Market deleted successfully.'));
             } catch (e) {
               console.log(e);
-              Alert.alert('Error', 'Failed to delete market.');
+              Alert.alert(t('common.error', 'Error'), t('admin.failedDeleteMarket', 'Failed to delete market.'));
               setLoading(false);
             }
           },
@@ -162,7 +164,7 @@ export const AdminMarketsScreen: React.FC = () => {
           onPress={() => navigation.navigate('AdminAddEditMarket', { market: item })}
         >
           <EditIcon size={14} color={ADMIN_THEME.colors.indigo} />
-          <Text style={styles.editText}>Edit</Text>
+          <Text style={styles.editText}>{t('common.edit', 'Edit')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -179,7 +181,7 @@ export const AdminMarketsScreen: React.FC = () => {
               { color: item.isActive ? ADMIN_THEME.colors.danger : ADMIN_THEME.colors.success },
             ]}
           >
-            {item.isActive ? 'Deactivate' : 'Activate'}
+            {item.isActive ? t('common.deactivate', 'Deactivate') : t('common.activate', 'Activate')}
           </Text>
         </TouchableOpacity>
 
@@ -189,7 +191,7 @@ export const AdminMarketsScreen: React.FC = () => {
           onPress={() => handleDelete(item.id)}
         >
           <TrashIcon size={14} color={ADMIN_THEME.colors.danger} />
-          <Text style={styles.deleteText}>Delete</Text>
+          <Text style={styles.deleteText}>{t('common.delete', 'Delete')}</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -200,13 +202,13 @@ export const AdminMarketsScreen: React.FC = () => {
       {/* 1) TAB ADMIN HEADER WITH SEARCH & NAVY "+" BUTTON */}
       <AdminHeader
         variant="tab"
-        title="Markets"
-        subtitle="All mandis & market hubs"
+        title={t('admin.markets', 'Markets')}
+        subtitle={t('admin.marketsSubtitle', 'All mandis & market hubs')}
         showBackButton={true}
         showSearch={true}
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search by market or location..."
+        searchPlaceholder={t('admin.searchMarketPlaceholder', 'Search by market or location...')}
         rightAction={
           <TouchableOpacity
             activeOpacity={0.7}
@@ -224,8 +226,8 @@ export const AdminMarketsScreen: React.FC = () => {
       ) : filteredMarkets.length === 0 ? (
         <AdminEmptyState
           icon={<StoreIcon size={44} color={ADMIN_THEME.colors.indigo} strokeWidth={1.8} />}
-          title="No markets found"
-          subtitle="There are no markets matching your search."
+          title={t('admin.noMarketsFound', 'No markets found')}
+          subtitle={t('admin.noMarketsMatched', 'There are no markets matching your search.')}
         />
       ) : (
         <FlatList

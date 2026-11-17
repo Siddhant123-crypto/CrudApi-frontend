@@ -40,7 +40,30 @@ export const NotificationService = {
     try {
       await api.put('/notifications/read-all');
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      try {
+        await api.put('/farmer/notifications/read-all');
+      } catch (err2) {
+        console.error('Error marking all notifications as read:', error);
+        throw error;
+      }
+    }
+  },
+  getFarmerNotifications: async (page = 0, size = 10, unreadOnly = false): Promise<any> => {
+    try {
+      const response = await api.get('/farmer/notifications', {
+        params: { page, size, unreadOnly },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching farmer notifications:', error);
+      throw error;
+    }
+  },
+  markFarmerNotificationAsRead: async (notificationId: string): Promise<void> => {
+    try {
+      await api.patch(`/farmer/notifications/${notificationId}/read`);
+    } catch (error) {
+      console.error('Error marking farmer notification as read:', error);
       throw error;
     }
   },

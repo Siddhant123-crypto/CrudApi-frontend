@@ -76,3 +76,12 @@ export const googleLogin = async (idToken: string) => {
   });
   return response.data;
 };
+
+export const linkGoogleAccount = async (email: string, password: string, idToken: string) => {
+  const response = await api.post('/auth/link-google', {
+    email,
+    password,
+    idToken,
+  });
+  return response.data;
+};

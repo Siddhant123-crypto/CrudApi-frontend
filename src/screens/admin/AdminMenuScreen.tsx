@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,38 +11,49 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import { AdminOutlineButton } from '../../components/admin/AdminButtons';
 import { LogoutModal } from '../../components/ui';
+import { useFarmVerificationPendingCount } from '../../hooks/useFarmVerificationPendingCount';
 
 export const AdminMenuScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const { user, logout } = useAuth();
+  const { pendingCount, refresh } = useFarmVerificationPendingCount();
   const [messagesExpanded, setMessagesExpanded] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
+
   const menuItems = [
-    { title: 'Dashboard', icon: 'home-outline', route: 'Home' },
+    { title: t('nav.dashboard', 'Dashboard'), icon: 'home-outline', route: 'Home' },
     {
-      title: 'Farmers & Customers',
+      title: t('admin.farmersAndCustomers', 'Farmers & Customers'),
       icon: 'people-outline',
       route: 'AdminFarmers',
-      params: { title: 'Farmers & Customers' },
+      params: { title: t('admin.farmersAndCustomers', 'Farmers & Customers') },
     },
-    { title: 'Products', icon: 'cube-outline', route: 'AdminProducts' },
-    { title: 'Categories', icon: 'grid-outline', route: 'AdminCategories' },
-    { title: 'Orders', icon: 'receipt-outline', route: 'AdminOrders' },
-    { title: 'Messages', icon: 'chatbubbles-outline', isDropdown: true },
-    { title: 'Farm Verification', icon: 'shield-checkmark-outline', route: 'AdminFarmVerification' },
+    { title: t('nav.products', 'Products'), icon: 'cube-outline', route: 'AdminProducts' },
+    { title: t('nav.categories', 'Categories'), icon: 'grid-outline', route: 'AdminCategories' },
+    { title: t('nav.orders', 'Orders'), icon: 'receipt-outline', route: 'AdminOrders' },
+    { title: t('profile.changeLanguage', 'Change Language'), icon: 'language-outline', route: 'LanguageSelection' },
+    { title: t('nav.messages', 'Messages'), icon: 'chatbubbles-outline', isDropdown: true },
+    { title: t('admin.farmVerification', 'Farm Verification'), icon: 'shield-checkmark-outline', route: 'AdminFarmVerification' },
   ];
 
   const handleLogout = () => {
     setLogoutModalVisible(true);
   };
 
-  const adminName = user?.name || user?.email || 'Administrator';
+  const adminName = user?.name || user?.email || t('common.administrator', 'Administrator');
   const adminInitial = (adminName.charAt(0) || 'A').toUpperCase();
 
   return (
@@ -68,7 +79,7 @@ export const AdminMenuScreen: React.FC = () => {
               <Text style={styles.headerAdminName} numberOfLines={1}>
                 {adminName}
               </Text>
-              <Text style={styles.headerAdminRole}>ADMIN PORTAL</Text>
+              <Text style={styles.headerAdminRole}>{t('admin.adminPortal', 'ADMIN PORTAL')}</Text>
             </View>
             <TouchableOpacity
               onPress={() => navigation.goBack()}
@@ -93,6 +104,8 @@ export const AdminMenuScreen: React.FC = () => {
                 onPress={() => {
                   if (item.isDropdown) {
                     setMessagesExpanded(!messagesExpanded);
+                  } else if (item.route === 'LanguageSelection') {
+                    navigation.navigate('LanguageSelection', { fromSettings: true });
                   } else if (item.route === 'Home') {
                     navigation.navigate('AdminMain', { screen: 'Home' });
                   } else {
@@ -103,6 +116,9 @@ export const AdminMenuScreen: React.FC = () => {
                 <View style={styles.menuItemLeft}>
                   <View style={styles.iconContainer}>
                     <Ionicons name={item.icon as any} size={18} color="#4F5BD5" />
+                    {item.route === 'AdminFarmVerification' && pendingCount > 0 && (
+                      <View style={styles.redDot} />
+                    )}
                   </View>
                   <Text style={styles.menuText}>{item.title}</Text>
                 </View>
@@ -134,7 +150,7 @@ export const AdminMenuScreen: React.FC = () => {
                       color="#4F5BD5"
                       style={styles.dropdownIcon}
                     />
-                    <Text style={styles.dropdownText}>Farmer Message</Text>
+                    <Text style={styles.dropdownText}>{t('admin.farmerMessage', 'Farmer Message')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.dropdownItem, { borderBottomWidth: 0 }]}
@@ -149,7 +165,7 @@ export const AdminMenuScreen: React.FC = () => {
                       color="#4F5BD5"
                       style={styles.dropdownIcon}
                     />
-                    <Text style={styles.dropdownText}>Customer Message</Text>
+                    <Text style={styles.dropdownText}>{t('admin.customerMessage', 'Customer Message')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -159,7 +175,7 @@ export const AdminMenuScreen: React.FC = () => {
           {/* Logout Button */}
           <View style={styles.logoutWrapper}>
             <AdminOutlineButton
-              title="Log Out"
+              title={t('profile.logout', 'Log Out')}
               icon={<Ionicons name="log-out-outline" size={18} color="#D64545" />}
               onPress={handleLogout}
               style={styles.logoutBtn}
@@ -274,6 +290,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    position: 'relative',
+  },
+  redDot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E53935',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   menuText: {
     fontFamily: AdminFonts.semiBold,

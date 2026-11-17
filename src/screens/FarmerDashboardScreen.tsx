@@ -16,11 +16,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { useNotification } from '../context/NotificationContext';
 import { getAllProducts } from '../services/productService';
 import { getFarmerOrders, getFarmerItemsStatus } from '../services/orderService';
 import { getFarmerById } from '../services/farmerService';
-import api, { BASE_URL } from '../services/api';
+import api, { BASE_URL, resolveMediaUrl } from '../services/api';
 
 import { FARMER_THEME } from '../constants/farmerTheme';
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
@@ -29,6 +30,8 @@ import { FarmerSectionHeader } from '../components/farmer/FarmerSectionHeader';
 import { FarmerCategoryTile } from '../components/farmer/FarmerCategoryTile';
 import { QuickActionTile } from '../components/farmer/QuickActionTile';
 import { FarmerShortCard } from '../components/farmer/FarmerShortCard';
+import { FarmerShortsSkeleton } from '../components/shorts/FarmerShortsSkeleton';
+import { getFarmerShorts, FarmerShortItem } from '../services/shortsService';
 import { FarmerEmptyOrders } from '../components/farmer/FarmerEmptyOrders';
 import { FarmerOrderCard } from '../components/farmer/FarmerOrderCard';
 import {
@@ -47,13 +50,8 @@ const SAMPLE_CATEGORIES = [
   { name: 'Pulses' },
 ];
 
-const SAMPLE_SHORTS = [
-  { id: 'short-1', handle: '@larry wang', thumbnail: require('../../assets/vagis4.png') },
-  { id: 'short-2', handle: '@janesha patil', thumbnail: require('../../assets/vagis5.png') },
-  { id: 'short-3', handle: '@ramesh kumar', thumbnail: require('../../assets/vagis6.png') },
-];
-
 export const FarmerDashboardScreen = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotification();
   const { user, logout } = useAuth();
@@ -61,6 +59,8 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   const [, setProducts] = useState<any[]>([]);
   const [allGlobalProducts, setAllGlobalProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [farmShorts, setFarmShorts] = useState<FarmerShortItem[]>([]);
+  const [loadingShorts, setLoadingShorts] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -86,6 +86,19 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
     }
   };
 
+  const fetchFarmShorts = async () => {
+    try {
+      setLoadingShorts(true);
+      const res = await getFarmerShorts(0, 6);
+      setFarmShorts(res.items || []);
+    } catch (e) {
+      console.log('Error fetching farm shorts in FarmerDashboard:', e);
+      setFarmShorts([]);
+    } finally {
+      setLoadingShorts(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const [allProducts, farmerOrders, farmerDetails] = await Promise.all([
@@ -93,6 +106,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
         getFarmerOrders(),
         user?.farmerId ? getFarmerById(user.farmerId).catch(() => null) : Promise.resolve(null),
       ]);
+      fetchFarmShorts();
 
       if (farmerDetails) {
         if (farmerDetails.status === 'INACTIVE' && farmerDetails.blockReason) {
@@ -128,6 +142,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
     useCallback(() => {
       fetchData();
       fetchCategories();
+      fetchFarmShorts();
     }, [user?.farmerId])
   );
 
@@ -153,8 +168,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setWeatherRefreshTrigger((prev) => prev + 1);
-    await fetchData();
-    await fetchCategories();
+    await Promise.all([fetchData(), fetchCategories(), fetchFarmShorts()]);
     setRefreshing(false);
   }, []);
 
@@ -220,7 +234,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
           />
 
           {/* 4) FARM CATEGORIES SECTION */}
-          <FarmerSectionHeader title="Farm categories" />
+          <FarmerSectionHeader title={t('home.categories', 'Farm categories')} />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -239,28 +253,28 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
           </ScrollView>
 
           {/* 5) QUICK ACTIONS SECTION */}
-          <FarmerSectionHeader title="Quick actions" />
+          <FarmerSectionHeader title={t('farmer.quickActions', 'Quick actions')} />
           <View style={styles.quickActionsRow}>
             <QuickActionTile
-              label="Add"
+              label={t('farmer.addProduct', 'Add')}
               boxBg="#DDF3E4"
               icon={<PlusIcon size={20} color="#17663F" strokeWidth={1.9} />}
               onPress={() => navigation.navigate('AddProduct')}
             />
             <QuickActionTile
-              label="My product"
+              label={t('farmer.myProducts', 'My products')}
               boxBg="#E4F5D6"
               icon={<LeafIcon size={20} color="#2F7A3A" strokeWidth={1.9} />}
               onPress={() => navigation.navigate('MyProducts')}
             />
             <QuickActionTile
-              label="Orders"
+              label={t('orders.myOrders', 'Orders')}
               boxBg="#FFF0CC"
               icon={<ReceiptIcon size={20} color="#C98A1B" strokeWidth={1.9} />}
               onPress={() => navigation.navigate('Orders')}
             />
             <QuickActionTile
-              label="Market"
+              label={t('nav.market', 'Market')}
               boxBg="#D7F0EC"
               icon={<StoreIcon size={20} color="#1F7F78" strokeWidth={1.9} />}
               onPress={() => navigation.navigate('Market')}
@@ -268,47 +282,53 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
           </View>
 
           {/* 6) FARMER SHORTS SECTION */}
-          <FarmerSectionHeader
-            title="Farmer shorts"
-            linkText="Watch all"
-            onLinkPress={() => navigation.navigate('FarmerShorts')}
-          />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.bleedScroll}
-            contentContainerStyle={styles.shortsContent}
-          >
-            {videoProducts.length > 0
-              ? videoProducts.map((product, idx) => (
+          {loadingShorts ? (
+            <>
+              <FarmerSectionHeader
+                title={t('farmer.farmerShorts', 'Farmer shorts')}
+                linkText={t('common.viewAll', 'Watch all')}
+                onLinkPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <FarmerShortsSkeleton />
+            </>
+          ) : farmShorts.length > 0 ? (
+            <>
+              <FarmerSectionHeader
+                title={t('farmer.farmerShorts', 'Farmer shorts')}
+                linkText={t('common.viewAll', 'Watch all')}
+                onLinkPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.bleedScroll}
+                contentContainerStyle={styles.shortsContent}
+              >
+                {farmShorts.map((shortItem, idx) => (
                   <FarmerShortCard
-                    key={`video-${product.productId || idx}`}
-                    id={product.productId}
-                    handle={product.farmerName || user?.name || 'larry wang'}
-                    thumbnailUrl={
-                      product.productPhoto
-                        ? `${BASE_URL}/product/image/${product.productPhoto}`
-                        : null
+                    key={`farm-short-${shortItem.id || idx}`}
+                    id={shortItem.id}
+                    handle={shortItem.farmerName || 'Farmer'}
+                    farmName={shortItem.farmName}
+                    videoUrl={shortItem.playbackUrl}
+                    thumbnailUrl={shortItem.thumbnailUrl}
+                    index={idx}
+                    onPress={() =>
+                      navigation.navigate('FarmerShorts', {
+                        initialIndex: idx,
+                        initialShorts: farmShorts,
+                      })
                     }
-                    index={idx}
-                    onPress={() => navigation.navigate('FarmerShorts')}
-                  />
-                ))
-              : SAMPLE_SHORTS.map((short, idx) => (
-                  <FarmerShortCard
-                    key={short.id}
-                    handle={short.handle}
-                    thumbnailUrl={short.thumbnail}
-                    index={idx}
-                    onPress={() => navigation.navigate('FarmerShorts')}
                   />
                 ))}
-          </ScrollView>
+              </ScrollView>
+            </>
+          ) : null}
 
           {/* 7) RECENT ORDERS SECTION */}
           <FarmerSectionHeader
-            title="Recent orders"
-            linkText="View all"
+            title={t('farmer.recentOrders', 'Recent orders')}
+            linkText={t('common.viewAll', 'View all')}
             onLinkPress={() => navigation.navigate('Orders')}
           />
           {pendingOrders.length === 0 ? (
@@ -364,13 +384,13 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
             {/* Micro Status Chip */}
             <View style={styles.modalStatusPill}>
               <Ionicons name="alert-circle" size={13} color="#DC2626" />
-              <Text style={styles.modalStatusPillText}>RESTRICTED ACCESS</Text>
+              <Text style={styles.modalStatusPillText}>{t('farmer.restrictedAccess', 'RESTRICTED ACCESS')}</Text>
             </View>
 
             {/* Title & Message */}
-            <Text style={styles.modalTitle}>Account Blocked</Text>
+            <Text style={styles.modalTitle}>{t('farmer.accountBlocked', 'Account Blocked')}</Text>
             <Text style={styles.modalMessage}>
-              Your account access has been restricted by the administration. You can contact support to review and restore your access.
+              {t('farmer.accountBlockedDesc', 'Your account access has been restricted by the administration. You can contact support to review and restore your access.')}
             </Text>
 
             {/* Notice Snapshot Box */}
@@ -380,7 +400,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
                   <Ionicons name="document-text-outline" size={16} color="#17663F" />
                 </View>
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.snapshotLabel}>Reason for Block</Text>
+                  <Text style={styles.snapshotLabel}>{t('farmer.reasonForBlock', 'Reason for Block')}</Text>
                   <Text style={styles.snapshotValue}>{blockReason || 'Account suspended by administrator'}</Text>
                 </View>
               </View>
@@ -393,7 +413,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
                       <Ionicons name="calendar-outline" size={16} color="#17663F" />
                     </View>
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.snapshotLabel}>Blocked Until</Text>
+                      <Text style={styles.snapshotLabel}>{t('farmer.blockedUntil', 'Blocked Until')}</Text>
                       <Text style={styles.snapshotValue}>{blockedUntil}</Text>
                     </View>
                   </View>
@@ -418,7 +438,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
                   style={styles.btnGradient}
                 >
                   <Ionicons name="chatbubbles-outline" size={19} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={styles.btnText}>Contact Admin</Text>
+                  <Text style={styles.btnText}>{t('support.contactAdmin', 'Contact Admin')}</Text>
                   {supportUnreadCount > 0 && (
                     <View style={styles.unreadBadge}>
                       <Text style={styles.unreadBadgeText}>
@@ -444,7 +464,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
                   style={styles.btnGradient}
                 >
                   <Ionicons name="log-out-outline" size={19} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={styles.btnText}>Log Out</Text>
+                  <Text style={styles.btnText}>{t('profile.logout', 'Log Out')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -483,6 +503,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
     paddingBottom: 4,
+  },
+  emptyShortsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  emptyShortsText: {
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 13,
+    color: '#8E9A90',
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 18,
   },
   ordersListContainer: {
     marginTop: 2,

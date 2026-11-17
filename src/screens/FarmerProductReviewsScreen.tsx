@@ -20,8 +20,10 @@ import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerEmptyState } from '../components/farmer/FarmerUI';
 import { FARMER_THEME } from '../constants/farmerTheme';
 import { Review } from '../types';
+import { useTranslation } from 'react-i18next';
 
 export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
   const product = route.params?.product;
   const [allReviews, setAllReviews] = useState<Review[]>([]);
   const [filteredReviews, setFilteredReviews] = useState<Review[]>([]);
@@ -48,7 +50,7 @@ export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
       }
     } catch (error: any) {
       console.log('Error fetching farmer reviews:', error);
-      Alert.alert('Error', 'Failed to load reviews. Please try again.');
+      Alert.alert(t('common.error'), t('reviews.failedLoadReviews'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -69,22 +71,22 @@ export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
       <StatusBar barStyle="light-content" backgroundColor="#1F7A4D" />
       <FarmerHeader
         variant="inner"
-        title="Product Reviews"
+        title={t('reviews.productReviews')}
         onBackPress={() => navigation.goBack()}
       />
 
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#1F7A4D" />
-          <Text style={styles.loadingText}>Loading reviews...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       ) : filteredReviews.length === 0 ? (
         <View style={styles.centerContainer}>
           <FarmerEmptyState
             icon={<Ionicons name="chatbox-ellipses-outline" size={48} color="#17663F" />}
-            title="No Reviews Yet"
-            subtitle="Your customers haven't shared their Farm2Home experience yet."
-            buttonTitle="Check Again"
+            title={t('reviews.noReviewsYet')}
+            subtitle={t('reviews.noReviewsYetFarmerDesc')}
+            buttonTitle={t('common.retry')}
             onButtonPress={() => fetchReviews()}
           />
         </View>
@@ -102,11 +104,11 @@ export const FarmerProductReviewsScreen = ({ route, navigation }: any) => {
                   <View style={styles.ratingBox}>
                     <Text style={styles.averageRatingText}>{averageRating.toFixed(1)}</Text>
                     <StarRating rating={Math.round(averageRating)} size={18} disabled={true} variant="farmer" />
-                    <Text style={styles.totalReviewsText}>{totalReviews} {totalReviews === 1 ? 'Review' : 'Reviews'}</Text>
+                    <Text style={styles.totalReviewsText}>{totalReviews} {totalReviews === 1 ? t('reviews.reviewOne') : t('reviews.reviewOther')}</Text>
                   </View>
                   <View style={styles.summaryInfo}>
-                    <Text style={styles.summaryTitle}>Overall Product Rating</Text>
-                    <Text style={styles.summarySub}>Based on verified customer orders.</Text>
+                    <Text style={styles.summaryTitle}>{t('reviews.overallProductRating')}</Text>
+                    <Text style={styles.summarySub}>{t('reviews.basedOnVerifiedOrders')}</Text>
                   </View>
                 </View>
               </FarmerCard>

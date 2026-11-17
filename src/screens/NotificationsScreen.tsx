@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { NotificationService } from '../services/NotificationService';
 import { NotificationResponse } from '../types';
 import { NotificationCard } from '../components/NotificationCard';
@@ -34,8 +35,9 @@ import { AdminEmptyState } from '../components/admin/AdminEmptyState';
 import { ADMIN_THEME, AdminFonts } from '../constants/adminTheme';
 
 const NotificationsScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
-  const { refreshUnreadCount, markAllAsRead: contextMarkAllAsRead } = useNotification();
+  const { refreshUnreadCount, markAllAsRead: contextMarkAllAsRead, decrementUnread } = useNotification();
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,9 +46,30 @@ const NotificationsScreen = () => {
 
   const fetchNotifications = async () => {
     try {
-      const data = await NotificationService.getNotifications();
-      setNotifications(data || []);
+      let rawData: any;
+      if (user?.role === 'FARMER') {
+        try {
+          rawData = await NotificationService.getFarmerNotifications(0, 50, false);
+        } catch {
+          rawData = await NotificationService.getNotifications();
+        }
+      } else {
+        rawData = await NotificationService.getNotifications();
+      }
+
+      const list = Array.isArray(rawData)
+        ? rawData
+        : rawData?.content || rawData?.data || [];
       setError(null);
+
+      // When the farmer views the notifications screen, automatically mark unread notifications as read
+      const hasUnread = list.some((n: any) => !n.isRead);
+      if (hasUnread) {
+        setNotifications(list.map((n: any) => ({ ...n, isRead: true })));
+        contextMarkAllAsRead().catch(() => {});
+      } else {
+        setNotifications(list);
+      }
     } catch (err: any) {
       if (err.response?.status === 401 || err.response?.status === 403) {
         setNotifications([]);
@@ -85,6 +108,50 @@ const NotificationsScreen = () => {
   const isAdmin = user?.role === 'ADMIN';
 
   const handleNotificationPress = (notification: NotificationResponse) => {
+    // Mark as read immediately and decrement badge
+    if (!notification.isRead) {
+      if (isFarmer) {
+        NotificationService.markFarmerNotificationAsRead(notification.notificationId).catch(() => {});
+      } else {
+        NotificationService.markAsRead(notification.notificationId).catch(() => {});
+      }
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.notificationId === notification.notificationId ? { ...n, isRead: true } : n
+        )
+      );
+      decrementUnread();
+    }
+
+    if (isFarmer) {
+      if (
+        notification.type === 'ORDER_ADDRESS_CHANGED' ||
+        notification.notificationType === 'ORDER_ADDRESS_CHANGED' ||
+        notification.orderId
+      ) {
+        if (notification.orderId) {
+          navigation.navigate('FarmerOrderDetails', {
+            orderId: notification.orderId,
+            addressUpdated: true,
+            previousAddress: notification.previousAddress,
+            newAddress: notification.newAddress,
+          });
+          return;
+        }
+      }
+    }
+
+    if (
+      isAdmin &&
+      (notification.title === 'Farmer Self-Deactivated' ||
+        notification.message?.toLowerCase().includes('deactivated their account'))
+    ) {
+      if (notification.senderId) {
+        navigation.navigate('AdminFarmerDetails', { farmerId: notification.senderId });
+        return;
+      }
+    }
+
     if (
       isAdmin &&
       notification.type === 'ADMIN' &&
@@ -156,25 +223,29 @@ const NotificationsScreen = () => {
 
   const handleNotificationDelete = (notification: NotificationResponse) => {
     import('react-native').then(({ Alert }) => {
-      Alert.alert('Delete Message', 'Are you sure you want to delete this message?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setNotifications((prev) =>
-                prev.filter((n) => n.notificationId !== notification.notificationId)
-              );
-              const api = (await import('../services/api')).default;
-              await api.delete(`/notifications/${notification.notificationId}`);
-            } catch (error) {
-              console.log('Failed to delete notification:', error);
-              fetchNotifications();
-            }
+      Alert.alert(
+        t('notifications.deleteMessageTitle', 'Delete Message'),
+        t('notifications.deleteMessageConfirm', 'Are you sure you want to delete this message?'),
+        [
+          { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+          {
+            text: t('common.delete', 'Delete'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setNotifications((prev) =>
+                  prev.filter((n) => n.notificationId !== notification.notificationId)
+                );
+                const api = (await import('../services/api')).default;
+                await api.delete(`/notifications/${notification.notificationId}`);
+              } catch (error) {
+                console.log('Failed to delete notification:', error);
+                fetchNotifications();
+              }
+            },
           },
-        },
-      ]);
+        ]
+      );
     });
   };
 
@@ -185,8 +256,8 @@ const NotificationsScreen = () => {
       <View style={styles.emptyIconContainer}>
         <Ionicons name="notifications-off-outline" size={64} color="#9CA3AF" />
       </View>
-      <Text style={styles.emptyTitle}>You're all caught up</Text>
-      <Text style={styles.emptySubtitle}>No new notifications right now.</Text>
+      <Text style={styles.emptyTitle}>{t('notifications.youreAllCaughtUp', "You're all caught up")}</Text>
+      <Text style={styles.emptySubtitle}>{t('notifications.noNewNotifications', 'No new notifications right now.')}</Text>
     </View>
   );
 
@@ -206,11 +277,11 @@ const NotificationsScreen = () => {
 
     const sectionedData: any[] = [];
     if (todayItems.length > 0) {
-      sectionedData.push({ type: 'header', title: 'TODAY' });
+      sectionedData.push({ type: 'header', title: t('notifications.today', 'TODAY') });
       todayItems.forEach((i) => sectionedData.push({ type: 'item', data: i }));
     }
     if (earlierItems.length > 0) {
-      sectionedData.push({ type: 'header', title: 'EARLIER' });
+      sectionedData.push({ type: 'header', title: t('notifications.earlier', 'EARLIER') });
       earlierItems.forEach((i) => sectionedData.push({ type: 'item', data: i }));
     }
 
@@ -220,8 +291,8 @@ const NotificationsScreen = () => {
       <PageBackground style={{ flex: 1 }}>
         <ThemedHeader
           variant="inner"
-          title="Notifications"
-          subtitle={unreadCount > 0 ? `${unreadCount} unread` : undefined}
+          title={t('notifications.title', 'Notifications')}
+          subtitle={unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : undefined}
           onBackPress={() => navigation.goBack()}
           rightAction={
             notifications.some((n) => !n.isRead) ? (
@@ -230,7 +301,7 @@ const NotificationsScreen = () => {
                 style={styles.customerMarkReadBtn}
                 activeOpacity={0.8}
               >
-                <Text style={styles.customerMarkReadText}>Mark read</Text>
+                <Text style={styles.customerMarkReadText}>{t('notifications.markRead', 'Mark read')}</Text>
               </TouchableOpacity>
             ) : undefined
           }
@@ -245,7 +316,7 @@ const NotificationsScreen = () => {
             <View style={styles.centerContainer}>
               <Text style={styles.errorText}>{error}</Text>
               <TouchableOpacity style={styles.retryButton} onPress={fetchNotifications}>
-                <Text style={styles.retryText}>Retry</Text>
+                <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -293,8 +364,8 @@ const NotificationsScreen = () => {
                   icon={
                     <Ionicons name="notifications-outline" size={44} color={THEME.colors.accent} />
                   }
-                  title="You're all caught up"
-                  subtitle="No new notifications right now."
+                  title={t('notifications.youreAllCaughtUp', "You're all caught up")}
+                  subtitle={t('notifications.noNewNotifications', 'No new notifications right now.')}
                 />
               }
               refreshControl={
@@ -328,11 +399,11 @@ const NotificationsScreen = () => {
 
     const sectionedData: any[] = [];
     if (todayItems.length > 0) {
-      sectionedData.push({ type: 'header', title: 'TODAY' });
+      sectionedData.push({ type: 'header', title: t('notifications.today', 'TODAY') });
       todayItems.forEach((i) => sectionedData.push({ type: 'item', data: i }));
     }
     if (earlierItems.length > 0) {
-      sectionedData.push({ type: 'header', title: 'EARLIER' });
+      sectionedData.push({ type: 'header', title: t('notifications.earlier', 'EARLIER') });
       earlierItems.forEach((i) => sectionedData.push({ type: 'item', data: i }));
     }
 
@@ -342,8 +413,8 @@ const NotificationsScreen = () => {
       <FarmerPageBackground>
         <FarmerHeader
           variant="inner"
-          title="Notifications"
-          subtitle={unreadCount > 0 ? `${unreadCount} unread` : undefined}
+          title={t('notifications.title', 'Notifications')}
+          subtitle={unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : undefined}
           onBackPress={() => navigation.goBack()}
           rightComponent={
             notifications.some((n) => !n.isRead) ? (
@@ -352,7 +423,7 @@ const NotificationsScreen = () => {
                 style={styles.farmerMarkReadBtn}
                 activeOpacity={0.8}
               >
-                <Text style={styles.farmerMarkReadText}>Mark read</Text>
+                <Text style={styles.farmerMarkReadText}>{t('notifications.markRead', 'Mark read')}</Text>
               </TouchableOpacity>
             ) : undefined
           }
@@ -373,7 +444,7 @@ const NotificationsScreen = () => {
                 ]}
                 onPress={fetchNotifications}
               >
-                <Text style={styles.retryText}>Retry</Text>
+                <Text style={styles.retryText}>{t('common.retry', 'Retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -425,8 +496,8 @@ const NotificationsScreen = () => {
                       color={FARMER_THEME.colors.emeraldPrimary}
                     />
                   }
-                  title="You're all caught up"
-                  subtitle="No new notifications right now."
+                  title={t('notifications.youreAllCaughtUp', "You're all caught up")}
+                  subtitle={t('notifications.noNewNotifications', 'No new notifications right now.')}
                 />
               }
               refreshControl={
@@ -459,11 +530,11 @@ const NotificationsScreen = () => {
 
   const sectionedData: any[] = [];
   if (todayItems.length > 0) {
-    sectionedData.push({ type: 'header', title: 'TODAY' });
+    sectionedData.push({ type: 'header', title: t('notifications.today', 'TODAY') });
     todayItems.forEach((i) => sectionedData.push({ type: 'item', data: i }));
   }
   if (earlierItems.length > 0) {
-    sectionedData.push({ type: 'header', title: 'EARLIER' });
+    sectionedData.push({ type: 'header', title: t('notifications.earlier', 'EARLIER') });
     earlierItems.forEach((i) => sectionedData.push({ type: 'item', data: i }));
   }
 
@@ -473,8 +544,8 @@ const NotificationsScreen = () => {
     <AdminPageBackground>
       <AdminHeader
         variant="inner"
-        title="Notifications"
-        subtitle={unreadCount > 0 ? `${unreadCount} unread` : 'All updates'}
+        title={t('notifications.title', 'Notifications')}
+        subtitle={unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : t('notifications.allUpdates', 'All updates')}
         onBack={() => navigation.goBack()}
         rightAction={
           <View style={styles.adminHeaderActions}>
@@ -484,7 +555,7 @@ const NotificationsScreen = () => {
                 style={styles.adminMarkReadBtn}
                 activeOpacity={0.8}
               >
-                <Text style={styles.adminMarkReadText}>Mark read</Text>
+                <Text style={styles.adminMarkReadText}>{t('notifications.markRead', 'Mark read')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -507,7 +578,7 @@ const NotificationsScreen = () => {
           <View style={styles.centerContainer}>
             <Text style={styles.adminErrorText}>{error}</Text>
             <TouchableOpacity style={styles.adminRetryButton} onPress={fetchNotifications}>
-              <Text style={styles.adminRetryText}>Retry</Text>
+              <Text style={styles.adminRetryText}>{t('common.retry', 'Retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -553,8 +624,8 @@ const NotificationsScreen = () => {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <AdminEmptyState
-                title="No Notifications"
-                message="You're all caught up. No new notifications right now."
+                title={t('notifications.noNotifications', 'No Notifications')}
+                message={t('notifications.noNewNotifications', "You're all caught up. No new notifications right now.")}
                 icon={<Ionicons name="notifications-outline" size={40} color="#4F5BD5" />}
               />
             }

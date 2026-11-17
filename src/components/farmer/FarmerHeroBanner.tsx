@@ -13,6 +13,7 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 
 interface FarmerHeroBannerProps {
@@ -41,6 +42,7 @@ const IMAGE_ASSETS = FARMER_HERO_IMAGES.map((source) => {
 export const FarmerHeroBanner: React.FC<FarmerHeroBannerProps> = ({
   onAddProductPress,
 }) => {
+  const { t } = useTranslation();
   const isFocused = useIsFocused();
   const appState = useRef(AppState.currentState);
 
@@ -207,15 +209,15 @@ export const FarmerHeroBanner: React.FC<FarmerHeroBannerProps> = ({
         <View style={styles.textBlock} pointerEvents="box-none">
           {/* Chip */}
           <View style={styles.chip}>
-            <Text style={styles.chipText}>YOUR FARM</Text>
+            <Text style={styles.chipText}>{t('farmer.yourFarm', 'YOUR FARM').toUpperCase()}</Text>
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Farm{'\n'}Performance</Text>
+          <Text style={styles.title}>{t('farmer.farmPerformance', 'Farm\nPerformance')}</Text>
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            Manage your stock & orders
+            {t('farmer.manageStockOrders', 'Manage your stock & orders')}
           </Text>
 
           {/* Add product button */}
@@ -230,7 +232,7 @@ export const FarmerHeroBanner: React.FC<FarmerHeroBannerProps> = ({
               end={{ x: 0.9, y: 0.9 }}
               style={styles.addProductBtn}
             >
-              <Text style={styles.addProductText}>Add product</Text>
+              <Text style={styles.addProductText}>{t('farmer.addProduct', 'Add product')}</Text>
               <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
                 <Path
                   d="M12 5v14M5 12h14"

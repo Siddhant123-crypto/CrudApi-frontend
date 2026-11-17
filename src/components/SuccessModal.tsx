@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { THEME } from '../constants/theme';
 import { PrimaryButton } from './ui/Buttons';
 
@@ -11,6 +12,7 @@ interface SuccessModalProps {
 }
 
 const SuccessModal: React.FC<SuccessModalProps> = ({ visible, message, onClose }) => {
+  const { t } = useTranslation();
   return (
     <Modal
       transparent
@@ -23,10 +25,10 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ visible, message, onClose }
           <View style={styles.iconCircle}>
             <Ionicons name="checkmark-circle" size={48} color={THEME.colors.success} />
           </View>
-          <Text style={styles.title}>Success!</Text>
+          <Text style={styles.title}>{t('common.success', 'Success!')}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.buttonWrapper}>
-            <PrimaryButton title="Continue" onPress={onClose} />
+            <PrimaryButton title={t('common.continue', 'Continue')} onPress={onClose} />
           </View>
         </View>
       </View>

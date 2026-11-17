@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { THEME } from '../../constants/theme';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 import { AdminFonts } from '../../constants/adminTheme';
+import { formatOrderStatus } from '../../utils/statusUtils';
 
 interface OrderStatusBadgeProps {
   status: string;
@@ -10,8 +12,11 @@ interface OrderStatusBadgeProps {
 }
 
 export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, variant = 'default' }) => {
+  const { t } = useTranslation();
+  const localizedLabel = formatOrderStatus(status, t);
+  const s = (status || '').toUpperCase().replace(/\s+/g, '_');
+
   if (variant === 'admin') {
-    const s = (status || '').toUpperCase().replace(/\s+/g, '_');
     let color = '#5B6580';
     let bgColor = '#EEF0F7';
     if (s === 'DELIVERED') {
@@ -34,7 +39,7 @@ export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, vari
     return (
       <View style={[styles.adminBadge, { backgroundColor: bgColor }]}>
         <Text style={[styles.adminText, { color }]}>
-          {(status || '').replace(/_/g, ' ').toUpperCase()}
+          {localizedLabel.toUpperCase()}
         </Text>
       </View>
     );
@@ -43,36 +48,32 @@ export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, vari
   if (variant === 'farmer') {
     let color = FARMER_THEME.colors.warning;
     let bgColor = FARMER_THEME.colors.warningBg;
-    let label = 'Pending';
 
-    switch (status) {
+    switch (s) {
       case 'PENDING':
-        label = 'Pending';
         color = '#B8860B';
         bgColor = '#FFF4DD';
         break;
       case 'CONFIRMED':
-        label = 'Confirmed';
         color = '#1F7A4D';
         bgColor = '#DDF3E4';
         break;
       case 'PROCESSING':
-        label = 'Processing';
+      case 'PACKED':
         color = '#1F7F78';
         bgColor = '#D7F0EC';
         break;
       case 'OUT_FOR_DELIVERY':
-        label = 'Out for Delivery';
+      case 'DISPATCHED':
+      case 'SHIPPED':
         color = '#C2561A';
         bgColor = '#FFEDD5';
         break;
       case 'DELIVERED':
-        label = 'Delivered';
         color = '#2E7D4F';
         bgColor = '#E3F3E8';
         break;
       case 'CANCELLED':
-        label = 'Cancelled';
         color = '#C0392B';
         bgColor = '#FDE6E2';
         break;
@@ -80,7 +81,7 @@ export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, vari
 
     return (
       <View style={[styles.farmerBadge, { backgroundColor: bgColor }]}>
-        <Text style={[styles.farmerText, { color }]}>{label}</Text>
+        <Text style={[styles.farmerText, { color }]}>{localizedLabel}</Text>
       </View>
     );
   }
@@ -88,36 +89,32 @@ export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, vari
   if (variant === 'customer') {
     let color = THEME.colors.warning;
     let bgColor = THEME.colors.warningBg;
-    let label = 'Pending';
 
-    switch (status) {
+    switch (s) {
       case 'PENDING':
-        label = 'Pending';
         color = THEME.colors.accentDeep;
         bgColor = THEME.colors.chipBg;
         break;
       case 'CONFIRMED':
-        label = 'Confirmed';
         color = '#B85814';
         bgColor = '#FFEBD6';
         break;
       case 'PROCESSING':
-        label = 'Processing';
+      case 'PACKED':
         color = THEME.colors.accent;
         bgColor = '#FFF4DD';
         break;
       case 'OUT_FOR_DELIVERY':
-        label = 'Out for Delivery';
+      case 'DISPATCHED':
+      case 'SHIPPED':
         color = '#C2561A';
         bgColor = '#FFF0E5';
         break;
       case 'DELIVERED':
-        label = 'Delivered';
         color = THEME.colors.success;
         bgColor = THEME.colors.successBg;
         break;
       case 'CANCELLED':
-        label = 'Cancelled';
         color = THEME.colors.error;
         bgColor = THEME.colors.errorBg;
         break;
@@ -125,49 +122,45 @@ export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, vari
 
     return (
       <View style={[styles.customerBadge, { backgroundColor: bgColor }]}>
-        <Text style={[styles.customerText, { color }]}>{label}</Text>
+        <Text style={[styles.customerText, { color }]}>{localizedLabel}</Text>
       </View>
     );
   }
 
   let color = '#FFA000';
   let bgColor = '#FFF8E1';
-  let label = 'Pending';
-  switch (status) {
+  switch (s) {
     case 'PENDING':
-      label = 'Pending';
       color = '#FFA000';
       bgColor = '#FFF8E1';
       break;
     case 'CONFIRMED':
-      label = 'Confirmed';
       color = '#1E88E5';
       bgColor = '#E3F2FD';
       break;
     case 'PROCESSING':
-      label = 'Processing';
+    case 'PACKED':
       color = '#8E24AA';
       bgColor = '#F3E5F5';
       break;
     case 'OUT_FOR_DELIVERY':
-      label = 'Out for Delivery';
+    case 'DISPATCHED':
+    case 'SHIPPED':
       color = '#00897B';
       bgColor = '#E0F2F1';
       break;
     case 'DELIVERED':
-      label = 'Delivered';
       color = '#43A047';
       bgColor = '#E8F5E9';
       break;
     case 'CANCELLED':
-      label = 'Cancelled';
       color = '#C62828';
       bgColor = '#FFCDD2';
       break;
   }
   return (
     <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.text, { color }]}>{label}</Text>
+      <Text style={[styles.text, { color }]}>{localizedLabel}</Text>
     </View>
   );
 };
@@ -215,4 +208,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
 });
-

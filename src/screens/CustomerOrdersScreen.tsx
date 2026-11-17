@@ -27,8 +27,10 @@ import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { ThemedChip } from '../components/ui/ThemedChip';
 import { Card } from '../components/ui/Card';
+import { useTranslation } from 'react-i18next';
 import { THEME } from '../constants/theme';
 import { ChevronRightIcon } from '../components/CustomerIcons';
+import { formatDate, formatCurrency } from '../utils/formatters';
 
 const formatDisplayPrice = (val: any) => {
   const num = Number(val);
@@ -40,13 +42,18 @@ const formatDisplayPrice = (val: any) => {
 };
 
 const CustomerOrdersScreen = ({navigation}: any) => {
+  const { t } = useTranslation();
   const {user} = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('Ongoing');
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
-  const tabs = ['Ongoing', 'Delivered', 'Cancelled'];
+  const tabs = [
+    { key: 'Ongoing', label: t('orders.tabOngoing', 'Ongoing') },
+    { key: 'Delivered', label: t('orders.statusDelivered', 'Delivered') },
+    { key: 'Cancelled', label: t('orders.statusCancelled', 'Cancelled') },
+  ];
 
   const fetchOrders = async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -157,27 +164,27 @@ const CustomerOrdersScreen = ({navigation}: any) => {
         });
       } else if (result.status === 'VERIFY_FAILED') {
         Alert.alert(
-          'Payment Status',
+          t('payments.paymentStatus', 'Payment Status'),
           result.message || PAYMENT_MESSAGES.VERIFICATION_PROBLEM,
           [
             {
-              text: 'View Details',
+              text: t('orders.orderDetails', 'View Details'),
               onPress: () => navigation.navigate('CustomerOrderDetails', {orderId: orderItem.orderId}),
             },
             {
-              text: 'OK',
+              text: t('common.ok', 'OK'),
               onPress: () => fetchOrders(true),
             },
           ]
         );
         fetchOrders(true);
       } else if (result.status === 'CANCELLED') {
-        Alert.alert('Payment Cancelled', result.message || PAYMENT_MESSAGES.PAYMENT_CANCELLED);
+        Alert.alert(t('payments.paymentCancelled', 'Payment Cancelled'), result.message || PAYMENT_MESSAGES.PAYMENT_CANCELLED);
       } else {
-        Alert.alert('Payment Failed', result.message || PAYMENT_MESSAGES.PAYMENT_FAILED);
+        Alert.alert(t('payments.paymentFailed', 'Payment Failed'), result.message || PAYMENT_MESSAGES.PAYMENT_FAILED);
       }
     } catch (err: any) {
-      Alert.alert('Payment Error', getPaymentErrorMessage(err));
+      Alert.alert(t('payments.paymentFailed', 'Payment Error'), getPaymentErrorMessage(err));
     } finally {
       setPayingOrderId(null);
     }
@@ -199,10 +206,10 @@ const CustomerOrdersScreen = ({navigation}: any) => {
       >
         <View style={styles.cardHeader}>
           <Text style={styles.orderNumber}>
-            Order #{item.orderNumber ? item.orderNumber.substring(0, 12) : item.orderId.substring(0, 8)}
+            {t('orders.orderNumber', { id: item.orderNumber ? item.orderNumber.substring(0, 12) : item.orderId.substring(0, 8) })}
           </Text>
           <Text style={styles.orderDate}>
-            {item.createdOn ? new Date(item.createdOn).toLocaleDateString() : ''}
+            {item.createdOn ? formatDate(item.createdOn) : ''}
           </Text>
         </View>
 
@@ -216,15 +223,17 @@ const CustomerOrdersScreen = ({navigation}: any) => {
           )}
           <View style={styles.productInfo}>
             <Text style={styles.productName} numberOfLines={1}>
-              {mainItem?.productName || 'Product'}
+              {mainItem?.productName || t('products.title', 'Product')}
             </Text>
             {moreItemsCount > 0 && (
               <View style={styles.moreItemsBadge}>
                 <Ionicons name="layers-outline" size={13} color={THEME.colors.accent} />
-                <Text style={styles.moreItemsText}>+{moreItemsCount} more item{moreItemsCount > 1 ? 's' : ''}</Text>
+                <Text style={styles.moreItemsText}>
+                  +{moreItemsCount} {moreItemsCount > 1 ? t('cart.itemCount_plural', { count: moreItemsCount }) : t('cart.itemCount', { count: moreItemsCount })}
+                </Text>
               </View>
             )}
-            <Text style={styles.totalAmount}>₹{formatDisplayPrice(item.totalAmount)}</Text>
+            <Text style={styles.totalAmount}>{formatCurrency(item.totalAmount)}</Text>
           </View>
         </View>
 
@@ -248,12 +257,12 @@ const CustomerOrdersScreen = ({navigation}: any) => {
                   {payingOrderId === item.orderId ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Text style={styles.payNowSmallBtnText}>Pay Now</Text>
+                    <Text style={styles.payNowSmallBtnText}>{t('payments.payNow', 'Pay Now')}</Text>
                   )}
                 </TouchableOpacity>
               )}
             <View style={styles.viewDetailsBtn}>
-              <Text style={styles.viewDetailsText}>Details</Text>
+              <Text style={styles.viewDetailsText}>{t('orders.orderDetails', 'Details')}</Text>
               <ChevronRightIcon size={14} color={THEME.colors.accent} />
             </View>
           </View>
@@ -267,8 +276,8 @@ const CustomerOrdersScreen = ({navigation}: any) => {
       {/* Themed Header (Tab Variant) */}
       <ThemedHeader
         variant="tab"
-        title="My Orders"
-        subtitle="Track and manage your orders"
+        title={t('orders.myOrders', 'My Orders')}
+        subtitle={t('orders.trackManageOrders', 'Track and manage your orders')}
       />
 
       {/* Segmented ThemedChip Tabs */}
@@ -276,10 +285,10 @@ const CustomerOrdersScreen = ({navigation}: any) => {
         <View style={styles.tabsContainer}>
           {tabs.map(tab => (
             <ThemedChip
-              key={tab}
-              label={tab}
-              selected={filter === tab}
-              onPress={() => setFilter(tab)}
+              key={tab.key}
+              label={tab.label}
+              selected={filter === tab.key}
+              onPress={() => setFilter(tab.key)}
               style={styles.tabChip}
               textStyle={styles.tabChipText}
             />
@@ -308,9 +317,9 @@ const CustomerOrdersScreen = ({navigation}: any) => {
           ListEmptyComponent={
             <OrderEmptyState
               variant="customer"
-              title={`No ${filter} orders found`}
-              subtitle="Looks like you don't have any orders here yet."
-              buttonTitle="Start Shopping"
+              title={t('orders.noOrdersTitle', 'No orders yet')}
+              subtitle={t('orders.noOrdersSubtitle', "Looks like you don't have any orders here yet.")}
+              buttonTitle={t('cart.startShopping', 'Start Shopping')}
               onButtonPress={() => navigation.navigate('Home')}
             />
           }

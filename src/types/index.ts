@@ -2,10 +2,16 @@ export interface User {
   userId?: string;
   name: string;
   email: string;
-  role: 'USER' | 'FARMER' | 'ADMIN';
+  role: 'USER' | 'FARMER' | 'ADMIN' | 'CUSTOMER';
   farmerId?: string;
   profilePhoto?: string;
   mobile?: string;
+  address?: string;
+  village?: string;
+  state?: string;
+  postalCode?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 export interface Farmer {
   farmerId: string;
@@ -124,10 +130,15 @@ export interface NotificationResponse {
   senderName?: string;
   message: string;
   type: NotificationType;
+  notificationType?: string;
   isRead: boolean;
   createdAt: string;
   title?: string;
   senderType?: string;
+  orderId?: string;
+  orderNumber?: string;
+  previousAddress?: string;
+  newAddress?: string;
 }
 
 export interface NotificationSendRequest {
@@ -140,7 +151,7 @@ export interface NotificationSendRequest {
   notificationType?: NotificationType;
 }
 
-export type NotificationType = 'ORDER' | 'SYSTEM' | 'MESSAGE' | 'ALERT' | 'PRODUCT' | 'FARMER' | 'CUSTOMER' | 'ADMIN';
+export type NotificationType = 'ORDER' | 'SYSTEM' | 'MESSAGE' | 'ALERT' | 'PRODUCT' | 'FARMER' | 'CUSTOMER' | 'ADMIN' | 'ORDER_ADDRESS_CHANGED';
 
 export type PaymentMethod = 'COD' | 'ONLINE' | 'CARD' | 'UPI' | 'NET_BANKING';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
@@ -203,6 +214,8 @@ export interface OrderResponse {
   village: string;
   postalCode: string;
   state: string;
+  deliveryLatitude?: number | null;
+  deliveryLongitude?: number | null;
   totalAmount: number;
   status: string;
   paymentStatus: PaymentStatus;
@@ -212,4 +225,36 @@ export interface OrderResponse {
   createdOn?: string;
   updatedOn?: string;
   items: OrderItemResponse[];
+}
+
+export interface OrderAddressUpdateRequest {
+  deliveryAddress: string;
+  village?: string;
+  state?: string;
+  postalCode?: string;
+  deliveryLatitude?: number | null;
+  deliveryLongitude?: number | null;
+}
+
+export interface AddressSyncSummary {
+  synchronizedOrdersCount: number;
+  synchronizedOrderNumbers: string[];
+  notificationsCreatedCount: number;
+  skippedOrderNumbers: string[];
+}
+
+export interface OrderAddressUpdateResponse {
+  message: string;
+  order: OrderResponse;
+  syncSummary?: AddressSyncSummary;
+}
+
+export interface UpdateProfileResponse {
+  message: string;
+  user: User;
+  addressUpdated?: boolean;
+  synchronizedOrdersCount?: number;
+  synchronizedOrderNumbers?: string[];
+  notificationsCreatedCount?: number;
+  skippedOrderNumbers?: string[];
 }

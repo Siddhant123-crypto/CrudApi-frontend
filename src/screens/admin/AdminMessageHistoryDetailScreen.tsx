@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -18,6 +19,7 @@ import { formatNotificationDate } from '../../components/NotificationCard';
 import { ClockIcon } from '../../components/admin/AdminIcons';
 
 export const AdminMessageHistoryDetailScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const notification = route.params?.notification;
@@ -27,14 +29,14 @@ export const AdminMessageHistoryDetailScreen = () => {
       <AdminPageBackground>
         <AdminHeader
           variant="inner"
-          title="Message Details"
+          title={t('admin.messageDetails', 'Message Details')}
           onBack={() => navigation.goBack()}
         />
         <View style={styles.centerContainer}>
           <AdminCard style={styles.errorCard}>
-            <Text style={styles.errorText}>Message details not found.</Text>
+            <Text style={styles.errorText}>{t('admin.messageDetailsNotFound', 'Message details not found.')}</Text>
             <AdminOutlineButton
-              title="Go Back"
+              title={t('common.goBack', 'Go Back')}
               onPress={() => navigation.goBack()}
               style={{ marginTop: 14 }}
             />
@@ -56,9 +58,9 @@ export const AdminMessageHistoryDetailScreen = () => {
     notification.receiverName ||
     'All ' +
       (notification.receiverType === 'FARMER'
-        ? 'Farmers'
+        ? t('admin.farmers', 'Farmers')
         : notification.receiverType === 'CUSTOMER'
-        ? 'Customers'
+        ? t('admin.customers', 'Customers')
         : 'Users');
   const isBroadcast = !notification.receiverId;
   const canChat =
@@ -69,7 +71,7 @@ export const AdminMessageHistoryDetailScreen = () => {
     <AdminPageBackground>
       <AdminHeader
         variant="inner"
-        title="Sent Message Detail"
+        title={t('admin.sentMessageDetail', 'Sent Message Detail')}
         subtitle={notification.receiverType || 'Direct Notification'}
         onBack={() => navigation.goBack()}
       />
@@ -83,7 +85,7 @@ export const AdminMessageHistoryDetailScreen = () => {
           {/* Header Row: Recipient & Date */}
           <View style={styles.headerRow}>
             <View style={styles.recipientInfo}>
-              <Text style={styles.fieldLabel}>SENT TO</Text>
+              <Text style={styles.fieldLabel}>{t('admin.sentToUpper', 'SENT TO')}</Text>
               <Text style={styles.recipientName}>{receiverName}</Text>
             </View>
             <AdminBadge
@@ -105,12 +107,12 @@ export const AdminMessageHistoryDetailScreen = () => {
           {/* Subject & Reply Button */}
           <View style={styles.titleSection}>
             <View style={styles.titleWrapper}>
-              <Text style={styles.fieldLabel}>SUBJECT</Text>
+              <Text style={styles.fieldLabel}>{t('admin.subjectUpper', 'SUBJECT')}</Text>
               <Text style={styles.subjectText}>{notification.title}</Text>
             </View>
             {canChat && (
               <AdminPrimaryButton
-                title="Reply"
+                title={t('notifications.reply', 'Reply')}
                 icon={<Ionicons name="chatbubble-ellipses" size={15} color="#FFFFFF" />}
                 onPress={() => {
                   navigation.navigate('AdminMessage', {
@@ -128,7 +130,7 @@ export const AdminMessageHistoryDetailScreen = () => {
 
           {/* Message Content */}
           <View style={styles.messageBox}>
-            <Text style={styles.fieldLabel}>MESSAGE BODY</Text>
+            <Text style={styles.fieldLabel}>{t('admin.messageBodyUpper', 'MESSAGE BODY')}</Text>
             <Text style={styles.messageBodyText}>{actualMessage}</Text>
           </View>
         </AdminCard>

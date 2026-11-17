@@ -406,3 +406,17 @@ export const CheckIcon = ({ size = 20, color = '#2E7D4F', strokeWidth = 2.4 }: I
   </Svg>
 );
 
+export const AiSparkleIcon = ({ size = 24, color = '#FFFFFF' }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 2L14.4 8.6L21 11L14.4 13.4L12 20L9.6 13.4L3 11L9.6 8.6L12 2Z"
+      fill={color}
+    />
+    <Path
+      d="M19 15L19.9 17.5L22.5 18.4L19.9 19.3L19 22L18.1 19.3L15.5 18.4L18.1 17.5L19 15Z"
+      fill={color}
+      opacity={0.85}
+    />
+  </Svg>
+);
+

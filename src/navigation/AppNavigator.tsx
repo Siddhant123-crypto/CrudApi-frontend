@@ -6,6 +6,8 @@ import {useAuth} from '../context/AuthContext';
 import {useNotification} from '../context/NotificationContext';
 import {Product} from '../types';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import {useTranslation} from 'react-i18next';
+import {formatCategory} from '../utils/categoryUtils';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import RoleSelectionScreen from '../screens/RoleSelectionScreen';
 import NewUserLoginScreen from '../screens/NewUserLoginScreen';
@@ -77,9 +79,13 @@ import AdminGroupChatScreen from '../screens/admin/AdminGroupChatScreen';
 import AdminSupportInboxScreen from '../screens/admin/AdminSupportInboxScreen';
 import FarmerShortsScreen from '../screens/FarmerShortsScreen';
 import FarmerWeatherDetailsScreen from '../screens/FarmerWeatherDetailsScreen';
+import FarmerAiChatScreen from '../screens/FarmerAiChatScreen';
+import CustomerAiChatScreen from '../screens/CustomerAiChatScreen';
+import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
 
 export type AuthStackParamList = {
   Welcome: undefined;
+  LanguageSelection?: { fromSettings?: boolean } | undefined;
   RoleSelection: undefined;
   NewUserLogin: undefined;
   CustomerRegister: undefined;
@@ -88,6 +94,7 @@ export type AuthStackParamList = {
   ResetPassword?: { email?: string; token?: string } | undefined;
 };
 export type MainStackParamList = {
+  LanguageSelection?: { fromSettings?: boolean } | undefined;
   AdminMain: undefined;
   CustomerMain: undefined;
   FarmerMain: undefined;
@@ -150,20 +157,22 @@ export type MainStackParamList = {
   AdminSupportChatScreen: { farmerId: string; farmerName?: string };
   AdminGroupChat: undefined;
   AdminSupportInbox: undefined;
-  FarmerShorts: undefined;
+  FarmerShorts?: { initialIndex?: number; initialShorts?: any[] };
   FarmCertificate: undefined;
   FarmerWeatherDetails: { weatherData?: any, initialLatitude?: number, initialLongitude?: number };
+  FarmerAiChat: undefined;
+  CustomerAiChat: undefined;
+  Categories: undefined;
+  MyFarm: undefined;
 };
 export type CustomerTabParamList = {
   Home: undefined;
-  Categories: undefined;
   Wishlist: undefined;
   Orders: undefined;
   Profile: undefined;
 };
 export type FarmerTabParamList = {
   Home: undefined;
-  MyFarm: undefined;
   Market: undefined;
   Orders: undefined;
   Profile: undefined;
@@ -189,6 +198,7 @@ import CustomerTabBar from '../components/CustomerTabBar';
 import FarmerTabBar from '../components/farmer/FarmerTabBar';
 
 const CustomerTabs = () => {
+  const { t } = useTranslation();
   return (
     <CustomerTab.Navigator
       tabBar={props => <CustomerTabBar {...props} />}
@@ -199,68 +209,65 @@ const CustomerTabs = () => {
       <CustomerTab.Screen
         name="Home"
         component={HomeScreen as any}
-        options={{tabBarLabel: 'Home'}}
-      />
-      <CustomerTab.Screen
-        name="Categories"
-        component={CategoriesScreen as any}
-        options={{tabBarLabel: 'Categories'}}
+        options={{tabBarLabel: t('nav.home', 'Home')}}
       />
       <CustomerTab.Screen
         name="Wishlist"
         component={WishlistScreen as any}
-        options={{tabBarLabel: 'Wishlist'}}
+        options={{tabBarLabel: t('nav.wishlist', 'Wishlist')}}
       />
       <CustomerTab.Screen
         name="Orders"
         component={CustomerOrdersScreen as any}
-        options={{tabBarLabel: 'Orders'}}
+        options={{tabBarLabel: t('nav.orders', 'Orders')}}
       />
       <CustomerTab.Screen
         name="Profile"
         component={ProfileScreen as any}
-        options={{tabBarLabel: 'Account'}}
+        options={{tabBarLabel: t('nav.profile', 'Account')}}
       />
     </CustomerTab.Navigator>
   );
 };
+import { FarmerNotificationBanner } from '../components/farmer/FarmerNotificationBanner';
+
 const FarmerTabs = () => {
+  const { t } = useTranslation();
   return (
-    <FarmerTab.Navigator
-      tabBar={props => <FarmerTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <FarmerTab.Screen
-        name="Home"
-        component={FarmerDashboardScreen as any}
-        options={{tabBarLabel: 'Home'}}
-      />
-      <FarmerTab.Screen
-        name="MyFarm"
-        component={MyFarmScreen as any}
-        options={{tabBarLabel: 'My Farm'}}
-      />
-      <FarmerTab.Screen
-        name="Market"
-        component={FarmerMarketScreen as any}
-        options={{tabBarLabel: 'Market'}}
-      />
-      <FarmerTab.Screen
-        name="Orders"
-        component={FarmerOrdersScreen as any}
-        options={{tabBarLabel: 'Orders'}}
-      />
-      <FarmerTab.Screen
-        name="Profile"
-        component={ProfileScreen as any}
-        options={{tabBarLabel: 'Profile'}}
-      />
-    </FarmerTab.Navigator>
+    <View style={{ flex: 1 }}>
+      <FarmerNotificationBanner />
+      <FarmerTab.Navigator
+        tabBar={props => <FarmerTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <FarmerTab.Screen
+          name="Home"
+          component={FarmerDashboardScreen as any}
+          options={{tabBarLabel: t('nav.home', 'Home')}}
+        />
+        <FarmerTab.Screen
+          name="Market"
+          component={FarmerMarketScreen as any}
+          options={{tabBarLabel: t('nav.market', 'Market')}}
+        />
+        <FarmerTab.Screen
+          name="Orders"
+          component={FarmerOrdersScreen as any}
+          options={{tabBarLabel: t('nav.orders', 'Orders')}}
+        />
+        <FarmerTab.Screen
+          name="Profile"
+          component={ProfileScreen as any}
+          options={{tabBarLabel: t('nav.profile', 'Profile')}}
+        />
+      </FarmerTab.Navigator>
+    </View>
   );
 };
 const AdminTabs = () => {
+  const { t } = useTranslation();
   return (
     <AdminTab.Navigator
       tabBar={(props) => <AdminTabBar {...props} />}
@@ -270,22 +277,22 @@ const AdminTabs = () => {
       <AdminTab.Screen
         name="Home"
         component={AdminDashboardScreen as any}
-        options={{tabBarLabel: 'Home'}}
+        options={{tabBarLabel: t('nav.home', 'Home')}}
       />
       <AdminTab.Screen
         name="Users"
         component={AdminFarmersScreen as any}
-        options={{tabBarLabel: 'Users'}}
+        options={{tabBarLabel: t('nav.users', 'Users')}}
       />
       <AdminTab.Screen
         name="Products"
         component={AdminProductsScreen as any}
-        options={{tabBarLabel: 'Products'}}
+        options={{tabBarLabel: t('nav.products', 'Products')}}
       />
       <AdminTab.Screen
         name="Markets"
         component={AdminMarketsScreen as any}
-        options={{tabBarLabel: 'Markets'}}
+        options={{tabBarLabel: t('nav.markets', 'Markets')}}
       />
     </AdminTab.Navigator>
   );
@@ -293,6 +300,7 @@ const AdminTabs = () => {
 const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection' | 'NewUserLogin'}) => (
   <Stack.Navigator screenOptions={{headerShown: false}} initialRouteName={initialRoute}>
     <Stack.Screen name="Welcome" component={WelcomeScreen as any} />
+    <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen as any} />
     <Stack.Screen name="RoleSelection" component={RoleSelectionScreen as any} />
     <Stack.Screen name="NewUserLogin" component={NewUserLoginScreen as any} />
     <Stack.Screen name="CustomerRegister" component={CustomerRegisterScreen as any} />
@@ -301,7 +309,9 @@ const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection' | 
     <Stack.Screen name="ResetPassword" component={ResetPasswordScreen as any} />
   </Stack.Navigator>
 );
-const MainStack: React.FC<{role?: string}> = ({role}) => (
+const MainStack: React.FC<{role?: string}> = ({role}) => {
+  const { t } = useTranslation();
+  return (
   <Stack.Navigator screenOptions={{headerShown: false}}>
     {role === 'ADMIN' ? (
       <Stack.Screen name="AdminMain" component={AdminTabs} />
@@ -334,7 +344,11 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
     <Stack.Screen
       name="CategoryDashboard"
       component={CategoryDashboardScreen as any}
-      options={{headerShown: true, headerBackTitleVisible: false}}
+      options={({ route }: any) => ({
+        headerShown: true,
+        headerBackTitleVisible: false,
+        title: formatCategory(route?.params?.category, t)
+      })}
     />
     <Stack.Screen
       name="FarmerCategoryDashboard"
@@ -444,8 +458,14 @@ const MainStack: React.FC<{role?: string}> = ({role}) => (
     <Stack.Screen name="AdminMessageHistoryDetail" component={AdminMessageHistoryDetailScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="AdminSendNotification" component={AdminSendNotificationScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="FarmerShorts" component={FarmerShortsScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="FarmerAiChat" component={FarmerAiChatScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="CustomerAiChat" component={CustomerAiChatScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="Categories" component={CategoriesScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="MyFarm" component={MyFarmScreen as any} options={{headerShown: false}} />
+    <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen as any} options={{headerShown: false}} />
   </Stack.Navigator>
-);
+  );
+};
 const AppNavigator: React.FC = () => {
   const {user, isLoading, isLoggedIn, initialAuthRoute} = useAuth();
   if (isLoading) {

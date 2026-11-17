@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotification } from '../context/NotificationContext';
@@ -53,6 +54,7 @@ const formatDateLabel = (dateStr: string) => {
 };
 
 export const FarmerSupportChatScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotification();
@@ -128,7 +130,7 @@ export const FarmerSupportChatScreen = () => {
       }
     } catch (error) {
       console.error('Error fetching support requests:', error);
-      Alert.alert('Error', 'Could not fetch support history.');
+      Alert.alert(t('common.error', 'Error'), t('support.couldNotFetchHistory', 'Could not fetch support history.'));
       setLoading(false);
     }
   };
@@ -235,7 +237,7 @@ export const FarmerSupportChatScreen = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'Could not send message.');
+      Alert.alert(t('common.error', 'Error'), t('support.couldNotSendMessage', 'Could not send message.'));
     } finally {
       setSending(false);
       isSendingRef.current = false;
@@ -353,7 +355,7 @@ export const FarmerSupportChatScreen = () => {
       ) : (
         <FarmerHeader
           variant="inner"
-          title="Support Chat"
+          title={t('support.supportChat', 'Support Chat')}
           onBackPress={() => navigation.goBack()}
           rightAction={
             <TouchableOpacity style={styles.headerIconButton} onPress={() => navigation.navigate('Notifications')}>
@@ -408,7 +410,7 @@ export const FarmerSupportChatScreen = () => {
           ref={textInputRef}
           style={styles.input}
           value={inputText}
-          placeholder="Type your message..."
+          placeholder={t('support.typeMessagePlaceholder', 'Type your message...')}
           placeholderTextColor="#7D8D81"
           onChangeText={handleTextChange}
           multiline
@@ -473,17 +475,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 2,
     right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: FARMER_THEME.colors.harvestGold,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    backgroundColor: '#EF4444',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#1F7A4D',
+    borderColor: '#FFFFFF',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
+    elevation: 3,
   },
   badgeText: {
-    color: '#082419',
+    color: '#FFFFFF',
     fontSize: 9,
     fontFamily: FARMER_THEME.fonts.bold,
   },

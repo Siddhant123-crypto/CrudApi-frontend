@@ -17,6 +17,7 @@ import { THEME } from '../constants/theme';
 import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { ThemedEmptyState } from '../components/ui/ThemedEmptyState';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -44,6 +45,7 @@ interface FarmDetailsResponse {
 }
 
 export default function CustomerFarmerFarmsScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const [farms, setFarms] = useState<FarmDetailsResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,13 +90,13 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
         {item.verified && (
           <View style={styles.verifiedBadge}>
             <Ionicons name="checkmark-circle" size={16} color="#2E7D4F" />
-            <Text style={styles.verifiedText}>Verified</Text>
+            <Text style={styles.verifiedText}>{t('status.verified')}</Text>
           </View>
         )}
       </View>
       <View style={styles.cardBody}>
-        <Text style={styles.farmName} numberOfLines={1}>{item.farmName || 'Unnamed Farm'}</Text>
-        <Text style={styles.tagline} numberOfLines={1}>{item.tagline || 'Fresh from the root'}</Text>
+        <Text style={styles.farmName} numberOfLines={1}>{item.farmName || t('farmer.unnamedFarm')}</Text>
+        <Text style={styles.tagline} numberOfLines={1}>{item.tagline || t('farmer.freshFromRoot')}</Text>
         <View style={styles.infoRow}>
           <Ionicons name="person-outline" size={14} color="#8A6F5C" />
           <Text style={styles.infoText}>{item.farmerName}</Text>
@@ -105,7 +107,7 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
         </View>
         <View style={styles.badgeRow}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{item.farmingType || 'Organic'}</Text>
+            <Text style={styles.badgeText}>{item.farmingType || t('categories.organic')}</Text>
           </View>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{item.farmArea} {item.farmAreaUnit}</Text>
@@ -119,7 +121,7 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
     <PageBackground style={styles.safeArea}>
       <ThemedHeader
         variant="inner"
-        title="Farmer Farms"
+        title={t('farmer.farmerFarms')}
         onBackPress={() => navigation.goBack()}
       />
       <View style={styles.container}>
@@ -128,8 +130,8 @@ export default function CustomerFarmerFarmsScreen({ navigation }: any) {
         ) : farms.length === 0 ? (
           <ThemedEmptyState
             icon={<Ionicons name="home-outline" size={44} color="#B8470F" />}
-            title="No Farms Found"
-            subtitle="There are currently no farmer farms to display."
+            title={t('farmer.noFarmsFound')}
+            subtitle={t('farmer.noFarmsFoundDesc')}
           />
         ) : (
           <FlatList

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { NotificationService } from '../services/NotificationService';
 import { NotificationSendRequest } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,7 @@ import { FarmerHeader } from '../components/farmer/FarmerHeader';
 import { FARMER_THEME } from '../constants/farmerTheme';
 
 export const FarmerContactAdminScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -78,12 +80,12 @@ export const FarmerContactAdminScreen = () => {
     }
 
     if (!currentTitle.trim() || !currentMessage.trim()) {
-      Alert.alert('Error', 'Title and message are required.');
+      Alert.alert(t('common.error', 'Error'), t('support.titleAndMessageRequired', 'Title and message are required.'));
       return;
     }
     setLoading(true);
     try {
-      const senderName = user?.name || user?.email || 'A Farmer';
+      const senderName = user?.name || user?.email || t('common.farmerRole', 'Farm2Home Producer');
       const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
       const payload: NotificationSendRequest = {
         receiverType: 'ADMIN',
@@ -93,12 +95,12 @@ export const FarmerContactAdminScreen = () => {
         notificationType: 'ADMIN',
       };
       await NotificationService.sendNotification(payload);
-      Alert.alert('Success', 'Your message send successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert(t('common.success', 'Success'), t('support.messageSentSuccess', 'Message sent successfully'), [
+        { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
       console.error('Send message error:', error);
-      Alert.alert('Error', 'Failed to send message.');
+      Alert.alert(t('common.error', 'Error'), t('support.failedSendMessage', 'Failed to send message.'));
     } finally {
       setLoading(false);
     }
@@ -108,7 +110,7 @@ export const FarmerContactAdminScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor="#1F7A4D" />
       <FarmerHeader
         variant="inner"
-        title="Contact Admin"
+        title={t('support.contactAdmin', 'Contact Admin')}
         onBackPress={() => navigation.goBack()}
       />
       <KeyboardAvoidingView
@@ -126,24 +128,24 @@ export const FarmerContactAdminScreen = () => {
             <Ionicons name="shield-checkmark" size={30} color="#FFFFFF" />
           </View>
           <View style={styles.adminInfo}>
-            <Text style={styles.adminName}>System Administrator</Text>
-            <Text style={styles.adminRole}>Support & Verification</Text>
+            <Text style={styles.adminName}>{t('support.systemAdmin', 'System Administrator')}</Text>
+            <Text style={styles.adminRole}>{t('support.supportVerification', 'Support & Verification')}</Text>
           </View>
         </View>
-        <Text style={styles.label}>Title</Text>
+        <Text style={styles.label}>{t('support.title', 'Title')}</Text>
         <TextInput
           ref={titleInputRef}
           style={styles.input}
-          placeholder="e.g., Verification Issue"
+          placeholder={t('support.verificationIssuePlaceholder', 'e.g., Verification Issue')}
           value={title}
           onChangeText={handleTitleChange}
           placeholderTextColor="#7D8D81"
         />
-        <Text style={styles.label}>Message</Text>
+        <Text style={styles.label}>{t('support.message', 'Message')}</Text>
         <TextInput
           ref={messageInputRef}
           style={[styles.input, styles.textArea]}
-          placeholder="Please describe your issue in detail..."
+          placeholder={t('support.describeIssuePlaceholder', 'Please describe your issue in detail...')}
           value={message}
           onChangeText={handleMessageChange}
           multiline
@@ -160,7 +162,7 @@ export const FarmerContactAdminScreen = () => {
           {loading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.sendButtonText}>Send Message</Text>
+            <Text style={styles.sendButtonText}>{t('support.sendMessage', 'Send Message')}</Text>
           )}
         </TouchableOpacity>
         </ScrollView>
@@ -171,8 +173,8 @@ export const FarmerContactAdminScreen = () => {
             <View style={styles.successIconContainer}>
               <Ionicons name="checkmark-circle" size={56} color="#17663F" />
             </View>
-            <Text style={styles.successModalTitle}>Success!</Text>
-            <Text style={styles.successModalMessage}>Message sent successfully</Text>
+            <Text style={styles.successModalTitle}>{t('common.success', 'Success!')}</Text>
+            <Text style={styles.successModalMessage}>{t('support.messageSentSuccess', 'Message sent successfully')}</Text>
           </View>
         </View>
       </Modal>

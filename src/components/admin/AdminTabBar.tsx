@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useTranslation } from 'react-i18next';
 import { ADMIN_THEME } from '../../constants/adminTheme';
 import { HomeIcon, UsersIcon, CubeIcon, StoreIcon } from './AdminIcons';
 
@@ -11,6 +12,7 @@ export const AdminTabBar: React.FC<BottomTabBarProps> = ({
   descriptors,
   navigation,
 }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const currentRoute = state.routes[state.index];
   const currentOptions = descriptors[currentRoute.key]?.options;
@@ -52,12 +54,18 @@ export const AdminTabBar: React.FC<BottomTabBarProps> = ({
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
           const { options } = descriptors[route.key];
-          const label =
+          const rawLabel =
             options.tabBarLabel !== undefined
               ? (options.tabBarLabel as string)
               : options.title !== undefined
               ? options.title
               : route.name;
+
+          let label = rawLabel;
+          if (route.name === 'Home') label = t('nav.home', 'Home');
+          else if (route.name === 'Users') label = t('nav.users', 'Users');
+          else if (route.name === 'Products') label = t('nav.products', 'Products');
+          else if (route.name === 'Markets') label = t('nav.markets', 'Markets');
 
           const onPress = () => {
             const event = navigation.emit({

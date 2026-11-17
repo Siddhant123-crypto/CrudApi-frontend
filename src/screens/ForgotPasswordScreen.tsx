@@ -12,10 +12,12 @@ import {
   Keyboard,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { forgotPassword } from '../services/authService';
 
-const ForgotPasswordScreen = ({ navigation }: any) => {
-  const [email, setEmail] = useState('');
+const ForgotPasswordScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
+  const [email, setEmail] = useState(route?.params?.email || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -48,12 +50,12 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
   const validateEmail = (val: string): boolean => {
     const trimmed = val.trim();
     if (!trimmed) {
-      setError('Please enter your email address');
+      setError(t('validation.emailRequired', 'Please enter your email address'));
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmed)) {
-      setError('Please enter a valid email address');
+      setError(t('validation.emailInvalid', 'Please enter a valid email address'));
       return false;
     }
     setError(null);
@@ -116,7 +118,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('common.goBack', 'Go back')}
             accessibilityRole="button"
             activeOpacity={0.8}
           >
@@ -146,7 +148,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
             )}
 
             {/* Title & Translated Subtitle */}
-            <Text style={styles.heading}>Forgot password?</Text>
+            <Text style={styles.heading}>{t('auth.forgotPassword', 'Forgot password?')}</Text>
             <Text style={styles.subheading}>
               No worries. Enter your registered email, and we will send you a
               secure link to reset your password.
@@ -154,7 +156,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
 
             {/* Floating Form Card */}
             <View style={styles.card}>
-              <Text style={styles.inputLabel}>Registered email</Text>
+              <Text style={styles.inputLabel}>{t('auth.email', 'Registered email')}</Text>
 
               <View
                 style={[
@@ -175,7 +177,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
                     setEmail(text);
                     if (error) setError(null);
                   }}
-                  placeholder="Enter your email"
+                  placeholder={t('auth.emailPlaceholder', 'Enter your email')}
                   placeholderTextColor="#8A9E8E"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -201,7 +203,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <View style={styles.buttonContent}>
-                    <Text style={styles.submitButtonText}>Send reset link</Text>
+                    <Text style={styles.submitButtonText}>{t('auth.sendResetLink', 'Send reset link')}</Text>
                     <Ionicons
                       name="chevron-forward"
                       size={18}
@@ -238,7 +240,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
                 color="#184D2B"
                 style={{ marginRight: 4 }}
               />
-              <Text style={styles.backToSignInText}>Back to Sign In</Text>
+              <Text style={styles.backToSignInText}>{t('auth.backToLogin', 'Back to Sign In')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -250,7 +252,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
               </View>
             </View>
 
-            <Text style={styles.heading}>Email Sent Successfully!</Text>
+            <Text style={styles.heading}>{t('auth.resetEmailSent', 'Email Sent Successfully!')}</Text>
             <Text style={styles.subheading}>
               A secure password reset link has been sent to{' '}
               <Text style={styles.boldEmail}>{submittedEmail}</Text>. Please open
@@ -264,7 +266,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
                 activeOpacity={0.85}
               >
                 <View style={styles.buttonContent}>
-                  <Text style={styles.submitButtonText}>Back to Sign In</Text>
+                  <Text style={styles.submitButtonText}>{t('auth.backToLogin', 'Back to Sign In')}</Text>
                   <Ionicons
                     name="chevron-forward"
                     size={18}

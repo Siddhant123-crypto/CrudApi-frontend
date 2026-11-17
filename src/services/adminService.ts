@@ -153,3 +153,13 @@ export const deleteAdminGroupMessage = async (messageId: string) => {
     throw error;
   }
 };
+
+export const getFarmVerificationPendingCount = async () => {
+  try {
+    const response = await api.get('/admin/farmers/verification/pending-count');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+

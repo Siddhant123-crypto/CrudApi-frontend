@@ -11,6 +11,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 import { ADMIN_THEME } from '../../constants/adminTheme';
+import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon } from './AdminIcons';
 
 interface RevenueCardProps {
@@ -126,6 +127,7 @@ export const RevenueCard: React.FC<RevenueCardProps> = ({
   growthText = '↑ 18% from last month',
   isGrowthPositive = true,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.cardShadow}>
       <LinearGradient
@@ -146,7 +148,7 @@ export const RevenueCard: React.FC<RevenueCardProps> = ({
 
         {/* Top row */}
         <View style={styles.topRow}>
-          <Text style={styles.label}>Revenue overview</Text>
+          <Text style={styles.label}>{t('admin.revenueOverview', 'Revenue overview')}</Text>
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.periodPill}

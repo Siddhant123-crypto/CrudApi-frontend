@@ -15,11 +15,14 @@ import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground'
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
 import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerEmptyState } from '../components/farmer/FarmerUI';
+import { useTranslation } from 'react-i18next';
+import { formatCategory } from '../utils/categoryUtils';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
 const FarmerCategoriesScreen = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,7 +75,7 @@ const FarmerCategoriesScreen = ({ navigation }: any) => {
       {/* Inner FarmerHeader */}
       <FarmerHeader
         variant="inner"
-        title="Farm Categories"
+        title={t('farmer.farmCategories')}
         titleAlign="left"
         onBackPress={() => navigation.goBack()}
       />
@@ -87,14 +90,14 @@ const FarmerCategoriesScreen = ({ navigation }: any) => {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.guideText}>
-            Select a category to view and manage your farm products
+            {t('farmer.selectCategoryPrompt')}
           </Text>
 
           {categories.length === 0 ? (
             <FarmerEmptyState
               icon={<Ionicons name="grid-outline" size={48} color={FARMER_THEME.colors.sageText} />}
-              title="No Categories Available"
-              subtitle="Categories configured on the marketplace will appear here."
+              title={t('categories.noCategoriesAvailable')}
+              subtitle={t('categories.noCategoriesAvailableDesc')}
               style={{ marginTop: 40 }}
             />
           ) : (
@@ -116,11 +119,11 @@ const FarmerCategoriesScreen = ({ navigation }: any) => {
                       </View>
                       <View style={styles.nameContainer}>
                         <Text style={styles.categoryName} numberOfLines={2}>
-                          {category.name}
+                          {formatCategory(category.name, t)}
                         </Text>
                       </View>
                       <View style={styles.viewBadge}>
-                        <Text style={styles.viewBadgeText}>Browse</Text>
+                        <Text style={styles.viewBadgeText}>{t('common.browse')}</Text>
                         <Ionicons name="chevron-forward" size={11} color={FARMER_THEME.colors.forestGreen} />
                       </View>
                     </FarmerCard>

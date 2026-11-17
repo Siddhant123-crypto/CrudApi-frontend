@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import WishlistProductCard from '../components/WishlistProductCard';
@@ -22,6 +23,7 @@ import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { GoldButton } from '../components/ui/Buttons';
 
 const WishlistScreen = () => {
+  const { t } = useTranslation();
   const { wishlist, isLoading, refreshWishlist, removeFromWishlist } = useWishlist();
   const { addToCart, cartCount } = useCart();
   const navigation = useNavigation<any>();
@@ -79,15 +81,20 @@ const WishlistScreen = () => {
       }
 
       if (addedCount > 0) {
-        setSuccessMessage(`${addedCount} items have been added to your cart successfully!`);
+        setSuccessMessage(
+          t('wishlist.itemsAdded', {
+            count: addedCount,
+            defaultValue: `${addedCount} items have been added to your cart successfully!`
+          })
+        );
         setShowSuccessModal(true);
       } else {
-        Alert.alert('Error', 'Failed to add items to cart.');
+        Alert.alert(t('common.error', 'Error'), t('cart.failedAddToCart', 'Failed to add items to cart.'));
       }
       setSelectedProducts([]);
     } catch (error) {
       console.log('Error bulk adding to cart', error);
-      Alert.alert('Error', 'Failed to add some items to cart.');
+      Alert.alert(t('common.error', 'Error'), t('cart.failedAddToCart', 'Failed to add some items to cart.'));
     } finally {
       setIsAdding(false);
     }
@@ -98,8 +105,8 @@ const WishlistScreen = () => {
       <PageBackground>
         <ThemedHeader
           variant="tab"
-          title="Wishlist"
-          subtitle="Your saved favorites"
+          title={t('wishlist.title', 'Wishlist')}
+          subtitle={t('wishlist.subtitle', 'Your saved favorites')}
           titleStyle={{ fontSize: 21 }}
           showCart
           cartCount={cartCount}
@@ -116,16 +123,16 @@ const WishlistScreen = () => {
       <PageBackground>
         <ThemedHeader
           variant="tab"
-          title="Wishlist"
-          subtitle="Your saved favorites"
+          title={t('wishlist.title', 'Wishlist')}
+          subtitle={t('wishlist.subtitle', 'Your saved favorites')}
           titleStyle={{ fontSize: 21 }}
           showCart
           cartCount={cartCount}
         />
         <EmptyState
-          title="Your wishlist is empty"
-          subtitle="Save your favorite farm fresh products here for later."
-          buttonText="Explore Products"
+          title={t('wishlist.emptyTitle', 'Your wishlist is empty')}
+          subtitle={t('wishlist.emptySubtitle', 'Save your favorite farm fresh products here for later.')}
+          buttonText={t('wishlist.exploreProducts', 'Explore Products')}
           onButtonPress={() => navigation.navigate('Home')}
           iconName="heart-outline"
         />
@@ -136,7 +143,7 @@ const WishlistScreen = () => {
   const headerRightAction =
     selectedProducts.length > 0 ? (
       <GoldButton
-        title={isAdding ? 'Adding...' : `Add (${selectedProducts.length})`}
+        title={isAdding ? t('common.loading', 'Adding...') : t('wishlist.addCount', { count: selectedProducts.length, defaultValue: `Add (${selectedProducts.length})` })}
         onPress={handleAddSelectedToCart}
         disabled={isAdding}
       />
@@ -146,8 +153,8 @@ const WishlistScreen = () => {
     <PageBackground>
       <ThemedHeader
         variant="tab"
-        title={selectedProducts.length > 0 ? `${selectedProducts.length} Selected` : 'Wishlist'}
-        subtitle={selectedProducts.length > 0 ? 'Bulk actions available' : 'Your saved favorites'}
+        title={selectedProducts.length > 0 ? t('wishlist.selectedCount', { count: selectedProducts.length, defaultValue: `${selectedProducts.length} Selected` }) : t('wishlist.title', 'Wishlist')}
+        subtitle={selectedProducts.length > 0 ? t('wishlist.bulkActions', 'Bulk actions available') : t('wishlist.subtitle', 'Your saved favorites')}
         titleStyle={{ fontSize: 21 }}
         rightAction={headerRightAction}
         showCart={selectedProducts.length === 0}

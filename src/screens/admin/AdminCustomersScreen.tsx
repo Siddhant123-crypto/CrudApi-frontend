@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, StyleSheet, FlatList, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import api from '../../services/api';
@@ -14,6 +15,7 @@ import {
 } from '../../components/admin';
 
 export const AdminCustomersScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
@@ -66,12 +68,12 @@ export const AdminCustomersScreen: React.FC = () => {
       <AdminHeader
         variant="tab"
         showBackButton={true}
-        title="Customers"
-        subtitle="Customer accounts management"
+        title={t('admin.customers', 'Customers')}
+        subtitle={t('admin.customersSubtitle', 'Customer accounts management')}
         showSearch={true}
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search customers..."
+        searchPlaceholder={t('admin.searchCustomers', 'Search customers...')}
       />
 
       {/* STATUS TABS */}
@@ -80,7 +82,7 @@ export const AdminCustomersScreen: React.FC = () => {
           {tabs.map((tab) => (
             <AdminChip
               key={tab}
-              label={tab === 'All' ? 'All' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+              label={tab === 'All' ? t('common.all', 'All') : tab.charAt(0) + tab.slice(1).toLowerCase()}
               active={activeTab === tab}
               onPress={() => setActiveTab(tab)}
               style={styles.statusChip}
@@ -102,11 +104,11 @@ export const AdminCustomersScreen: React.FC = () => {
           ListEmptyComponent={
             <AdminEmptyState
               icon={<UserIcon size={46} color={ADMIN_THEME.colors.indigo} strokeWidth={1.8} />}
-              title="No customers found"
+              title={t('admin.noCustomersFound', 'No customers found')}
               subtitle={
                 searchQuery
-                  ? `No customers matching "${searchQuery}".`
-                  : 'There are currently no customers in this status.'
+                  ? t('admin.noCustomersMatched', `No customers matching "${searchQuery}".`)
+                  : t('admin.noCustomersMatched', 'There are currently no customers in this status.')
               }
             />
           }

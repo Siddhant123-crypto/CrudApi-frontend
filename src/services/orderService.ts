@@ -1,4 +1,27 @@
 import api from './api';
+import { OrderResponse, OrderAddressUpdateRequest, OrderAddressUpdateResponse } from '../types';
+
+export const getOrderById = async (orderId: string): Promise<OrderResponse> => {
+  try {
+    const response = await api.get(`/order/${orderId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateOrderAddress = async (
+  orderId: string,
+  addressData: OrderAddressUpdateRequest
+): Promise<OrderAddressUpdateResponse> => {
+  try {
+    const response = await api.put(`/order/${orderId}/address`, addressData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const getFarmerOrders = async () => {
   try {
     const response = await api.get('/order/farmer');
@@ -55,3 +78,4 @@ export const getAllAdminOrders = async () => {
     throw error;
   }
 };
+

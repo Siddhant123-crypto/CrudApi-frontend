@@ -14,7 +14,14 @@ interface Props {
 }
 
 export const getFarmerNotificationIcon = (notification: NotificationResponse) => {
-  const text = (notification.title + ' ' + notification.message).toLowerCase();
+  const text = ((notification.title || '') + ' ' + (notification.message || '')).toLowerCase();
+  if (
+    notification.type === 'ORDER_ADDRESS_CHANGED' ||
+    notification.notificationType === 'ORDER_ADDRESS_CHANGED' ||
+    text.includes('address')
+  ) {
+    return { name: 'location-outline', color: '#059669', bg: '#D1FAE5' };
+  }
   if (text.includes('pay') || text.includes('paid') || text.includes('cod') || text.includes('refund')) {
     return { name: 'cash-outline', color: '#C98A1B', bg: '#FFF0CC' };
   }
@@ -232,9 +239,23 @@ export const NotificationCard = ({ notification, onPress, onDelete, variant = 'd
               {!notification.isRead && <View style={styles.farmerUnreadDot} />}
             </View>
           </View>
+          {notification.orderNumber && (
+            <View style={styles.farmerOrderTagRow}>
+              <Ionicons name="receipt-outline" size={12} color="#047857" style={{ marginRight: 4 }} />
+              <Text style={styles.farmerOrderTagText}>Order #{notification.orderNumber}</Text>
+            </View>
+          )}
           <Text style={styles.farmerMessage} numberOfLines={2}>
             {notification.message}
           </Text>
+          {notification.newAddress && (
+            <View style={styles.addressPreviewRow}>
+              <Ionicons name="navigate-outline" size={12} color="#059669" style={{ marginRight: 4 }} />
+              <Text style={styles.addressPreviewText} numberOfLines={1}>
+                New: {notification.newAddress}
+              </Text>
+            </View>
+          )}
         </View>
         {onDelete && (
           <TouchableOpacity
@@ -481,6 +502,38 @@ const styles = StyleSheet.create({
     fontFamily: FARMER_THEME.fonts.regular,
     color: '#5C6B60',
     lineHeight: 18,
+  },
+  farmerOrderTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  farmerOrderTagText: {
+    fontSize: 11,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#047857',
+  },
+  addressPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 5,
+  },
+  addressPreviewText: {
+    fontSize: 11,
+    fontFamily: FARMER_THEME.fonts.regular,
+    color: '#374151',
+    flex: 1,
   },
   farmerDeleteButton: {
     padding: 6,

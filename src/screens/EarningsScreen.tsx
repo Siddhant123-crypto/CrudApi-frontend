@@ -2,19 +2,21 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { TouchableOpacity, SafeAreaView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const EarningsScreen = ({ navigation }: any) => {
+  const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Earnings</Text>
+        <Text style={styles.headerTitle}>{t('farmer.earnings')}</Text>
         <View style={{ width: 28 }} />
       </View>
       <View style={styles.container}>
-        <Text style={styles.text}>Earnings Screen</Text>
+        <Text style={styles.text}>{t('farmer.earningsScreen')}</Text>
       </View>
     </SafeAreaView>
   );

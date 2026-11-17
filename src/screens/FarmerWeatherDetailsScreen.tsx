@@ -17,6 +17,7 @@ import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground'
 import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerStatCard, FarmerListRow } from '../components/farmer/FarmerUI';
 import { FARMER_THEME } from '../constants/farmerTheme';
+import { useTranslation } from 'react-i18next';
 
 const getWeatherIcon = (code: number, size = 24, color = '#17663F') => {
   let name = 'cloud';
@@ -36,6 +37,7 @@ const formatDate = (dateString: string) => {
 };
 
 const FarmerWeatherDetailsScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
   const { weatherData, initialLatitude, initialLongitude, locationName = 'Current Location' } = route.params || {};
   const [loading, setLoading] = useState(!weatherData);
   const [weather, setWeather] = useState<any>(weatherData);
@@ -55,16 +57,62 @@ const FarmerWeatherDetailsScreen = ({ route, navigation }: any) => {
       if (!lat || !lon) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          lat = loc.coords.latitude;
-          lon = loc.coords.longitude;
+          const lastLoc = await Location.getLastKnownPositionAsync().catch(() => null);
+          if (lastLoc && lastLoc.coords) {
+            lat = lastLoc.coords.latitude;
+            lon = lastLoc.coords.longitude;
+          } else {
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            lat = loc.coords.latitude;
+            lon = loc.coords.longitude;
+          }
         }
       }
 
       if (lat && lon) {
-        const response = await api.get(`/weather?latitude=${lat}&longitude=${lon}`);
-        if (response.data && response.data.data) {
-          setWeather(response.data.data);
+        let fetchedData: any = null;
+
+        // 1. Try backend endpoint first
+        try {
+          const response = await api.get(`/weather?latitude=${lat}&longitude=${lon}`, { timeout: 8000 });
+          if (response.data && response.data.data) {
+            fetchedData = response.data.data;
+          }
+        } catch (apiErr) {
+          // Backend call failed or timed out — fallback to direct Open-Meteo
+        }
+
+        // 2. Fallback to Open-Meteo for full current + 7-day forecast
+        if (!fetchedData) {
+          try {
+            const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=7&timezone=auto`;
+            const omRes = await fetch(omUrl);
+            const om = await omRes.json();
+            if (om && om.current && om.daily) {
+              const dailyForecast = (om.daily.time || []).map((date: string, idx: number) => ({
+                date,
+                maxTemperature: om.daily.temperature_2m_max?.[idx],
+                minTemperature: om.daily.temperature_2m_min?.[idx],
+                rainProbability: om.daily.precipitation_probability_max?.[idx] || 0,
+                weatherCode: om.daily.weather_code?.[idx] || 0,
+              }));
+              fetchedData = {
+                current: {
+                  temperature: om.current.temperature_2m,
+                  weatherCode: om.current.weather_code,
+                  humidity: om.current.relative_humidity_2m,
+                  windSpeed: om.current.wind_speed_10m,
+                },
+                dailyForecast,
+              };
+            }
+          } catch (omErr) {
+            console.log('Open-Meteo fallback error:', omErr);
+          }
+        }
+
+        if (fetchedData) {
+          setWeather(fetchedData);
         }
       }
     } catch (error) {
@@ -107,9 +155,9 @@ const FarmerWeatherDetailsScreen = ({ route, navigation }: any) => {
         />
         <View style={[styles.container, styles.center]}>
           <Ionicons name="cloud-offline-outline" size={64} color="#7D8D81" />
-          <Text style={styles.errorText}>Could not load weather data</Text>
+          <Text style={styles.errorText}>{t('weather.couldNotLoad')}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchWeather} activeOpacity={0.85}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </FarmerPageBackground>
@@ -135,14 +183,14 @@ const FarmerWeatherDetailsScreen = ({ route, navigation }: any) => {
       >
         {/* Main Weather Summary Card */}
         <FarmerCard style={styles.mainCard}>
-          <Text style={styles.dateText}>Today, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
+          <Text style={styles.dateText}>{t('weather.today')}, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
           <View style={styles.mainTempRow}>
             <View style={styles.weatherIconCircle}>
               {getWeatherIcon(current?.weatherCode || 0, 48, '#17663F')}
             </View>
             <View style={styles.tempBlock}>
               <Text style={styles.mainTemp}>{Math.round(current?.temperature || 0)}°</Text>
-              <Text style={styles.mainDesc}>{current?.weatherDescription || 'Clear'}</Text>
+              <Text style={styles.mainDesc}>{current?.weatherDescription || t('weather.clear')}</Text>
             </View>
           </View>
 
@@ -150,21 +198,21 @@ const FarmerWeatherDetailsScreen = ({ route, navigation }: any) => {
           <View style={styles.statsGrid}>
             <FarmerStatCard
               value={`${current?.humidity || 0}%`}
-              label="Humidity"
+              label={t('weather.humidity')}
               icon={<Ionicons name="water-outline" size={20} color="#1F7F78" />}
               iconBg="#D7F0EC"
               style={styles.statTile}
             />
             <FarmerStatCard
               value={`${current?.rainProbability || 0}%`}
-              label="Rain Prob"
+              label={t('weather.rainProb')}
               icon={<Ionicons name="rainy-outline" size={20} color="#17663F" />}
               iconBg="#DDF3E4"
               style={styles.statTile}
             />
             <FarmerStatCard
               value={`${current?.windSpeed || 0} km/h`}
-              label="Wind Speed"
+              label={t('weather.windSpeed')}
               icon={<Ionicons name="leaf-outline" size={20} color="#C98A1B" />}
               iconBg="#FFF0CC"
               style={styles.statTile}
@@ -173,13 +221,13 @@ const FarmerWeatherDetailsScreen = ({ route, navigation }: any) => {
         </FarmerCard>
 
         {/* Forecast Section */}
-        <Text style={styles.sectionTitle}>7-DAY FORECAST</Text>
+        <Text style={styles.sectionTitle}>{t('weather.sevenDayForecast')}</Text>
         <View style={styles.forecastList}>
           {forecast.map((day: any, index: number) => (
             <FarmerListRow
               key={index}
-              title={index === 0 ? 'Today' : formatDate(day.date)}
-              subtitle={day.rainProbability > 0 ? `Rain chance: ${day.rainProbability}%` : undefined}
+              title={index === 0 ? t('weather.today') : formatDate(day.date)}
+              subtitle={day.rainProbability > 0 ? t('weather.rainChance', { percent: day.rainProbability }) : undefined}
               icon={getWeatherIcon(day.weatherCode, 24, '#17663F')}
               iconBg="#DDF3E4"
               showChevron={false}

@@ -13,6 +13,7 @@ import {
   Keyboard,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { resetPassword } from '../services/authService';
 
 const parseTokenFromUrl = (url: string | null): string | null => {
@@ -30,6 +31,7 @@ const parseTokenFromUrl = (url: string | null): string | null => {
 };
 
 const ResetPasswordScreen = ({ navigation, route }: any) => {
+  const { t } = useTranslation();
   const initialToken = route?.params?.token || '';
   const initialEmail = route?.params?.email || '';
 
@@ -128,19 +130,19 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
     const cleanToken = token.trim();
 
     if (!cleanToken) {
-      newErrors.token = 'Reset token is missing. Please open the link from your email.';
+      newErrors.token = t('validation.resetTokenMissing', 'Reset token is missing. Please open the link from your email.');
     }
 
     if (!newPassword) {
-      newErrors.newPassword = 'New password is required';
+      newErrors.newPassword = t('validation.passwordRequired', 'New password is required');
     } else if (newPassword.length < 8) {
-      newErrors.newPassword = 'Password must be at least 8 characters';
+      newErrors.newPassword = t('validation.passwordTooShort', 'Password must be at least 8 characters');
     }
 
     if (!confirmPassword) {
-      newErrors.confirmPassword = 'Confirm your new password';
+      newErrors.confirmPassword = t('validation.confirmPasswordRequired', 'Confirm your new password');
     } else if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('validation.passwordsDoNotMatch', 'Passwords do not match');
     }
 
     setErrors(newErrors);
@@ -211,7 +213,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
             <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={styles.backButton}
-              accessibilityLabel="Go back"
+              accessibilityLabel={t('common.goBack', 'Go back')}
               accessibilityRole="button"
               activeOpacity={0.7}
             >
@@ -236,9 +238,9 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
           )}
 
           {/* Titles */}
-          <Text style={styles.headerTitle}>Create new password</Text>
+          <Text style={styles.headerTitle}>{t('auth.resetPasswordTitle', 'Create new password')}</Text>
           <Text style={styles.headerSubtitle}>
-            Choose a secure password for your{'\n'}Farm2Home account.
+            {t('auth.resetPasswordSubtitle', 'Choose a secure password for your Farm2Home account.')}
           </Text>
         </View>
 
@@ -298,7 +300,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
                         if (errors.token) setErrors({ ...errors, token: null });
                         if (serverError) setServerError(null);
                       }}
-                      placeholder="Paste reset token from email"
+                      placeholder={t('auth.pasteResetTokenPlaceholder', 'Paste reset token from email')}
                       placeholderTextColor="#8A9E8E"
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -308,7 +310,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
               )}
 
               {/* New Password */}
-              <Text style={styles.inputLabel}>New password</Text>
+              <Text style={styles.inputLabel}>{t('auth.newPassword', 'New password')}</Text>
               <View
                 style={[
                   styles.inputWrapper,
@@ -383,7 +385,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
                     {strengthInfo.label}
                   </Text>
                 ) : (
-                  <Text style={styles.strengthLabelEmpty}>Strong</Text>
+                  <Text style={styles.strengthLabelEmpty}>{t('auth.passwordStrengthStrong', 'Strong')}</Text>
                 )}
               </View>
 
@@ -460,7 +462,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
 
               {/* Confirm Password */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                Confirm password
+                {t('auth.confirmPassword', 'Confirm password')}
               </Text>
               <View
                 style={[
@@ -484,7 +486,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
                     }
                     if (serverError) setServerError(null);
                   }}
-                  placeholder="Re-enter your new password"
+                  placeholder={t('auth.confirmPasswordPlaceholder', 'Confirm your password')}
                   placeholderTextColor="#8A9E8E"
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
@@ -528,7 +530,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.resetButtonText}>Reset password</Text>
+                  <Text style={styles.resetButtonText}>{t('auth.resetPasswordBtn', 'Reset Password')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -539,7 +541,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
               style={styles.backToSignInButton}
               activeOpacity={0.7}
             >
-              <Text style={styles.backToSignInText}>← Back to sign in</Text>
+              <Text style={styles.backToSignInText}>{t('auth.backToLogin', 'Back to Login')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -550,11 +552,10 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
                 <Ionicons name="checkmark-circle" size={54} color="#165B31" />
               </View>
               <Text style={styles.successHeading}>
-                Password Reset Successful!
+                {t('auth.passwordResetSuccess', 'Password Reset Successful!')}
               </Text>
               <Text style={styles.successSubtitle}>
-                Your password has been securely updated. You can now sign in to
-                Farm2Home with your new credentials.
+                {t('auth.passwordResetSuccessDesc', 'Your password has been securely updated. You can now sign in to Farm2Home with your new credentials.')}
               </Text>
 
               <TouchableOpacity
@@ -562,7 +563,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
                 style={styles.resetButton}
                 activeOpacity={0.85}
               >
-                <Text style={styles.resetButtonText}>Back to Sign In</Text>
+                <Text style={styles.resetButtonText}>{t('auth.backToLogin', 'Back to Login')}</Text>
               </TouchableOpacity>
             </View>
           </View>

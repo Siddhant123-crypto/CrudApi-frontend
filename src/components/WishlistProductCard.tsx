@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Platform } from 'react
 import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Rect } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { WishlistResponse } from '../types';
 import { BASE_URL } from '../services/api';
 import { useWishlist } from '../context/WishlistContext';
@@ -24,6 +25,7 @@ const WishlistProductCard: React.FC<WishlistProductCardProps> = ({
   onLongPress,
   isSelected = false,
 }) => {
+  const { t } = useTranslation();
   const { toggleWishlist, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
 
@@ -128,7 +130,7 @@ const WishlistProductCard: React.FC<WishlistProductCardProps> = ({
             style={styles.addToCartGradient}
           >
             <Ionicons name="cart-outline" size={16} color={THEME.colors.white} style={{ marginRight: 6 }} />
-            <Text style={styles.addToCartText}>Add to Cart</Text>
+            <Text style={styles.addToCartText}>{t('product.addToCart', 'Add to Cart')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

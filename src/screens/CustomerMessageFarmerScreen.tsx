@@ -26,8 +26,10 @@ import { THEME } from '../constants/theme';
 import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { PrimaryButton } from '../components/ui/Buttons';
+import { useTranslation } from 'react-i18next';
 
 export const CustomerMessageFarmerScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export const CustomerMessageFarmerScreen = () => {
       setFarmersList(farmers);
     } catch (error) {
       console.log('Failed to fetch farmers:', error);
-      Alert.alert('Error', 'Failed to load farmers list.');
+      Alert.alert(t('common.error'), t('support.failedLoadFarmers'));
     } finally {
       setFetchingUsers(false);
     }
@@ -68,9 +70,9 @@ export const CustomerMessageFarmerScreen = () => {
   const titleRef = useRef(title);
   const messageRef = useRef(message);
 
-  const handleTitleChange = (t: string) => {
-    setTitle(t);
-    titleRef.current = t;
+  const handleTitleChange = (tVal: string) => {
+    setTitle(tVal);
+    titleRef.current = tVal;
   };
   const handleMessageChange = (m: string) => {
     setMessage(m);
@@ -90,8 +92,8 @@ export const CustomerMessageFarmerScreen = () => {
           if (titleInputRef.current) {
             const titleTag = findNodeHandle(titleInputRef.current);
             if (titleTag) {
-              const t = await TextInputCommiter.getAndCommitText(titleTag);
-              if (t && t.trim().length > currentTitle.length) currentTitle = t.trim();
+              const nativeText = await TextInputCommiter.getAndCommitText(titleTag);
+              if (nativeText && nativeText.trim().length > currentTitle.length) currentTitle = nativeText.trim();
             }
           }
           if (messageInputRef.current) {
@@ -108,16 +110,16 @@ export const CustomerMessageFarmerScreen = () => {
     }
 
     if (!currentTitle.trim() || !currentMessage.trim()) {
-      Alert.alert('Error', 'Title and message are required.');
+      Alert.alert(t('common.error'), t('support.titleAndMessageRequired'));
       return;
     }
     if (recipient === 'SPECIFIC' && !specificUserId) {
-      Alert.alert('Error', 'Please select a specific farmer.');
+      Alert.alert(t('common.error'), t('support.selectFarmerRequired'));
       return;
     }
     setLoading(true);
     try {
-      const senderName = user?.name || user?.email || 'A Customer';
+      const senderName = user?.name || user?.email || t('common.customerRole');
       const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
       const payload: NotificationSendRequest = {
         receiverType: 'FARMER',
@@ -127,13 +129,13 @@ export const CustomerMessageFarmerScreen = () => {
         notificationType: 'CUSTOMER',
       };
       await NotificationService.sendNotification(payload);
-      Alert.alert('Success', 'Your message send successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert(t('common.success'), t('support.messageSentSuccess'), [
+        { text: t('common.ok'), onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
       console.error('Send message error:', error);
       setTimeout(() => {
-        Alert.alert('Error', 'Failed to send message.');
+        Alert.alert(t('common.error'), t('support.failedSendMessage'));
       }, 100);
     } finally {
       setLoading(false);
@@ -143,8 +145,8 @@ export const CustomerMessageFarmerScreen = () => {
     <PageBackground style={styles.safeArea}>
       <ThemedHeader
         variant="inner"
-        title={preSelectedName || 'Message Farmer'}
-        subtitle={preSelectedName ? 'Farmer' : undefined}
+        title={preSelectedName || t('nav.messageFarmer')}
+        subtitle={preSelectedName ? t('auth.farmer') : undefined}
         onBackPress={() => navigation.goBack()}
       />
       <KeyboardAvoidingView
@@ -157,14 +159,14 @@ export const CustomerMessageFarmerScreen = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <Text style={styles.label}>Receiver</Text>
+        <Text style={styles.label}>{t('support.receiver')}</Text>
         <View style={styles.rowSelector}>
           <TouchableOpacity
             style={[styles.selectorBtn, recipient === 'ALL' && styles.selectorBtnActive]}
             onPress={() => setRecipient('ALL')}
           >
             <Text style={[styles.selectorText, recipient === 'ALL' && styles.selectorTextActive]}>
-              All Farmers
+              {t('support.allFarmers')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -172,7 +174,7 @@ export const CustomerMessageFarmerScreen = () => {
             onPress={() => setRecipient('SPECIFIC')}
           >
             <Text style={[styles.selectorText, recipient === 'SPECIFIC' && styles.selectorTextActive]}>
-              Select Farmer
+              {t('support.selectFarmer')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -181,14 +183,14 @@ export const CustomerMessageFarmerScreen = () => {
             {fetchingUsers ? (
               <ActivityIndicator size="small" color="#1E3A8A" />
             ) : farmersList.length === 0 ? (
-              <Text style={styles.infoText}>No farmers found.</Text>
+              <Text style={styles.infoText}>{t('support.noFarmersFound')}</Text>
             ) : (
               <View>
                 <View style={styles.searchContainer}>
                   <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="Search farmers..."
+                    placeholder={t('support.searchFarmersPlaceholder')}
                     placeholderTextColor="#9CA3AF"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -201,11 +203,11 @@ export const CustomerMessageFarmerScreen = () => {
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll}>
                   {farmersList
-                    .filter(user =>
-                      (user.name || user.email || 'Unknown').toLowerCase().includes(searchQuery.toLowerCase())
+                    .filter(userItem =>
+                      (userItem.name || userItem.email || 'Unknown').toLowerCase().includes(searchQuery.toLowerCase())
                     )
-                    .map((user) => {
-                      const uId = user.userId || user.farmerId || user.id;
+                    .map((userItem) => {
+                      const uId = userItem.userId || userItem.farmerId || userItem.id;
                       const isSelected = specificUserId === uId;
                       return (
                         <TouchableOpacity
@@ -215,7 +217,7 @@ export const CustomerMessageFarmerScreen = () => {
                         >
                           <Ionicons name="person-circle-outline" size={32} color={isSelected ? "#FFF" : "#6B7280"} />
                           <Text style={[styles.userName, isSelected && { color: '#FFF' }]} numberOfLines={1}>
-                            {user.name || user.email || 'Unknown'}
+                            {userItem.name || userItem.email || 'Unknown'}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -226,25 +228,25 @@ export const CustomerMessageFarmerScreen = () => {
           </View>
         )}
         <View style={styles.readOnlyContainer}>
-          <Text style={styles.label}>Notification Type</Text>
+          <Text style={styles.label}>{t('support.notificationType')}</Text>
           <View style={styles.readOnlyBadge}>
             <Text style={styles.readOnlyBadgeText}>CUSTOMER</Text>
           </View>
         </View>
-        <Text style={styles.label}>Title</Text>
+        <Text style={styles.label}>{t('support.title')}</Text>
         <TextInput
           ref={titleInputRef}
           style={styles.input}
-          placeholder="e.g., Order Inquiry"
+          placeholder={t('support.orderInquiryPlaceholder')}
           value={title}
           onChangeText={handleTitleChange}
           placeholderTextColor="#9CA3AF"
         />
-        <Text style={styles.label}>Message</Text>
+        <Text style={styles.label}>{t('support.message')}</Text>
         <TextInput
           ref={messageInputRef}
           style={[styles.input, styles.textArea]}
-          placeholder="Enter your message here..."
+          placeholder={t('support.enterMessagePlaceholder')}
           value={message}
           onChangeText={handleMessageChange}
           multiline
@@ -253,7 +255,7 @@ export const CustomerMessageFarmerScreen = () => {
           placeholderTextColor="#9CA3AF"
         />
         <PrimaryButton
-          title="Send Message"
+          title={t('support.sendMessage')}
           loading={loading}
           onPress={handleSend}
           style={{ marginTop: 28, marginBottom: 40 }}
@@ -266,8 +268,8 @@ export const CustomerMessageFarmerScreen = () => {
             <View style={styles.successIconContainer}>
               <Ionicons name="checkmark-circle" size={60} color="#2E7D4F" />
             </View>
-            <Text style={styles.successModalTitle}>Success!</Text>
-            <Text style={styles.successModalMessage}>Message sent successfully</Text>
+            <Text style={styles.successModalTitle}>{t('common.success')}</Text>
+            <Text style={styles.successModalMessage}>{t('support.messageSentSuccess')}</Text>
           </View>
         </View>
       </Modal>

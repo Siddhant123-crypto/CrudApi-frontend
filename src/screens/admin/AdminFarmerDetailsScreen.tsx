@@ -17,6 +17,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import api, { BASE_URL } from '../../services/api';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
@@ -36,6 +37,7 @@ import {
 } from '../../components/admin';
 
 export const AdminFarmerDetailsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -162,7 +164,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
   if (loading) {
     return (
       <AdminPageBackground>
-        <AdminHeader variant="inner" title="Farmer Details" />
+        <AdminHeader variant="inner" title={t('admin.farmerDetails')} />
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={ADMIN_THEME.colors.indigo} />
         </View>
@@ -173,22 +175,23 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
   if (!farmer) {
     return (
       <AdminPageBackground>
-        <AdminHeader variant="inner" title="Farmer Details" />
+        <AdminHeader variant="inner" title={t('admin.farmerDetails')} />
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Farmer not found.</Text>
+          <Text style={styles.emptyText}>{t('admin.farmerNotFound')}</Text>
         </View>
       </AdminPageBackground>
     );
   }
 
-  const isBlocked = farmer.status === 'INACTIVE' || farmer.status === 'Blocked';
+  const isBlocked = Boolean(farmer.blockReason || farmer.blockedUntil || farmer.status === 'BLOCKED' || farmer.status === 'Blocked');
+  const isSelfDeactivated = !isBlocked && (farmer.status === 'INACTIVE' || farmer.status === 'Inactive' || farmer.isActive === false || farmer.inactiveSource === 'SELF_DEACTIVATION');
   const isBlockReady = Boolean(blockReason.trim()) && isValidBlockDate();
 
   return (
     <AdminPageBackground>
       <AdminHeader
         variant="inner"
-        title="Farmer Details"
+        title={t('admin.farmerDetails')}
         titleAlign="left"
         titleStyle={styles.headerTitle}
         rightAction={
@@ -220,25 +223,34 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
             <Image source={{ uri: getProfileImage() }} style={styles.profileImage} />
           </View>
           <Text style={styles.farmerName}>{farmer.name}</Text>
-          <Text style={styles.farmerEmail}>{farmer.email || 'No email registered'}</Text>
+          <Text style={styles.farmerEmail}>{farmer.email || t('admin.noEmailRegistered')}</Text>
           {farmer.farmName ? <Text style={styles.farmNameText}>{farmer.farmName}</Text> : null}
 
           <View style={styles.profileBadgeAndActionRow}>
-            {/* Highlighted Status Button with Already Blocked Alert */}
+            {/* Highlighted Status Button */}
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => {
                 if (isBlocked) {
                   Alert.alert(
-                    'Already Blocked',
-                    'This farmer is already blocked. Tap "Unblock Farmer" if you wish to restore their account access.',
-                    [{ text: 'OK', style: 'default' }]
+                    t('admin.blockedByAdmin'),
+                    t('admin.farmerBlockedDesc', { reason: farmer.blockReason || t('admin.policyViolation') }),
+                    [{ text: t('common.ok'), style: 'default' }]
                   );
-                } else if (farmer.status === 'ACTIVE') {
+                } else if (isSelfDeactivated) {
                   Alert.alert(
-                    'Farmer Active',
-                    'This farmer account is currently active. Use the "Block Farmer" button if you want to block this account.',
-                    [{ text: 'OK', style: 'default' }]
+                    t('admin.selfDeactivatedTitle'),
+                    t('admin.selfDeactivatedDesc', {
+                      reason: farmer.inactiveReason || t('admin.noReasonSpecified'),
+                      since: farmer.inactiveSince ? new Date(farmer.inactiveSince).toLocaleString() : 'N/A',
+                    }),
+                    [{ text: t('common.ok'), style: 'default' }]
+                  );
+                } else {
+                  Alert.alert(
+                    t('admin.farmerActive'),
+                    t('admin.farmerActiveDesc'),
+                    [{ text: t('common.ok'), style: 'default' }]
                   );
                 }
               }}
@@ -257,7 +269,9 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                     ? ['#10B981', '#059669']
                     : isBlocked
                     ? ['#EF4444', '#DC2626']
-                    : ['#F59E0B', '#D97706']
+                    : isSelfDeactivated
+                    ? ['#F59E0B', '#D97706']
+                    : ['#6B7280', '#4B5563']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -266,31 +280,33 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                 <View style={styles.statusIndicatorDotWhite} />
                 <Text style={styles.statusIndicatorTextWhite}>
                   {farmer.status === 'ACTIVE'
-                    ? 'ACTIVE'
+                    ? t('status.active')
                     : isBlocked
-                    ? 'BLOCKED'
-                    : farmer.status || 'INACTIVE'}
+                    ? t('status.blocked')
+                    : isSelfDeactivated
+                    ? t('status.selfDeactivated')
+                    : farmer.status || t('status.inactive')}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* Block / Unblock Action Button */}
+            {/* Block / Unblock / Activate Action Buttons */}
             {isBlocked ? (
               <TouchableOpacity
                 activeOpacity={0.8}
                 style={[styles.actionButtonWrapper, styles.unblockShadow]}
                 onPress={() => {
-                  Alert.alert('Unblock Farmer', 'Are you sure you want to unblock this farmer?', [
-                    { text: 'Cancel', style: 'cancel' },
+                  Alert.alert(t('admin.unblockFarmer'), t('admin.unblockFarmerConfirm'), [
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                      text: 'Unblock',
+                      text: t('admin.unblock'),
                       style: 'default',
                       onPress: async () => {
                         try {
                           await api.put(`/admin/farmers/${farmer.farmerId || farmer.id}/unblock`);
                           fetchFarmerData();
                         } catch (error) {
-                          Alert.alert('Error', 'Failed to unblock farmer.');
+                          Alert.alert(t('common.error'), t('admin.failedUnblockFarmer'));
                         }
                       },
                     },
@@ -304,9 +320,68 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                   style={styles.actionButtonGradient}
                 >
                   <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Unblock Farmer</Text>
+                  <Text style={styles.actionButtonText}>{t('admin.unblockFarmer')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
+            ) : isSelfDeactivated ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[styles.actionButtonWrapper, styles.unblockShadow]}
+                  onPress={() => {
+                    Alert.alert(
+                      t('admin.activateFarmer'),
+                      t('admin.activateFarmerConfirm', { name: farmer.name }),
+                      [
+                        { text: t('common.cancel'), style: 'cancel' },
+                        {
+                          text: t('admin.activate'),
+                          style: 'default',
+                          onPress: async () => {
+                            try {
+                              await api.put(`/admin/farmers/${farmer.farmerId || farmer.id}/activate`);
+                              Alert.alert(t('common.success'), t('admin.farmerActivatedSuccess'));
+                              fetchFarmerData();
+                            } catch (error) {
+                              Alert.alert(t('common.error'), t('admin.failedActivateFarmer'));
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.actionButtonGradient}
+                  >
+                    <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>{t('admin.activateFarmer')}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[styles.actionButtonWrapper, styles.blockShadow]}
+                  onPress={() => {
+                    setBlockReason('');
+                    setBlockUntilDate('');
+                    setIsBlockModalVisible(true);
+                  }}
+                >
+                  <LinearGradient
+                    colors={['#EF4444', '#DC2626']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.actionButtonGradient}
+                  >
+                    <Ionicons name="ban-outline" size={15} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>{t('admin.block')}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             ) : (
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -324,23 +399,61 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                   style={styles.actionButtonGradient}
                 >
                   <Ionicons name="ban-outline" size={15} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Block Farmer</Text>
+                  <Text style={styles.actionButtonText}>{t('admin.blockFarmer')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             )}
           </View>
         </AdminCard>
 
+        {/* SELF-DEACTIVATION DETAILS CARD */}
+        {(isSelfDeactivated || farmer.inactiveReason) && (
+          <AdminCard style={styles.deactivationCard}>
+            <View style={styles.deactivationHeaderRow}>
+              <Ionicons name="information-circle" size={22} color="#D97706" />
+              <Text style={styles.deactivationCardTitle}>{t('admin.selfDeactivationDetails')}</Text>
+            </View>
+            <View style={styles.deactivationBody}>
+              <Text style={styles.deactivationLabel}>{t('admin.reasonGivenByFarmer')}</Text>
+              <View style={styles.deactivationReasonBox}>
+                <Text style={styles.deactivationReasonText}>
+                  {farmer.inactiveReason || t('admin.noReasonSpecified')}
+                </Text>
+              </View>
+              {farmer.inactiveSince && (
+                <View style={styles.deactivationMetaRow}>
+                  <Text style={styles.deactivationMetaLabel}>{t('admin.deactivatedAt')}</Text>
+                  <Text style={styles.deactivationMetaValue}>
+                    {new Date(farmer.inactiveSince).toLocaleString()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.deactivationMetaRow}>
+                <Text style={styles.deactivationMetaLabel}>{t('admin.eventSource')}</Text>
+                <Text style={styles.deactivationMetaValue}>
+                  {farmer.inactiveSource || 'SELF_DEACTIVATION'}
+                </Text>
+              </View>
+              <View style={styles.deactivationNoticeBanner}>
+                <Ionicons name="alert-circle-outline" size={16} color="#B45309" />
+                <Text style={styles.deactivationNoticeText}>
+                  {t('admin.farmerProductsHidden')}
+                </Text>
+              </View>
+            </View>
+          </AdminCard>
+        )}
+
         {/* 2) FULL INFORMATION */}
         <AdminCard style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>Full Information</Text>
+          <Text style={styles.sectionTitle}>{t('admin.fullInformation')}</Text>
 
           <View style={styles.infoRow}>
             <View style={styles.infoIconBox}>
               <UserIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Name</Text>
+              <Text style={styles.infoLabel}>{t('common.name')}</Text>
               <Text style={styles.infoValue}>{farmer.name || 'N/A'}</Text>
             </View>
           </View>
@@ -350,7 +463,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <MailIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoLabel}>{t('common.email')}</Text>
               <Text style={styles.infoValue}>{farmer.email || 'N/A'}</Text>
             </View>
           </View>
@@ -360,7 +473,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <PhoneIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Mobile No.</Text>
+              <Text style={styles.infoLabel}>{t('admin.phoneNumber')}</Text>
               <Text style={styles.infoValue}>{farmer.mobile || 'N/A'}</Text>
             </View>
           </View>
@@ -370,7 +483,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Address</Text>
+              <Text style={styles.infoLabel}>{t('common.address')}</Text>
               <Text style={styles.infoValue}>{farmer.address || 'N/A'}</Text>
             </View>
           </View>
@@ -380,7 +493,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>State & Village</Text>
+              <Text style={styles.infoLabel}>{t('admin.stateAndVillage')}</Text>
               <Text style={styles.infoValue}>
                 {[farmer.village, farmer.state].filter(Boolean).join(', ') || 'N/A'}
               </Text>
@@ -392,7 +505,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               <LocationIcon size={18} color={ADMIN_THEME.colors.indigo} strokeWidth={2} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Postal Code</Text>
+              <Text style={styles.infoLabel}>{t('admin.pincode')}</Text>
               <Text style={styles.infoValue}>{farmer.postalCode || 'N/A'}</Text>
             </View>
           </View>
@@ -400,30 +513,30 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
 
         {/* 3) SALES STATISTICS */}
         <AdminCard style={styles.statsCard}>
-          <Text style={styles.sectionTitle}>Sales Statistics</Text>
+          <Text style={styles.sectionTitle}>{t('admin.salesStatistics')}</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{products.length}</Text>
-              <Text style={styles.statLabel}>Total Products</Text>
+              <Text style={styles.statLabel}>{t('admin.totalProducts')}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{sales?.totalProductsSold || 0}</Text>
-              <Text style={styles.statLabel}>Products Sold</Text>
+              <Text style={styles.statLabel}>{t('admin.productsSold')}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{sales?.totalOrders || 0}</Text>
-              <Text style={styles.statLabel}>Total Orders</Text>
+              <Text style={styles.statLabel}>{t('admin.totalOrders')}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{formatCurrency(sales?.totalRevenue || 0)}</Text>
-              <Text style={styles.statLabel}>Revenue</Text>
+              <Text style={styles.statLabel}>{t('admin.revenue')}</Text>
             </View>
           </View>
         </AdminCard>
 
         {/* 4) PRODUCTS CATALOG */}
         <AdminCard style={styles.catalogCard}>
-          <Text style={styles.sectionTitle}>Products Catalog</Text>
+          <Text style={styles.sectionTitle}>{t('admin.productsCatalog')}</Text>
           {products.length > 0 ? (
             <FlatList
               horizontal
@@ -434,13 +547,13 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               contentContainerStyle={{ paddingVertical: 6 }}
             />
           ) : (
-            <Text style={styles.emptyTextSmall}>No products listed by this farmer.</Text>
+            <Text style={styles.emptyTextSmall}>{t('admin.noProductsListedByFarmer')}</Text>
           )}
         </AdminCard>
 
         {/* 5) RECENT ORDERS */}
         <AdminCard style={styles.ordersCard}>
-          <Text style={styles.sectionTitle}>Recent Orders</Text>
+          <Text style={styles.sectionTitle}>{t('admin.recentOrders')}</Text>
           {orders.length > 0 ? (
             orders.slice(0, 5).map((order) => (
               <React.Fragment key={order.orderId}>
@@ -470,7 +583,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                   <View style={styles.modalIconCircle}>
                     <BanIcon size={20} color="#DC2626" strokeWidth={2.4} />
                   </View>
-                  <Text style={styles.modalTitle}>Block Farmer</Text>
+                  <Text style={styles.modalTitle}>{t('admin.blockFarmer')}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setIsBlockModalVisible(false)}
@@ -482,13 +595,13 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               </View>
 
               <Text style={styles.modalDescription}>
-                Please provide a reason for blocking <Text style={styles.farmerHighlightText}>{farmer?.name}</Text>. This reason will be shown to the farmer.
+                {t('admin.blockFarmerDesc', { name: farmer?.name })}
               </Text>
 
               <AdminInput
-                label="Block Reason"
+                label={t('admin.blockReason')}
                 required
-                placeholder="Enter block reason..."
+                placeholder={t('admin.enterBlockReason')}
                 multiline
                 numberOfLines={4}
                 value={blockReason}
@@ -496,9 +609,9 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
               />
 
               <AdminInput
-                label="Block Until Date"
+                label={t('admin.blockUntilDate')}
                 required
-                placeholder="e.g. 31-12-2026 (DD-MM-YYYY)"
+                placeholder={t('admin.egDate')}
                 value={blockUntilDate}
                 onChangeText={setBlockUntilDate}
                 maxLength={10}
@@ -516,7 +629,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                     end={{ x: 1, y: 0 }}
                     style={styles.cancelGradient}
                   >
-                    <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                    <Text style={styles.modalCancelBtnText}>{t('common.cancel')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
@@ -538,7 +651,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                       setIsBlockModalVisible(false);
                       fetchFarmerData();
                     } catch (error) {
-                      Alert.alert('Error', 'Failed to block farmer.');
+                      Alert.alert(t('common.error'), t('admin.failedBlockFarmer'));
                     }
                   }}
                 >
@@ -570,7 +683,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                         !isBlockReady && styles.modalConfirmBtnTextFaint,
                       ]}
                     >
-                      Confirm Block
+                      {t('admin.confirmBlock')}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -1051,5 +1164,76 @@ const styles = StyleSheet.create({
   },
   modalConfirmBtnTextFaint: {
     color: '#DC2626',
+  },
+  deactivationCard: {
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  deactivationHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  deactivationCardTitle: {
+    fontSize: 16,
+    fontFamily: AdminFonts.bold,
+    color: '#92400E',
+  },
+  deactivationBody: {
+    gap: 8,
+  },
+  deactivationLabel: {
+    fontSize: 13,
+    fontFamily: AdminFonts.semiBold,
+    color: '#78350F',
+  },
+  deactivationReasonBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  deactivationReasonText: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontFamily: AdminFonts.regular,
+    lineHeight: 20,
+  },
+  deactivationMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  deactivationMetaLabel: {
+    fontSize: 12.5,
+    fontFamily: AdminFonts.medium,
+    color: '#78350F',
+  },
+  deactivationMetaValue: {
+    fontSize: 12.5,
+    fontFamily: AdminFonts.semiBold,
+    color: '#92400E',
+  },
+  deactivationNoticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  deactivationNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#92400E',
+    fontFamily: AdminFonts.medium,
   },
 });

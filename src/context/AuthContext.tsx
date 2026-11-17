@@ -8,6 +8,7 @@ import React, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { setUnauthorizedHandler } from '../services/api';
+import { clearChatTimestampOnLogout } from '../services/aiService';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -155,6 +156,7 @@ export const AuthProvider: React.FC<{
   };
   const logout = async () => {
     try {
+      await clearChatTimestampOnLogout(user?.userId);
       await AsyncStorage.removeItem(
         'userData',
       );

@@ -141,7 +141,7 @@ export const FarmerDeepButton: React.FC<ButtonProps> = ({
         colors={FARMER_THEME.colors.deepBtnGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradientFill}
+        style={[styles.gradientFill, compact && styles.compactPadding]}
       >
         {loading ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
@@ -151,6 +151,7 @@ export const FarmerDeepButton: React.FC<ButtonProps> = ({
             <Text
               style={[styles.deepText, compact && styles.compactText, textStyle]}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+              numberOfLines={1}
             >
               {title}
             </Text>
@@ -186,6 +187,7 @@ export const FarmerOutlineButton: React.FC<OutlineButtonProps> = ({
       style={[
         styles.outlineBtn,
         compact ? styles.compactHeight : styles.outlineHeight,
+        compact ? styles.compactPadding : null,
         borderColor ? { borderColor } : null,
         disabled && styles.disabled,
         style,
@@ -207,6 +209,7 @@ export const FarmerOutlineButton: React.FC<OutlineButtonProps> = ({
               textStyle,
             ]}
             maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+            numberOfLines={1}
           >
             {title}
           </Text>
@@ -292,6 +295,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+  },
+  compactPadding: {
+    paddingHorizontal: 10,
   },
   contentRow: {
     flexDirection: 'row',

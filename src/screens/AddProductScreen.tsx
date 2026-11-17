@@ -33,6 +33,8 @@ import {
   CheckmarkIcon,
   CloseCircleIcon,
 } from '../components/farmer/FarmerIcons';
+import { useTranslation } from 'react-i18next';
+import { formatCategory } from '../utils/categoryUtils';
 
 const CATEGORIES = [
   'Vegetable',
@@ -74,6 +76,7 @@ const CalendarModal: React.FC<CalendarModalProps> = React.memo(({
   harvestDate,
   onSelectDate,
 }) => {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   const currentYear = calendarDate.getFullYear();
@@ -141,7 +144,7 @@ const CalendarModal: React.FC<CalendarModalProps> = React.memo(({
           <View style={styles.daysGrid}>{days}</View>
 
           <TouchableOpacity style={styles.calendarCancelBtn} onPress={onClose}>
-            <Text style={styles.calendarCancelText}>Close</Text>
+            <Text style={styles.calendarCancelText}>{t('common.close', 'Close')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -169,6 +172,7 @@ const DropdownModal: React.FC<DropdownModalProps> = React.memo(({
   title,
   onInactiveSelect,
 }) => {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   return (
@@ -181,7 +185,8 @@ const DropdownModal: React.FC<DropdownModalProps> = React.memo(({
             keyExtractor={(item) => item}
             renderItem={({ item }) => {
               const isInactive = item.endsWith(' (Inactive)');
-              const displayText = isInactive ? item.replace(' (Inactive)', '') : item;
+              const rawText = isInactive ? item.replace(' (Inactive)', '') : item;
+              const displayText = formatCategory(rawText, t);
               return (
                 <TouchableOpacity
                   style={styles.dropdownItem}
@@ -196,7 +201,7 @@ const DropdownModal: React.FC<DropdownModalProps> = React.memo(({
                   }}
                 >
                   <Text style={[styles.dropdownItemText, isInactive && { color: FARMER_THEME.colors.error }]}>
-                    {displayText} {isInactive && '(Inactive)'}
+                    {displayText} {isInactive && `(${t('common.inactive', 'Inactive')})`}
                   </Text>
                 </TouchableOpacity>
               );
@@ -210,6 +215,7 @@ const DropdownModal: React.FC<DropdownModalProps> = React.memo(({
 });
 
 const AddProductScreen = ({ navigation, route }: any) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const editProduct = route?.params?.product ?? null;
   const isEditMode = !!editProduct;
@@ -363,7 +369,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
   const requestCameraPermission = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Camera access is required.');
+      Alert.alert(t('validation.permissionDenied', 'Permission Denied'), t('validation.cameraPermissionRequired', 'Camera access is required.'));
       return false;
     }
     return true;
@@ -373,7 +379,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Gallery access is required.');
+        Alert.alert(t('validation.permissionDenied', 'Permission Denied'), t('validation.permissionDenied', 'Gallery access is required.'));
         setMediaModalVisible(false);
         return;
       }
@@ -389,8 +395,8 @@ const AddProductScreen = ({ navigation, route }: any) => {
         if (isVideo) {
           if (asset.type !== 'video') {
             Alert.alert(
-              'Wrong file type',
-              'Please select a video from the gallery.'
+              t('common.error', 'Wrong file type'),
+              t('common.error', 'Please select a video from the gallery.')
             );
             return;
           }
@@ -405,7 +411,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
       }
     } catch (error) {
       console.log('Error picking media from gallery:', error);
-      Alert.alert('Error', 'Failed to pick media from gallery');
+      Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to pick media from gallery'));
     }
     setMediaModalVisible(false);
   };
@@ -440,7 +446,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
       }
     } catch (error) {
       console.log('Error capturing media from camera:', error);
-      Alert.alert('Error', 'Failed to capture media. Please try again.');
+      Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to capture media. Please try again.'));
     }
     setMediaModalVisible(false);
   };
@@ -467,14 +473,14 @@ const AddProductScreen = ({ navigation, route }: any) => {
       }
     } catch (error) {
       console.log('Error picking document:', error);
-      Alert.alert('Error', 'Failed to pick file from documents');
+      Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to pick file from documents'));
     }
     setMediaModalVisible(false);
   };
 
   const handleSaveProduct = async () => {
     if (!form.productName.trim() || !form.price.trim() || !form.quantity.trim() || !form.harvestDate.trim()) {
-      Alert.alert('Validation Error', 'Please fill in all required fields (including Harvest Date)');
+      Alert.alert(t('common.error', 'Validation Error'), t('farmer.enterDescription', 'Please fill in all required fields (including Harvest Date)'));
       return;
     }
     if (
@@ -483,14 +489,14 @@ const AddProductScreen = ({ navigation, route }: any) => {
       isNaN(Number(form.quantity)) ||
       Number(form.quantity) <= 0
     ) {
-      Alert.alert('Validation Error', 'Price and Quantity must be valid numbers greater than 0');
+      Alert.alert(t('common.error', 'Validation Error'), t('farmer.enterPrice', 'Price and Quantity must be valid numbers greater than 0'));
       return;
     }
     const isCurrentCategoryInactive = categoriesList.includes(`${form.category} (Inactive)`);
     if (isCurrentCategoryInactive) {
       Alert.alert(
-        'Category Unavailable',
-        'This category is currently unavailable, so you cannot add a product to it.'
+        t('common.error', 'Category Unavailable'),
+        t('farmer.categoryUnavailableDesc', 'This category is currently unavailable, so you cannot add a product to it.')
       );
       return;
     }
@@ -515,7 +521,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
           selectedPhoto || undefined,
           selectedVideo || undefined
         );
-        setSuccessMessage('Product updated successfully!');
+        setSuccessMessage(t('farmer.productUpdatedSuccess', 'Product updated successfully!'));
         setSuccessModalVisible(true);
       } else {
         await saveProductFormData(
@@ -523,12 +529,12 @@ const AddProductScreen = ({ navigation, route }: any) => {
           selectedPhoto || undefined,
           selectedVideo || undefined
         );
-        setSuccessMessage('Product added successfully!');
+        setSuccessMessage(t('farmer.productAddedSuccess', 'Product added successfully!'));
         setSuccessModalVisible(true);
       }
     } catch (error: any) {
       console.log('Error saving product:', error);
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to save product');
+      Alert.alert(t('common.error', 'Error'), error?.response?.data?.message || t('errors.generic', 'Failed to save product'));
     } finally {
       setLoading(false);
     }
@@ -552,7 +558,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
         {/* Header */}
         <FarmerHeader
           variant="inner"
-          title={isEditMode ? 'Edit Product' : 'Add Product'}
+          title={isEditMode ? t('farmer.editProductTitle', 'Edit Product') : t('farmer.addProductTitle', 'Add Product')}
           titleAlign="left"
           onBackPress={handleBackPress}
         />
@@ -565,7 +571,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
               style={styles.sectionHeading}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              PRODUCT MEDIA
+              {t('product.details', 'PRODUCT MEDIA')}
             </Text>
             <View style={styles.sectionDivider} />
           </View>
@@ -577,10 +583,10 @@ const AddProductScreen = ({ navigation, route }: any) => {
               onPress={openMediaModalImages}
               onLongPress={() => {
                 if (selectedPhoto || (isEditMode && editProduct?.productPhoto && !removePhoto)) {
-                  Alert.alert('Delete Photo', 'Are you sure you want to delete this photo?', [
-                    { text: 'Cancel', style: 'cancel' },
+                  Alert.alert(t('farmer.deleteProductTitle', 'Delete Photo'), t('farmer.deleteProductConfirm', 'Are you sure you want to delete this photo?'), [
+                    { text: t('common.cancel', 'Cancel'), style: 'cancel' },
                     {
-                      text: 'Yes',
+                      text: t('common.yes', 'Yes'),
                       onPress: () => {
                         setSelectedPhoto(null);
                         setTempSelectedPhoto(null);
@@ -617,9 +623,9 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     style={styles.mediaBoxTitle}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    Add Photo *
+                    {t('farmer.choosePhoto', 'Add Photo')} *
                   </Text>
-                  <Text style={styles.mediaBoxSub}>Tap to upload</Text>
+                  <Text style={styles.mediaBoxSub}>{t('auth.tapToUpload', 'Tap to upload')}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -637,7 +643,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     style={styles.videoSuccessText}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    Video Ready
+                    {t('farmer.videoReady', 'Video Ready')}
                   </Text>
                   <TouchableOpacity
                     style={styles.removeVideoBtn}
@@ -663,9 +669,9 @@ const AddProductScreen = ({ navigation, route }: any) => {
                     style={styles.mediaBoxTitle}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    Add Video
+                    {t('farmer.addVideo', 'Add Video')}
                   </Text>
-                  <Text style={styles.mediaBoxSub}>Optional</Text>
+                  <Text style={styles.mediaBoxSub}>{t('common.optional', 'Optional')}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -679,26 +685,26 @@ const AddProductScreen = ({ navigation, route }: any) => {
               style={styles.sectionHeading}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              PRODUCT DETAILS
+              {t('product.details', 'PRODUCT DETAILS')}
             </Text>
             <View style={styles.sectionDivider} />
           </View>
 
           <FarmerInput
             ref={productNameRef}
-            label="Product Name"
+            label={t('product.details', 'Product Name')}
             required
             value={form.productName}
             onChangeText={onProductNameChange}
-            placeholder="E.g. Fresh Organic Tomatoes"
+            placeholder={t('farmer.enterProductName', 'E.g. Fresh Organic Tomatoes')}
             returnKeyType="next"
             onSubmitEditing={focusDescription}
           />
 
           <FarmerInput
-            label="Category"
+            label={t('home.categories', 'Category')}
             required
-            value={form.category}
+            value={formatCategory(form.category, t)}
             isTouchable
             onPressContainer={openCategoryModal}
             rightIcon={categoryRightIcon}
@@ -706,10 +712,10 @@ const AddProductScreen = ({ navigation, route }: any) => {
 
           <FarmerInput
             ref={descriptionRef}
-            label="Description (Optional)"
+            label={`${t('product.description', 'Description')} (${t('common.optional', 'Optional')})`}
             value={form.description}
             onChangeText={onDescriptionChange}
-            placeholder="Enter product description, freshness details..."
+            placeholder={t('farmer.enterDescription', 'Enter product description, freshness details...')}
             multiline
             numberOfLines={3}
             blurOnSubmit={false}
@@ -723,7 +729,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
               style={styles.sectionHeading}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              PRICING & INVENTORY
+              {t('farmer.pricingInventory', 'PRICING & INVENTORY')}
             </Text>
             <View style={styles.sectionDivider} />
           </View>
@@ -732,19 +738,19 @@ const AddProductScreen = ({ navigation, route }: any) => {
             <View style={styles.twoColItem}>
               <FarmerInput
                 ref={priceRef}
-                label="Price (₹)"
+                label={`${t('product.price', 'Price')} (₹)`}
                 required
                 value={form.price}
                 onChangeText={onPriceChange}
                 keyboardType="decimal-pad"
-                placeholder="E.g. 40"
+                placeholder="40"
                 returnKeyType="next"
                 onSubmitEditing={focusQuantity}
               />
             </View>
             <View style={styles.twoColItem}>
               <FarmerInput
-                label="Unit"
+                label={t('product.unit', 'Unit')}
                 required
                 value={form.unit}
                 isTouchable
@@ -758,12 +764,12 @@ const AddProductScreen = ({ navigation, route }: any) => {
             <View style={styles.twoColItem}>
               <FarmerInput
                 ref={quantityRef}
-                label="Available Quantity"
+                label={t('farmer.enterQuantity', 'Available Quantity')}
                 required
                 value={form.quantity}
                 onChangeText={onQuantityChange}
                 keyboardType="numeric"
-                placeholder="E.g. 100"
+                placeholder="100"
                 returnKeyType="next"
                 onSubmitEditing={focusHarvestDate}
               />
@@ -771,7 +777,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
             <View style={styles.twoColItem}>
               <FarmerInput
                 ref={harvestDateRef}
-                label="Harvest Date"
+                label={t('product.harvestDate', 'Harvest Date')}
                 required
                 value={form.harvestDate}
                 onChangeText={onHarvestDateChange}
@@ -789,7 +795,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
       {/* Sticky Save Bar */}
       <FarmerStickyBar>
         <FarmerDeepButton
-          title={isEditMode ? 'Update Product' : 'Save Product'}
+          title={isEditMode ? t('farmer.editProductTitle', 'Update Product') : t('farmer.saveProduct', 'Save Product')}
           onPress={handleSaveProduct}
           loading={loading}
           disabled={loading}
@@ -802,7 +808,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
         onClose={closeCategoryModal}
         data={categoriesList}
         onSelect={onCategorySelect}
-        title="Select Category"
+        title={t('farmer.selectCategory', 'Select Category')}
         onInactiveSelect={onInactiveCategoryAlert}
       />
       <DropdownModal
@@ -810,7 +816,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
         onClose={closeUnitModal}
         data={UNITS}
         onSelect={onUnitSelect}
-        title="Select Unit"
+        title={t('farmer.selectCategory', 'Select Unit')}
         onInactiveSelect={onInactiveCategoryAlert}
       />
       <CalendarModal
@@ -827,7 +833,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMediaModalVisible(false)}>
           <View style={styles.mediaSheetContainer}>
             <Text style={styles.mediaSheetTitle}>
-              Select {mediaSelectionType === 'Images' ? 'Photo' : 'Video'} Source
+              {mediaSelectionType === 'Images' ? t('farmer.choosePhoto', 'Select Photo Source') : t('farmer.addVideo', 'Select Video Source')}
             </Text>
 
             <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromCamera}>
@@ -836,22 +842,24 @@ const AddProductScreen = ({ navigation, route }: any) => {
                 size={22}
                 color={FARMER_THEME.colors.primaryGreen}
               />
-              <Text style={styles.mediaOptionText}>Take {mediaSelectionType === 'Images' ? 'Photo' : 'Video'}</Text>
+              <Text style={styles.mediaOptionText}>
+                {mediaSelectionType === 'Images' ? t('farmer.takePhoto', 'Take Photo') : t('farmer.addVideo', 'Record Video')}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromGallery}>
               <Ionicons name="images-outline" size={22} color={FARMER_THEME.colors.primaryGreen} />
-              <Text style={styles.mediaOptionText}>Choose from Gallery</Text>
+              <Text style={styles.mediaOptionText}>{t('farmer.gallery', 'Choose from Gallery')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.mediaOptionBtn} onPress={handlePickMediaFromDocument}>
               <Ionicons name="document-text-outline" size={22} color={FARMER_THEME.colors.primaryGreen} />
-              <Text style={styles.mediaOptionText}>Choose from Documents</Text>
+              <Text style={styles.mediaOptionText}>{t('farmer.document', 'Choose from Documents')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.mediaOptionBtn, { borderBottomWidth: 0 }]} onPress={() => setMediaModalVisible(false)}>
               <Ionicons name="close-circle-outline" size={22} color={FARMER_THEME.colors.error} />
-              <Text style={[styles.mediaOptionText, { color: FARMER_THEME.colors.error }]}>Cancel</Text>
+              <Text style={[styles.mediaOptionText, { color: FARMER_THEME.colors.error }]}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -862,10 +870,10 @@ const AddProductScreen = ({ navigation, route }: any) => {
         <View style={styles.modalOverlay}>
           <FarmerCard style={styles.alertCard}>
             <Ionicons name="alert-circle" size={50} color={FARMER_THEME.colors.error} style={{ marginBottom: 12 }} />
-            <Text style={styles.alertTitle}>Notice</Text>
-            <Text style={styles.alertSubtitle}>This category is currently inactive.</Text>
+            <Text style={styles.alertTitle}>{t('common.notice', 'Notice')}</Text>
+            <Text style={styles.alertSubtitle}>{t('farmer.categoryInactive', 'This category is currently inactive.')}</Text>
             <FarmerOutlineButton
-              title="OK"
+              title={t('common.ok', 'OK')}
               onPress={() => setInactiveAlertVisible(false)}
               compact
               style={{ width: '100%', marginTop: 14 }}
@@ -881,10 +889,10 @@ const AddProductScreen = ({ navigation, route }: any) => {
             <View style={styles.successIconCircle}>
               <CheckmarkIcon size={36} color={FARMER_THEME.colors.primaryGreen} strokeWidth={3} />
             </View>
-            <Text style={styles.successTitle}>Success!</Text>
+            <Text style={styles.successTitle}>{t('common.success', 'Success!')}</Text>
             <Text style={styles.successSubtitle}>{successMessage}</Text>
             <FarmerDeepButton
-              title="Continue"
+              title={t('common.continue', 'Continue')}
               onPress={() => {
                 setSuccessModalVisible(false);
                 navigation.goBack();
@@ -901,7 +909,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
           <Image source={{ uri: tempSelectedPhoto || '' }} style={{ flex: 1, resizeMode: 'contain' }} />
           <View style={{ position: 'absolute', bottom: 60, left: 24, right: 24 }}>
             <FarmerDeepButton
-              title="Confirm Photo"
+              title={t('common.confirm', 'Confirm Photo')}
               onPress={() => {
                 setSelectedPhoto(tempSelectedPhoto);
                 setPhotoPreviewModalVisible(false);

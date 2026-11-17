@@ -10,11 +10,15 @@ import { useNavigation } from '@react-navigation/native';
 import { THEME } from '../constants/theme';
 import { Card } from './ui/Card';
 
+import { useTranslation } from 'react-i18next';
+import { formatCurrency } from '../utils/formatters';
+
 interface CartItemCardProps {
   item: CartItemResponse;
 }
 
 const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
+  const { t } = useTranslation();
   const { updateQuantity, removeFromCart } = useCart();
   const navigation = useNavigation<any>();
 
@@ -30,11 +34,11 @@ const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
 
   const handleRemove = () => {
     Alert.alert(
-      'Remove Item',
-      'Are you sure you want to remove this item from your cart?',
+      t('cart.removeItem', 'Remove Item'),
+      t('cart.removeItemConfirm', 'Are you sure you want to remove this item from your cart?'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => removeFromCart(item.productId) },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        { text: t('common.delete', 'Remove'), style: 'destructive', onPress: () => removeFromCart(item.productId) },
       ]
     );
   };
@@ -107,7 +111,7 @@ const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
 
         <TouchableOpacity onPress={handleProductPress} activeOpacity={0.9}>
           <Text style={styles.unitText}>{item.unit}</Text>
-          <Text style={styles.priceText}>₹{item.price}</Text>
+          <Text style={styles.priceText}>{formatCurrency(item.price)}</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomRow}>
@@ -116,7 +120,7 @@ const CartItemCard: React.FC<CartItemCardProps> = ({ item }) => {
             onIncrease={handleIncrease}
             onDecrease={handleDecrease}
           />
-          <Text style={styles.subtotalText}>₹{item.subtotal}</Text>
+          <Text style={styles.subtotalText}>{formatCurrency(item.subtotal)}</Text>
         </View>
       </View>
     </Card>

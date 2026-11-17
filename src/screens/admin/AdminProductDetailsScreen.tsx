@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -29,6 +30,7 @@ import {
 import { formatAddedTime } from '../../utils/dateUtils';
 
 export const AdminProductDetailsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { productId } = route.params || {};
@@ -97,7 +99,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
   if (loading) {
     return (
       <AdminPageBackground>
-        <AdminHeader variant="inner" title="Product Details" showBackButton={true} />
+        <AdminHeader variant="inner" title={t('admin.productDetails', 'Product Details')} showBackButton={true} />
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={ADMIN_THEME.colors.indigo} />
         </View>
@@ -108,11 +110,11 @@ export const AdminProductDetailsScreen: React.FC = () => {
   if (!product) {
     return (
       <AdminPageBackground>
-        <AdminHeader variant="inner" title="Product Details" showBackButton={true} />
+        <AdminHeader variant="inner" title={t('admin.productDetails', 'Product Details')} showBackButton={true} />
         <AdminEmptyState
           icon={<CubeIcon size={40} color={ADMIN_THEME.colors.indigo} />}
-          title="Product not found"
-          subtitle="The requested product could not be located."
+          title={t('admin.productNotFound', 'Product not found')}
+          subtitle={t('admin.noProductsMatched', 'The requested product could not be located.')}
         />
       </AdminPageBackground>
     );
@@ -130,7 +132,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
   return (
     <AdminPageBackground>
       {/* 1) INNER ADMIN HEADER */}
-      <AdminHeader variant="inner" title="Product Details" showBackButton={true} />
+      <AdminHeader variant="inner" title={t('admin.productDetails', 'Product Details')} showBackButton={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -170,7 +172,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
         {/* 3) FULL INFORMATION IN ADMINCARD */}
         <AdminCard style={styles.infoCard}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Full Information</Text>
+            <Text style={styles.sectionTitle}>{t('admin.fullInformation', 'Full Information')}</Text>
             <TouchableOpacity
               activeOpacity={0.7}
               style={styles.chatButton}
@@ -192,7 +194,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
               <UserIcon size={18} color={ADMIN_THEME.colors.indigo} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Farmer Name</Text>
+              <Text style={styles.infoLabel}>{t('admin.farmerName', 'Farmer Name')}</Text>
               <Text style={styles.infoValue}>{product.farmerName || 'N/A'}</Text>
             </View>
           </View>
@@ -203,7 +205,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
               <TagIcon size={18} color={ADMIN_THEME.colors.indigo} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Price Details</Text>
+              <Text style={styles.infoLabel}>{t('admin.priceDetails', 'Price Details')}</Text>
               <Text style={styles.infoValue}>
                 {formatCurrency(product.price)} / {product.unit || 'kg'}
               </Text>
@@ -216,7 +218,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
               <CubeIcon size={18} color={ADMIN_THEME.colors.indigo} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Available Stock</Text>
+              <Text style={styles.infoLabel}>{t('admin.availableStock', 'Available Stock')}</Text>
               <Text style={styles.infoValue}>
                 {product.quantity || 0} {product.unit || 'kg'}
               </Text>
@@ -229,7 +231,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
               <CalendarIcon size={18} color={ADMIN_THEME.colors.indigo} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Harvest Date</Text>
+              <Text style={styles.infoLabel}>{t('admin.harvestDate', 'Harvest Date')}</Text>
               <Text style={styles.infoValue}>
                 {product.harvestDate
                   ? new Date(product.harvestDate).toLocaleDateString()
@@ -245,7 +247,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
                 <ClockIcon size={18} color={ADMIN_THEME.colors.indigo} />
               </View>
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Added</Text>
+                <Text style={styles.infoLabel}>{t('admin.added', 'Added')}</Text>
                 <Text style={styles.infoValue}>
                   {formatAddedTime(product.createdOn, product.addedTime)}
                 </Text>
@@ -259,7 +261,7 @@ export const AdminProductDetailsScreen: React.FC = () => {
               <LeafIcon size={18} color={ADMIN_THEME.colors.indigo} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>Description</Text>
+              <Text style={styles.infoLabel}>{t('common.description', 'Description')}</Text>
               <Text style={styles.descriptionValue}>
                 {product.description || 'No description provided for this product.'}
               </Text>
@@ -269,25 +271,25 @@ export const AdminProductDetailsScreen: React.FC = () => {
 
         {/* 4) PRODUCT ACTIVITY STATS */}
         <AdminCard style={styles.activityCard}>
-          <Text style={styles.sectionTitle}>Product Activity</Text>
+          <Text style={styles.sectionTitle}>{t('admin.productActivity', 'Product Activity')}</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{buyersCount}</Text>
-              <Text style={styles.statLabel}>Total Buyers</Text>
+              <Text style={styles.statLabel}>{t('admin.totalBuyers', 'Total Buyers')}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{ordersCount}</Text>
-              <Text style={styles.statLabel}>Total Orders</Text>
+              <Text style={styles.statLabel}>{t('admin.totalOrders', 'Total Orders')}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>
                 {product.averageRating?.toFixed(1) || '0.0'}
               </Text>
-              <Text style={styles.statLabel}>Avg Rating</Text>
+              <Text style={styles.statLabel}>{t('admin.avgRating', 'Avg Rating')}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{product.reviewCount || 0}</Text>
-              <Text style={styles.statLabel}>Reviews</Text>
+              <Text style={styles.statLabel}>{t('admin.reviews', 'Reviews')}</Text>
             </View>
           </View>
         </AdminCard>

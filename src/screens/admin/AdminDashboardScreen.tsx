@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -14,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { getAdminDashboardSummary } from '../../services/adminService';
+import { refreshFarmVerificationPendingCount } from '../../hooks/useFarmVerificationPendingCount';
 import { ADMIN_THEME } from '../../constants/adminTheme';
 import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
 import { AdminHeader } from '../../components/admin/AdminHeader';
@@ -26,6 +28,7 @@ import { QuickActionTile } from '../../components/admin/QuickActionTile';
 import { CalendarIcon, HeadsetIcon } from '../../components/admin/AdminIcons';
 
 export const AdminDashboardScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const { width: screenWidth } = useWindowDimensions();
   const { user } = useAuth();
@@ -57,6 +60,7 @@ export const AdminDashboardScreen: React.FC = () => {
 
   const fetchData = async () => {
     try {
+      refreshFarmVerificationPendingCount();
       const res = await getAdminDashboardSummary();
       if (res && res.data) {
         setDashboardData((prev) => ({
@@ -170,7 +174,7 @@ export const AdminDashboardScreen: React.FC = () => {
                   style={styles.supportButtonGradient}
                 >
                   <HeadsetIcon size={16} color={ADMIN_THEME.colors.ink} strokeWidth={2} />
-                  <Text style={styles.supportText}>Support</Text>
+                  <Text style={styles.supportText}>{t('admin.support', 'Support')}</Text>
                   {(adminSupportUnreadCount > 0 || adminSupportUnassignedCount > 0) && (
                     <View style={styles.supportBadge}>
                       <Text style={styles.supportBadgeText}>
@@ -201,29 +205,29 @@ export const AdminDashboardScreen: React.FC = () => {
           {/* 5) MAIN STAT CARDS (2 x 2 grid) */}
           <View style={styles.mainStatsGrid}>
             <StatCard
-              title="Farmers"
+              title={t('admin.farmers', 'Farmers')}
               value={dashboardData.totalFarmers || 172}
               type="farmers"
               cardWidth={statCardWidth}
               onPress={() => navigation.navigate('AdminFarmers')}
             />
             <StatCard
-              title="Customers"
+              title={t('admin.customers', 'Customers')}
               value={dashboardData.totalCustomers || 89}
               type="customers"
               cardWidth={statCardWidth}
               onPress={() => navigation.navigate('AdminCustomers')}
             />
             <StatCard
-              title="Products"
+              title={t('admin.allProducts', 'Products')}
               value={dashboardData.totalProducts || 108}
               type="products"
               cardWidth={statCardWidth}
               onPress={() => navigation.navigate('AdminProducts')}
             />
             <StatCard
-              title="Orders"
-              value={dashboardData.totalOrders || 48}
+              title={t('admin.allOrders', 'Orders')}
+              value={dashboardData.totalOrders || 25}
               type="orders"
               cardWidth={statCardWidth}
               onPress={() => navigation.navigate('AdminOrders')}
@@ -235,27 +239,27 @@ export const AdminDashboardScreen: React.FC = () => {
             <OrderStatusCard
               type="pending"
               count={dashboardData.pendingOrders ?? 7}
-              label="Pending"
+              label={t('orders.statusPending', 'Pending')}
               onPress={() => navigation.navigate('AdminOrders', { status: 'Pending' })}
             />
             <OrderStatusCard
               type="completed"
               count={dashboardData.completedOrders ?? 16}
-              label="Completed"
+              label={t('orders.statusDelivered', 'Completed')}
               onPress={() => navigation.navigate('AdminOrders', { status: 'Completed' })}
             />
             <OrderStatusCard
               type="cancelled"
               count={dashboardData.cancelledOrders ?? 2}
-              label="Cancelled"
+              label={t('orders.statusCancelled', 'Cancelled')}
               onPress={() => navigation.navigate('AdminOrders', { status: 'Cancelled' })}
             />
           </View>
 
           {/* 7) SECTION HEADER: Recent orders */}
           <AdminSectionHeader
-            title="Recent orders"
-            actionText="View all"
+            title={t('admin.recentOrders', 'Recent orders')}
+            actionText={t('common.viewAll', 'View all')}
             onActionPress={() => navigation.navigate('AdminOrders')}
           />
 
@@ -272,7 +276,7 @@ export const AdminDashboardScreen: React.FC = () => {
           </View>
 
           {/* 9) SECTION HEADER: Quick actions */}
-          <AdminSectionHeader title="Quick actions" />
+          <AdminSectionHeader title={t('admin.quickActions', 'Quick actions')} />
 
           {/* QUICK ACTIONS HORIZONTAL SCROLLVIEW */}
           <ScrollView
@@ -282,22 +286,22 @@ export const AdminDashboardScreen: React.FC = () => {
             contentContainerStyle={styles.quickActionsContent}
           >
             <QuickActionTile
-              label="All users"
+              label={t('admin.allUsers', 'All users')}
               type="users"
               onPress={() => navigation.navigate('AdminFarmers')}
             />
             <QuickActionTile
-              label="All products"
+              label={t('admin.allProducts', 'All products')}
               type="products"
               onPress={() => navigation.navigate('AdminProducts')}
             />
             <QuickActionTile
-              label="Add category"
+              label={t('admin.addCategory', 'Add category')}
               type="category"
               onPress={() => navigation.navigate('AdminCategories')}
             />
             <QuickActionTile
-              label="All orders"
+              label={t('admin.allOrders', 'All orders')}
               type="orders"
               onPress={() => navigation.navigate('AdminOrders')}
             />

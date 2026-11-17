@@ -39,6 +39,9 @@ import {
   TrashIcon,
   StarIcon,
 } from '../components/farmer/FarmerIcons';
+import { useTranslation } from 'react-i18next';
+import { formatCategory } from '../utils/categoryUtils';
+import { formatDate } from '../utils/formatters';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -64,6 +67,7 @@ interface Product {
 }
 
 const MyProductsScreen = ({ navigation, route }: any) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,12 +135,12 @@ const MyProductsScreen = ({ navigation, route }: any) => {
 
   const handleDelete = (product: Product) => {
     Alert.alert(
-      'Delete Product',
-      `Are you sure you want to delete "${product.productName}"? This action cannot be undone.`,
+      t('farmer.deleteProductTitle', 'Delete Product'),
+      `${t('farmer.deleteProductConfirm', 'Are you sure you want to delete this product?')} "${product.productName}"`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete', 'Delete'),
           style: 'destructive',
           onPress: () => confirmDelete(product),
         },
@@ -149,15 +153,15 @@ const MyProductsScreen = ({ navigation, route }: any) => {
       await api.delete(`/product/delete/${product.productId}`);
       setProducts((prev) => prev.filter((p) => p.productId !== product.productId));
     } catch (error: any) {
-      const msg = error?.response?.data?.message || 'Failed to delete product. Please try again.';
-      Alert.alert('Error', msg);
+      const msg = error?.response?.data?.message || t('errors.generic', 'Failed to delete product. Please try again.');
+      Alert.alert(t('common.error', 'Error'), msg);
     }
   };
 
   const handlePlayVideo = (videoFilename: string) => {
     const videoUrl = `${BASE_URL}/product/video/${videoFilename}`;
     Linking.openURL(videoUrl).catch(() =>
-      Alert.alert('Error', 'Could not open video. Please try again.')
+      Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Could not open video. Please try again.'))
     );
   };
 
@@ -181,20 +185,16 @@ const MyProductsScreen = ({ navigation, route }: any) => {
             : p
         )
       );
-      Alert.alert('Error', 'Failed to update product status.');
+      Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to update product status.'));
     }
   };
 
   const photoUrl = (filename?: string) =>
     filename ? `${BASE_URL}/product/image/${filename}` : null;
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return 'Unknown';
-    return new Date(dateStr).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+  const formatDisplayDate = (dateStr?: string) => {
+    if (!dateStr) return '—';
+    return formatDate(dateStr);
   };
 
   const renderProduct = ({ item: product }: { item: Product }) => {
@@ -231,7 +231,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
             {hasVideo && (
               <View style={styles.videoBadge}>
                 <Ionicons name="play" size={9} color="#FFFFFF" />
-                <Text style={styles.videoTime}>Video</Text>
+                <Text style={styles.videoTime}>{t('farmer.video', 'Video')}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -247,7 +247,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
                 {product.productName}
               </Text>
               <FarmerBadge
-                label={isActive ? 'Active' : 'Inactive'}
+                label={isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
                 variant={isActive ? 'success' : 'error'}
                 size="sm"
               />
@@ -259,7 +259,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
                   style={styles.categoryText}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  {product.category}
+                  {formatCategory(product.category, t)}
                 </Text>
               </View>
 
@@ -292,7 +292,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
                 style={styles.stockText}
                 maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
               >
-                {product.quantity} {product.unit} left
+                {product.quantity} {product.unit} {t('product.inStock', 'left')}
               </Text>
             </View>
 
@@ -302,7 +302,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
                 style={styles.dateText}
                 maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
               >
-                Added {formatDate(product.createdOn)}
+                {t('farmer.added', 'Added')} {formatDisplayDate(product.createdOn)}
               </Text>
             </View>
           </View>
@@ -330,7 +330,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
               ]}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              {isActive ? 'Pause' : 'Activate'}
+              {isActive ? t('farmer.pause', 'Pause') : t('farmer.activate', 'Activate')}
             </Text>
           </TouchableOpacity>
 
@@ -344,7 +344,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
               style={styles.actionBtnText}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              Edit
+              {t('common.edit', 'Edit')}
             </Text>
           </TouchableOpacity>
 
@@ -358,7 +358,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
               style={styles.actionBtnText}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              Reviews
+              {t('product.reviews', 'Reviews')}
             </Text>
           </TouchableOpacity>
 
@@ -372,7 +372,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
               style={[styles.actionBtnText, { color: FARMER_THEME.colors.error }]}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              Delete
+              {t('common.delete', 'Delete')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -386,9 +386,9 @@ const MyProductsScreen = ({ navigation, route }: any) => {
       return (
         <FarmerEmptyState
           icon={<Ionicons name="cloud-offline-outline" size={44} color={FARMER_THEME.colors.error} />}
-          title="Unable to Load Products"
-          subtitle="Check your internet connection and try again."
-          buttonTitle="Retry"
+          title={t('errors.serverError', 'Unable to Load Products')}
+          subtitle={t('errors.networkError', 'Check your internet connection and try again.')}
+          buttonTitle={t('common.retry', 'Retry')}
           onButtonPress={fetchProducts}
         />
       );
@@ -396,13 +396,13 @@ const MyProductsScreen = ({ navigation, route }: any) => {
     return (
       <FarmerEmptyState
         icon={<Ionicons name="cube-outline" size={44} color={FARMER_THEME.colors.primaryGreen} />}
-        title="No Products Found"
+        title={t('farmer.noProductsTitle', 'No Products Found')}
         subtitle={
           searchText || filter !== 'ALL'
-            ? 'No products match your current search or filter.'
-            : "You haven't listed any farm products yet."
+            ? t('farmer.noMatchingProducts', 'No products match your current search or filter.')
+            : t('farmer.noProducts', "You haven't listed any farm products yet.")
         }
-        buttonTitle={!searchText && filter === 'ALL' ? 'Add Product' : undefined}
+        buttonTitle={!searchText && filter === 'ALL' ? t('farmer.addProductTitle', 'Add Product') : undefined}
         onButtonPress={() => navigation?.navigate('AddProduct')}
       />
     );
@@ -414,7 +414,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
       <View style={styles.statsGrid}>
         <FarmerStatCard
           value={totalProducts}
-          label="Total"
+          label={t('farmer.filterAll', 'Total')}
           icon={<Ionicons name="cube-outline" size={16} color={FARMER_THEME.colors.primaryGreen} />}
           iconBg={FARMER_THEME.colors.pastelGreen}
           style={styles.statCard}
@@ -422,7 +422,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
         />
         <FarmerStatCard
           value={activeProducts}
-          label="Active"
+          label={t('common.active', 'Active')}
           icon={<Ionicons name="checkmark-circle-outline" size={16} color={FARMER_THEME.colors.success} />}
           iconBg={FARMER_THEME.colors.pastelLime}
           style={styles.statCard}
@@ -430,7 +430,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
         />
         <FarmerStatCard
           value={inactiveProducts}
-          label="Inactive"
+          label={t('common.inactive', 'Inactive')}
           icon={<Ionicons name="pause-circle-outline" size={16} color={FARMER_THEME.colors.warning} />}
           iconBg={FARMER_THEME.colors.pastelYellow}
           style={styles.statCard}
@@ -438,8 +438,8 @@ const MyProductsScreen = ({ navigation, route }: any) => {
         />
         <FarmerStatCard
           value={totalStock}
-          subLabel="KG"
-          label="Stock"
+          subLabel={t('common.kg', 'KG')}
+          label={t('product.inStock', 'Stock')}
           icon={<Ionicons name="leaf-outline" size={16} color={FARMER_THEME.colors.tealGreen} />}
           iconBg={FARMER_THEME.colors.pastelTeal}
           style={styles.statCard}
@@ -452,7 +452,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
         <FarmerInput
           value={searchText}
           onChangeText={setSearchText}
-          placeholder="Search products by name or category..."
+          placeholder={t('farmer.searchPlaceholder', 'Search products by name or category...')}
           leftIcon={<SearchIcon size={18} color={FARMER_THEME.colors.primaryGreen} strokeWidth={2} />}
           rightIcon={
             searchText.length > 0 ? (
@@ -468,19 +468,19 @@ const MyProductsScreen = ({ navigation, route }: any) => {
       {/* Filter Chips */}
       <View style={styles.filterChipsRow}>
         <FarmerChip
-          label="All"
+          label={t('farmer.filterAll', 'All')}
           count={totalProducts}
           selected={filter === 'ALL'}
           onPress={() => setFilter('ALL')}
         />
         <FarmerChip
-          label="Active"
+          label={t('farmer.filterActive', 'Active')}
           count={activeProducts}
           selected={filter === 'ACTIVE'}
           onPress={() => setFilter('ACTIVE')}
         />
         <FarmerChip
-          label="Inactive"
+          label={t('farmer.filterInactive', 'Inactive')}
           count={inactiveProducts}
           selected={filter === 'INACTIVE'}
           onPress={() => setFilter('INACTIVE')}
@@ -494,8 +494,8 @@ const MyProductsScreen = ({ navigation, route }: any) => {
       {/* Header */}
       <FarmerHeader
         variant="tab"
-        title="My Products"
-        subtitle="Manage stock, prices & status"
+        title={t('farmer.myProductsTitle', 'My Products')}
+        subtitle={t('farmer.manageProducts', 'Manage stock, prices & status')}
         onBackPress={() => {
           if (navigation?.canGoBack()) {
             navigation.goBack();
@@ -518,7 +518,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
             style={styles.loadingText}
             maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
           >
-            Loading your products...
+            {t('common.loading', 'Loading your products...')}
           </Text>
         </View>
       ) : (

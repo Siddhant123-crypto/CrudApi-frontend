@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,19 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-  Linking,
   Dimensions,
+  Modal,
+  StatusBar,
+  Animated,
 } from 'react-native';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { getMyGallery, uploadGalleryFile, deleteGalleryFile } from '../services/farmGalleryService';
 import { useAuth } from '../context/AuthContext';
-import { BASE_URL } from '../services/api';
+import { BASE_URL, resolveMediaUrl } from '../services/api';
 import { getFarmDetails } from '../services/farmDetailsService';
 import { getFarmerById } from '../services/farmerService';
 
@@ -37,6 +41,7 @@ import {
   TrashIcon,
   EditIcon,
 } from '../components/farmer/FarmerIcons';
+import { useTranslation } from 'react-i18next';
 
 const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
   <View
@@ -83,6 +88,7 @@ const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const MyFarmScreen = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [farmDetails, setFarmDetails] = useState<any>(null);
@@ -90,6 +96,12 @@ const MyFarmScreen = ({ navigation }: any) => {
   const [uploading, setUploading] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedGalleryIds, setSelectedGalleryIds] = useState<string[]>([]);
+  const [videoModalUrl, setVideoModalUrl] = useState<string | null>(null);
+  const [isVideoMuted, setIsVideoMuted] = useState(false);
+  const [isVideoPaused, setIsVideoPaused] = useState(false);
+  const [isVideoBuffering, setIsVideoBuffering] = useState(true);
+  const videoRef = useRef<Video>(null);
+  const insets = useSafeAreaInsets();
 
   const fetchData = async () => {
     if (!user?.farmerId) {
@@ -107,9 +119,9 @@ const MyFarmScreen = ({ navigation }: any) => {
       if (farmerDetails) {
         if (farmerDetails.status === 'INACTIVE' && farmerDetails.blockReason) {
           Alert.alert(
-            'Account Blocked',
-            `Your account has been blocked by the admin.\n\nReason: ${farmerDetails.blockReason}`,
-            [{ text: 'OK', onPress: () => logout() }]
+            t('errors.unauthorized', 'Account Blocked'),
+            `${t('farmer.deactivateWarning', 'Your account has been blocked by the admin.')}\n\n${t('profile.deactivationReason', 'Reason:')} ${farmerDetails.blockReason}`,
+            [{ text: t('common.ok', 'OK'), onPress: () => logout() }]
           );
           return;
         }
@@ -138,7 +150,7 @@ const MyFarmScreen = ({ navigation }: any) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to upload media.');
+        Alert.alert(t('validation.permissionDenied', 'Permission needed'), t('farmer.galleryPermissionRequired', 'Sorry, we need camera roll permissions to upload media.'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -166,14 +178,14 @@ const MyFarmScreen = ({ navigation }: any) => {
         mimeType = 'image/png';
       }
       await uploadGalleryFile(user.farmerId, uri, mimeType, `gallery_file.${fileExt}`);
-      Alert.alert('Success', 'File uploaded successfully');
+      Alert.alert(t('common.success', 'Success'), t('farmer.fileUploadedSuccess', 'File uploaded successfully'));
       const galleryResponse = await getMyGallery().catch(() => ({ data: [] }));
       if (galleryResponse && galleryResponse.data) {
         setGallery(galleryResponse.data);
       }
     } catch (error) {
       console.log('Upload error:', error);
-      Alert.alert('Error', 'Failed to upload file');
+      Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to upload file'));
     } finally {
       setUploading(false);
     }
@@ -188,12 +200,12 @@ const MyFarmScreen = ({ navigation }: any) => {
   const handleDeleteSelected = () => {
     if (selectedGalleryIds.length === 0) return;
     Alert.alert(
-      'Delete Selected',
-      `Are you sure you want to delete ${selectedGalleryIds.length} item(s)?`,
+      t('common.delete', 'Delete Selected'),
+      `${t('common.confirm', 'Are you sure you want to delete')} ${selectedGalleryIds.length} ${t('cart.itemCount_plural', 'item(s)')}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -206,10 +218,10 @@ const MyFarmScreen = ({ navigation }: any) => {
               setGallery((prev) => prev.filter((item) => !selectedGalleryIds.includes(item.id)));
               setIsSelectionMode(false);
               setSelectedGalleryIds([]);
-              Alert.alert('Success', 'Selected items deleted successfully');
+              Alert.alert(t('common.success', 'Success'), t('common.success', 'Selected items deleted successfully'));
             } catch (error) {
               console.log('Delete error:', error);
-              Alert.alert('Error', 'Failed to delete some items');
+              Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to delete some items'));
             } finally {
               setLoading(false);
             }
@@ -219,11 +231,17 @@ const MyFarmScreen = ({ navigation }: any) => {
     );
   };
 
-  const handlePlayVideo = (filePath: string) => {
-    const videoUrl = `${BASE_URL}/${filePath}`;
-    Linking.openURL(videoUrl).catch(() =>
-      Alert.alert('Error', 'Could not open video.')
-    );
+  const handlePlayVideo = (item: any) => {
+    // Prefer playbackUrl (transcoded, mobile-friendly), fallback to filePath
+    const rawUrl = item.playbackUrl || item.filePath || '';
+    const resolved = resolveMediaUrl(rawUrl);
+    if (resolved) {
+      setIsVideoPaused(false);
+      setIsVideoBuffering(true);
+      setVideoModalUrl(resolved);
+    } else {
+      Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Could not open video.'));
+    }
   };
 
   if (loading) {
@@ -242,8 +260,9 @@ const MyFarmScreen = ({ navigation }: any) => {
       {/* Header */}
       <FarmerHeader
         variant="tab"
-        title="My Farm"
-        subtitle="Farm overview, details & gallery"
+        title={t('farmer.myFarm', 'My Farm')}
+        subtitle={t('farmer.farmDetails', 'Farm overview, details & gallery')}
+        onBackPress={() => navigation.goBack()}
         onNotificationPress={() => navigation.navigate('Notifications')}
       />
 
@@ -262,7 +281,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                     numberOfLines={2}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    {fd.farmName || fd.farmerName || user?.name || 'Your Farm Name'}
+                    {fd.farmName || fd.farmerName || user?.name || t('farmer.farmDetails', 'Your Farm Name')}
                   </Text>
                   {isVerified && (
                     <View style={styles.verifiedCheckCircle}>
@@ -291,7 +310,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                     numberOfLines={2}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    {fd.location || 'Location not set'}
+                    {fd.location || t('product.farmLocation', 'Location not set')}
                   </Text>
                 </View>
 
@@ -301,7 +320,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
                   {fd.aboutFarm ||
-                    'Update your farm details to add a description about your farming practices and produce.'}
+                    t('farmer.enterDescription', 'Update your farm details to add a description about your farming practices and produce.')}
                 </Text>
               </View>
 
@@ -318,13 +337,13 @@ const MyFarmScreen = ({ navigation }: any) => {
                       numberOfLines={1}
                       maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                     >
-                      Since {fd.farmingSince || '-'}
+                      {t('farmer.farmingSince', 'Since')} {fd.farmingSince || '-'}
                     </Text>
                     <Text
                       style={styles.infoLabel}
                       maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                     >
-                      Farming Since
+                      {t('farmer.farmingSince', 'Farming Since')}
                     </Text>
                   </View>
                 </View>
@@ -345,7 +364,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                       style={styles.infoLabel}
                       maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                     >
-                      Farming Type
+                      {t('farmer.farmingType', 'Farming Type')}
                     </Text>
                   </View>
                 </View>
@@ -357,8 +376,8 @@ const MyFarmScreen = ({ navigation }: any) => {
           <View style={styles.statsContainer}>
             <FarmerStatCard
               value={fd.farmArea || '0'}
-              subLabel={fd.farmAreaUnit === 'ACRE' ? 'Acres' : 'Hectares'}
-              label="Farm Area"
+              subLabel={fd.farmAreaUnit === 'ACRE' ? t('farmer.acres', 'Acres') : 'Hectares'}
+              label={t('farmer.acres', 'Farm Area')}
               icon={<Ionicons name="map-outline" size={17} color={FARMER_THEME.colors.primaryGreen} />}
               iconBg={FARMER_THEME.colors.pastelGreen}
               style={styles.statItem}
@@ -369,8 +388,8 @@ const MyFarmScreen = ({ navigation }: any) => {
             />
             <FarmerStatCard
               value={`${fd.cropsGrownCount || '0'}+`}
-              subLabel="Crops"
-              label="Grown"
+              subLabel={t('farmer.primaryCrops', 'Crops')}
+              label={t('farmer.primaryCrops', 'Grown')}
               icon={<Ionicons name="flower-outline" size={17} color={FARMER_THEME.colors.warning} />}
               iconBg={FARMER_THEME.colors.pastelYellow}
               style={styles.statItem}
@@ -381,8 +400,8 @@ const MyFarmScreen = ({ navigation }: any) => {
             />
             <FarmerStatCard
               value={`${fd.yearsExperience || '0'}+`}
-              subLabel="Years"
-              label="Experience"
+              subLabel={t('farmer.years', 'Years')}
+              label={t('farmer.experience', 'Experience')}
               icon={<Ionicons name="ribbon-outline" size={17} color={FARMER_THEME.colors.tealGreen} />}
               iconBg={FARMER_THEME.colors.pastelTeal}
               style={styles.statItem}
@@ -393,8 +412,8 @@ const MyFarmScreen = ({ navigation }: any) => {
             />
             <FarmerStatCard
               value={`${fd.happyCustomersCount || '0'}+`}
-              subLabel="Happy"
-              label="Customers"
+              subLabel={t('home.bestSellers', 'Happy')}
+              label={t('admin.totalCustomers', 'Customers')}
               icon={<Ionicons name="people-outline" size={17} color="#D9651B" />}
               iconBg={FARMER_THEME.colors.pastelRed}
               style={styles.statItem}
@@ -411,7 +430,7 @@ const MyFarmScreen = ({ navigation }: any) => {
               style={styles.sectionTitle}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              Farm Details
+              {t('farmer.farmDetails', 'Farm Details')}
             </Text>
 
             <View style={styles.detailsGrid}>
@@ -419,21 +438,21 @@ const MyFarmScreen = ({ navigation }: any) => {
                 <View style={styles.detailItem}>
                   <Ionicons name="person-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.detailLabel}>Farmer Name</Text>
+                    <Text style={styles.detailLabel}>{t('auth.fullName', 'Farmer Name')}</Text>
                     <Text style={styles.detailValue}>{fd.farmerName || user?.name || '-'}</Text>
                   </View>
                 </View>
                 <View style={styles.detailItem}>
                   <Ionicons name="location-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.detailLabel}>Location</Text>
+                    <Text style={styles.detailLabel}>{t('product.farmLocation', 'Location')}</Text>
                     <Text style={styles.detailValue}>{fd.location || '-'}</Text>
                   </View>
                 </View>
                 <View style={styles.detailItem}>
                   <Ionicons name="expand-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.detailLabel}>Farm Size</Text>
+                    <Text style={styles.detailLabel}>{t('farmer.acres', 'Farm Size')}</Text>
                     <Text style={styles.detailValue}>
                       {fd.farmArea ? `${fd.farmArea} ${fd.farmAreaUnit}` : '-'}
                     </Text>
@@ -442,7 +461,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                 <View style={styles.detailItem}>
                   <Ionicons name="water-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.detailLabel}>Irrigation Source</Text>
+                    <Text style={styles.detailLabel}>{t('farmer.waterSource', 'Irrigation Source')}</Text>
                     <Text style={styles.detailValue}>{fd.irrigationSource || '-'}</Text>
                   </View>
                 </View>
@@ -452,30 +471,30 @@ const MyFarmScreen = ({ navigation }: any) => {
                 <View style={styles.detailItem}>
                   <Ionicons name="leaf-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.detailLabel}>Farming Type</Text>
+                    <Text style={styles.detailLabel}>{t('farmer.farmingType', 'Farming Type')}</Text>
                     <Text style={styles.detailValue}>{fd.farmingType || '-'}</Text>
                   </View>
                 </View>
                 <View style={styles.detailItem}>
                   <Ionicons name="basket-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.detailLabel}>Main Crops</Text>
+                    <Text style={styles.detailLabel}>{t('farmer.primaryCrops', 'Main Crops')}</Text>
                     <Text style={styles.detailValue}>{fd.mainCrops || '-'}</Text>
                   </View>
                 </View>
                 <View style={styles.detailItem}>
                   <Ionicons name="time-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.detailLabel}>Experience</Text>
+                    <Text style={styles.detailLabel}>{t('farmer.experience', 'Experience')}</Text>
                     <Text style={styles.detailValue}>
-                      {fd.yearsExperience ? `${fd.yearsExperience}+ Years` : '-'}
+                      {fd.yearsExperience ? `${fd.yearsExperience}+ ${t('farmer.years', 'Years')}` : '-'}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.detailItem}>
                   <Ionicons name="triangle-outline" size={20} color={FARMER_THEME.colors.primaryGreen} style={styles.detailIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.detailLabel}>Soil Type</Text>
+                    <Text style={styles.detailLabel}>{t('farmer.soilType', 'Soil Type')}</Text>
                     <Text style={styles.detailValue}>{fd.soilType || '-'}</Text>
                   </View>
                 </View>
@@ -490,7 +509,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                   style={styles.aboutTitle}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  About My Farm
+                  {t('farmer.farmDetails', 'About My Farm')}
                 </Text>
               </View>
               <View style={styles.aboutContentRow}>
@@ -498,7 +517,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                   style={styles.aboutText}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  {fd.aboutFarm || 'Details about your farming approach will appear here.'}
+                  {fd.aboutFarm || t('farmer.enterDescription', 'Details about your farming approach will appear here.')}
                 </Text>
                 <Ionicons
                   name="home-outline"
@@ -518,7 +537,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                   style={styles.galleryTitle}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  Farm Photos & Videos
+                  {t('farmer.farmMedia', 'Farm Photos & Videos')}
                 </Text>
 
                 <View style={styles.galleryActionsRow}>
@@ -535,7 +554,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                       >
                         <TrashIcon size={14} color="#FFFFFF" strokeWidth={2} />
                         <Text style={styles.deleteActionText}>
-                          Delete ({selectedGalleryIds.length})
+                          {t('common.delete', 'Delete')} ({selectedGalleryIds.length})
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -545,7 +564,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                           setSelectedGalleryIds([]);
                         }}
                       >
-                        <Text style={styles.cancelActionText}>Cancel</Text>
+                        <Text style={styles.cancelActionText}>{t('common.cancel', 'Cancel')}</Text>
                       </TouchableOpacity>
                     </>
                   ) : (
@@ -560,7 +579,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                         ) : (
                           <>
                             <Ionicons name="add" size={16} color="#FFFFFF" />
-                            <Text style={styles.addPhotoText}>Add</Text>
+                            <Text style={styles.addPhotoText}>{t('common.add', 'Add')}</Text>
                           </>
                         )}
                       </TouchableOpacity>
@@ -571,7 +590,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                           onPress={() => setIsSelectionMode(true)}
                         >
                           <TrashIcon size={14} color={FARMER_THEME.colors.error} strokeWidth={2} />
-                          <Text style={styles.selectBtnText}>Select</Text>
+                          <Text style={styles.selectBtnText}>{t('common.select', 'Select')}</Text>
                         </TouchableOpacity>
                       )}
                     </>
@@ -582,9 +601,9 @@ const MyFarmScreen = ({ navigation }: any) => {
               {gallery.length === 0 ? (
                 <View style={styles.emptyGalleryBox}>
                   <Ionicons name="images-outline" size={40} color={FARMER_THEME.colors.placeholder} />
-                  <Text style={styles.emptyGalleryText}>No farm media uploaded yet</Text>
+                  <Text style={styles.emptyGalleryText}>{t('farmer.noMedia', 'No farm media uploaded yet')}</Text>
                   <Text style={styles.emptyGallerySubtext}>
-                    Tap Add above to upload photos or videos of your farm
+                    {t('farmer.noMediaDesc', 'Tap Add above to upload photos or videos of your farm')}
                   </Text>
                 </View>
               ) : (
@@ -616,7 +635,7 @@ const MyFarmScreen = ({ navigation }: any) => {
                           if (isSelectionMode) {
                             toggleSelection(item.id);
                           } else if (isVideo) {
-                            handlePlayVideo(item.filePath);
+                            handlePlayVideo(item);
                           }
                         }}
                         delayLongPress={300}
@@ -674,19 +693,19 @@ const MyFarmScreen = ({ navigation }: any) => {
                   style={styles.verifiedTitle}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  Farm Verified
+                  {t('farmer.verifiedBadge', 'Farm Verified')}
                 </Text>
                 <Text
                   style={styles.verifiedDesc}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  Your farm has been officially verified by our team.
+                  {t('farmer.verifiedDesc', 'Your farm has been officially verified by our team.')}
                 </Text>
               </View>
             </View>
 
             <FarmerGoldButton
-              title="View Certificate"
+              title={t('farmer.certificate', 'View Certificate')}
               onPress={() => navigation.navigate('FarmCertificate', { farmDetails: fd })}
               compact
               style={{ marginTop: 12 }}
@@ -697,13 +716,92 @@ const MyFarmScreen = ({ navigation }: any) => {
           {/* Edit Farm Details Button */}
           <View style={styles.bottomActionContainer}>
             <FarmerDeepButton
-              title="Edit Farm Details"
+              title={t('farmer.editFarm', 'Edit Farm Details')}
               onPress={() => navigation.navigate('EditFarmDetails', { farmDetails: fd })}
               icon={<EditIcon size={20} color="#FFFFFF" strokeWidth={2} />}
             />
           </View>
         </View>
       </ScrollView>
+
+      {/* ── Full-Screen Video Modal (like Shorts player) ── */}
+      <Modal
+        visible={!!videoModalUrl}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setVideoModalUrl(null)}
+      >
+        <StatusBar hidden />
+        <View style={styles.videoModalContainer}>
+          {/* Video Player */}
+          {videoModalUrl ? (
+            <Video
+              ref={videoRef}
+              source={{ uri: videoModalUrl }}
+              style={StyleSheet.absoluteFill}
+              resizeMode={ResizeMode.CONTAIN}
+              isLooping
+              shouldPlay={!isVideoPaused}
+              isMuted={isVideoMuted}
+              onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
+                if (status.isLoaded) {
+                  setIsVideoBuffering(status.isBuffering);
+                }
+              }}
+              onError={() => {
+                setVideoModalUrl(null);
+                Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Could not play video.'));
+              }}
+            />
+          ) : null}
+
+          {/* Dark gradient overlay at top and bottom */}
+          <View style={styles.videoModalTopGradient} pointerEvents="none" />
+          <View style={styles.videoModalBottomGradient} pointerEvents="none" />
+
+          {/* Buffering Spinner */}
+          {isVideoBuffering && (
+            <View style={styles.videoModalSpinner} pointerEvents="none">
+              <ActivityIndicator size="large" color="#2FA66B" />
+            </View>
+          )}
+
+          {/* Top Bar: Close + Mute */}
+          <View style={[styles.videoModalTopBar, { paddingTop: insets.top + 8 }]}>
+            <TouchableOpacity
+              style={styles.videoModalCircleBtn}
+              onPress={() => setVideoModalUrl(null)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="close" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.videoModalCircleBtn}
+              onPress={() => setIsVideoMuted(prev => !prev)}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name={isVideoMuted ? 'volume-mute' : 'volume-high'}
+                size={22}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Centre Tap: Play / Pause toggle */}
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setIsVideoPaused(prev => !prev)}
+            activeOpacity={1}
+          >
+            {isVideoPaused && (
+              <View style={styles.videoModalPauseIcon}>
+                <Ionicons name="play" size={48} color="#FFFFFF" />
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </FarmerPageBackground>
   );
 };
@@ -1115,6 +1213,60 @@ const styles = StyleSheet.create({
   bottomActionContainer: {
     marginTop: 10,
     marginBottom: 16,
+  },
+
+  // ── Video Modal Styles ──
+  videoModalContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  videoModalTopGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  videoModalBottomGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  videoModalSpinner: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoModalTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    zIndex: 10,
+  },
+  videoModalCircleBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  videoModalPauseIcon: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.9,
   },
 });
 

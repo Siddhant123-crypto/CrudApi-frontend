@@ -24,6 +24,7 @@ import { THEME } from '../../constants/theme';
 import { PageBackground } from '../ui/PageBackground';
 import { ThemedHeader } from '../ui/ThemedHeader';
 import { PrimaryButton } from '../ui/Buttons';
+import { useTranslation } from 'react-i18next';
 
 interface ReviewFormProps {
   visible: boolean;
@@ -45,6 +46,7 @@ export const ReviewForm = ({
   onSubmitSuccess,
   variant = 'customer',
 }: ReviewFormProps) => {
+  const { t } = useTranslation();
   const isCustomer = variant === 'customer';
   const [rating, setRating] = useState<number>(0);
   const [reviewText, setReviewText] = useState<string>('');
@@ -73,7 +75,10 @@ export const ReviewForm = ({
   const handleSelectPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Gallery access is required to select photos.');
+      Alert.alert(
+        t('common.error', 'Permission Denied'),
+        t('validation.cameraPermissionRequired', 'Gallery access is required to select photos.')
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -88,7 +93,10 @@ export const ReviewForm = ({
   const handleSelectVideo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Gallery access is required to select videos.');
+      Alert.alert(
+        t('common.error', 'Permission Denied'),
+        t('validation.cameraPermissionRequired', 'Gallery access is required to select videos.')
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -100,7 +108,7 @@ export const ReviewForm = ({
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
       if (asset.type !== 'video') {
-        Alert.alert('Invalid file', 'Please select a video file.');
+        Alert.alert(t('common.error', 'Invalid file'), t('product.selectVideoFile', 'Please select a video file.'));
         return;
       }
       setVideoUri(asset.uri);
@@ -108,7 +116,10 @@ export const ReviewForm = ({
   };
   const handleSubmit = async () => {
     if (rating === 0) {
-      Alert.alert('Rating Required', 'Please select a rating of 1 to 5 stars.');
+      Alert.alert(
+        t('product.rateProduct', 'Rating Required'),
+        t('product.selectRatingPrompt', 'Please select a rating of 1 to 5 stars.')
+      );
       return;
     }
     setSubmitting(true);
@@ -138,15 +149,10 @@ export const ReviewForm = ({
       }, 1500);
     } catch (error: any) {
       console.log('Error submitting review:', error);
-      let errorMessage = 'Failed to submit review. Please try again.';
-      if (error?.response?.data) {
-        errorMessage = `Server Error: ${JSON.stringify(error.response.data)}`;
-      } else if (error?.message) {
-        errorMessage = `Network/Client Error: ${error.message}`;
-      } else {
-        errorMessage = `Unknown Error: ${JSON.stringify(error)}`;
-      }
-      Alert.alert('Error Details', errorMessage);
+      Alert.alert(
+        t('common.error', 'Error'),
+        t('reviews.submitFailed', 'Failed to submit review. Please try again.')
+      );
     } finally {
       setSubmitting(false);
     }
@@ -158,34 +164,34 @@ export const ReviewForm = ({
         <PageBackground style={{ flex: 1 }}>
           <ThemedHeader
             variant="inner"
-            title={existingReview ? 'Edit Review' : 'Write Review'}
+            title={existingReview ? t('product.editReview', 'Edit Review') : t('product.writeReview', 'Write Review')}
             onBackPress={onClose}
           />
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             {success ? (
               <View style={styles.successContainer}>
                 <Ionicons name="checkmark-circle" size={80} color="#2E7D4F" />
-                <Text style={styles.successTitleThemed}>Review Submitted</Text>
-                <Text style={styles.successSubThemed}>Thank you for sharing your Farm2Home experience.</Text>
+                <Text style={styles.successTitleThemed}>{t('product.reviewSubmitted', 'Review Submitted')}</Text>
+                <Text style={styles.successSubThemed}>{t('product.reviewSubmittedDesc', 'Thank you for sharing your Farm2Home experience.')}</Text>
               </View>
             ) : (
               <ScrollView contentContainerStyle={styles.customerScrollContent} keyboardShouldPersistTaps="handled">
                 <Text style={styles.customerProductName}>{productName}</Text>
 
                 <View style={styles.customerRatingCard}>
-                  <Text style={styles.customerRatingLabel}>Rate this product</Text>
+                  <Text style={styles.customerRatingLabel}>{t('product.rateProduct', 'Rate this product')}</Text>
                   <StarRating rating={rating} onRatingChange={setRating} size={38} variant="customer" />
                   {rating > 0 ? (
                     <Text style={styles.customerRatingText}>
-                      {rating === 5 ? 'Excellent!' : rating === 4 ? 'Good' : rating === 3 ? 'Average' : rating === 2 ? 'Poor' : 'Very Poor'}
+                      {rating === 5 ? t('product.premiumQuality', 'Excellent!') : rating === 4 ? 'Good' : rating === 3 ? 'Average' : rating === 2 ? 'Poor' : 'Very Poor'}
                     </Text>
                   ) : null}
                 </View>
 
-                <Text style={styles.customerSectionLabel}>Share your experience</Text>
+                <Text style={styles.customerSectionLabel}>{t('product.shareExperience', 'Share your experience')}</Text>
                 <TextInput
                   style={styles.customerReviewInput}
-                  placeholder="Write your review here... (optional)"
+                  placeholder={t('product.writeReviewPlaceholder', 'Write your review here... (optional)')}
                   placeholderTextColor="#8A6F5C"
                   multiline
                   numberOfLines={6}
@@ -195,7 +201,7 @@ export const ReviewForm = ({
                   editable={!submitting}
                 />
 
-                <Text style={styles.customerSectionLabel}>Photos and videos are optional</Text>
+                <Text style={styles.customerSectionLabel}>{t('product.photosOptional', 'Photos and videos are optional')}</Text>
                 <View style={styles.mediaButtonsRow}>
                   <TouchableOpacity
                     style={[styles.customerMediaButton, photoUri && styles.customerMediaButtonActive]}
@@ -204,7 +210,7 @@ export const ReviewForm = ({
                   >
                     <Ionicons name="camera-outline" size={24} color={photoUri ? '#B8470F' : '#8A6F5C'} />
                     <Text style={[styles.customerMediaButtonText, photoUri && styles.customerMediaButtonTextActive]}>
-                      {photoUri ? 'Change Photo' : 'Add Photo'}
+                      {photoUri ? t('farmer.choosePhoto', 'Change Photo') : t('farmer.takePhoto', 'Add Photo')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -214,7 +220,7 @@ export const ReviewForm = ({
                   >
                     <Ionicons name="videocam-outline" size={24} color={videoUri ? '#B8470F' : '#8A6F5C'} />
                     <Text style={[styles.customerMediaButtonText, videoUri && styles.customerMediaButtonTextActive]}>
-                      {videoUri ? 'Change Video' : 'Add Video'}
+                      {videoUri ? t('farmer.changeVideo', 'Change Video') : t('farmer.addVideo', 'Add Video')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -231,7 +237,7 @@ export const ReviewForm = ({
                         >
                           <Ionicons name="close-circle" size={20} color="#DC2626" />
                         </TouchableOpacity>
-                        <Text style={styles.customerPreviewTypeText}>Photo Selected</Text>
+                        <Text style={styles.customerPreviewTypeText}>{t('product.photoSelected', 'Photo Selected')}</Text>
                       </View>
                     ) : null}
                     {videoUri ? (
@@ -246,14 +252,14 @@ export const ReviewForm = ({
                         >
                           <Ionicons name="close-circle" size={20} color="#DC2626" />
                         </TouchableOpacity>
-                        <Text style={styles.customerPreviewTypeText}>Video Selected</Text>
+                        <Text style={styles.customerPreviewTypeText}>{t('product.videoSelected', 'Video Selected')}</Text>
                       </View>
                     ) : null}
                   </View>
                 ) : null}
 
                 <PrimaryButton
-                  title={existingReview ? 'Update Review' : 'Submit Review'}
+                  title={existingReview ? t('product.updateReview', 'Update Review') : t('product.submitReview', 'Submit Review')}
                   loading={submitting}
                   disabled={submitting || rating === 0}
                   onPress={handleSubmit}
@@ -275,8 +281,8 @@ export const ReviewForm = ({
           {success ? (
           <View style={styles.successContainer}>
             <Ionicons name="checkmark-circle" size={80} color="#10B981" />
-            <Text style={styles.successTitle}>Review Submitted</Text>
-            <Text style={styles.successSub}>Thank you for sharing your Farm2Home experience.</Text>
+            <Text style={styles.successTitle}>{t('product.reviewSubmitted', 'Review Submitted')}</Text>
+            <Text style={styles.successSub}>{t('product.reviewSubmittedDesc', 'Thank you for sharing your Farm2Home experience.')}</Text>
           </View>
         ) : (
           <View style={styles.content}>
@@ -284,23 +290,23 @@ export const ReviewForm = ({
               <TouchableOpacity onPress={onClose} disabled={submitting} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>{existingReview ? 'Edit Review' : 'Write Review'}</Text>
+              <Text style={styles.headerTitle}>{existingReview ? t('product.editReview', 'Edit Review') : t('product.writeReview', 'Write Review')}</Text>
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
               <Text style={styles.productName}>{productName}</Text>
               <View style={styles.ratingCard}>
-                <Text style={styles.ratingLabel}>Rate this product</Text>
+                <Text style={styles.ratingLabel}>{t('product.rateProduct', 'Rate this product')}</Text>
                 <StarRating rating={rating} onRatingChange={setRating} size={40} />
                 {rating > 0 ? (
                   <Text style={styles.ratingText}>
-                    {rating === 5 ? 'Excellent!' : rating === 4 ? 'Good' : rating === 3 ? 'Average' : rating === 2 ? 'Poor' : 'Very Poor'}
+                    {rating === 5 ? t('product.premiumQuality', 'Excellent!') : rating === 4 ? 'Good' : rating === 3 ? 'Average' : rating === 2 ? 'Poor' : 'Very Poor'}
                   </Text>
                 ) : null}
               </View>
-              <Text style={styles.sectionLabel}>Share your experience</Text>
+              <Text style={styles.sectionLabel}>{t('product.shareExperience', 'Share your experience')}</Text>
               <TextInput
                 style={styles.reviewInput}
-                placeholder="Write your review here... (optional)"
+                placeholder={t('product.writeReviewPlaceholder', 'Write your review here... (optional)')}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={6}
@@ -309,7 +315,7 @@ export const ReviewForm = ({
                 textAlignVertical="top"
                 editable={!submitting}
               />
-              <Text style={styles.sectionLabel}>Photos and videos are optional</Text>
+              <Text style={styles.sectionLabel}>{t('product.photosOptional', 'Photos and videos are optional')}</Text>
               <View style={styles.mediaButtonsRow}>
                 <TouchableOpacity
                   style={[styles.mediaButton, photoUri && styles.mediaButtonActive]}
@@ -318,7 +324,7 @@ export const ReviewForm = ({
                 >
                   <Ionicons name="camera-outline" size={24} color={photoUri ? '#15803D' : '#6B7280'} />
                   <Text style={[styles.mediaButtonText, photoUri && styles.mediaButtonTextActive]}>
-                    {photoUri ? 'Change Photo' : 'Add Photo'}
+                    {photoUri ? t('farmer.choosePhoto', 'Change Photo') : t('farmer.takePhoto', 'Add Photo')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -328,7 +334,7 @@ export const ReviewForm = ({
                 >
                   <Ionicons name="videocam-outline" size={24} color={videoUri ? '#15803D' : '#6B7280'} />
                   <Text style={[styles.mediaButtonText, videoUri && styles.mediaButtonTextActive]}>
-                    {videoUri ? 'Change Video' : 'Add Video'}
+                    {videoUri ? t('farmer.changeVideo', 'Change Video') : t('farmer.addVideo', 'Add Video')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -344,7 +350,7 @@ export const ReviewForm = ({
                       >
                         <Ionicons name="close-circle" size={20} color="#EF4444" />
                       </TouchableOpacity>
-                      <Text style={styles.previewTypeText}>Photo Selected</Text>
+                      <Text style={styles.previewTypeText}>{t('product.photoSelected', 'Photo Selected')}</Text>
                     </View>
                   ) : null}
                   {videoUri ? (
@@ -359,7 +365,7 @@ export const ReviewForm = ({
                       >
                         <Ionicons name="close-circle" size={20} color="#EF4444" />
                       </TouchableOpacity>
-                      <Text style={styles.previewTypeText}>Video Selected</Text>
+                      <Text style={styles.previewTypeText}>{t('product.videoSelected', 'Video Selected')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -374,10 +380,12 @@ export const ReviewForm = ({
                 {submitting ? (
                   <View style={styles.submittingContainer}>
                     <ActivityIndicator size="small" color="#FFFFFF" />
-                    <Text style={styles.submitBtnText}>Submitting Review...</Text>
+                    <Text style={styles.submitBtnText}>{t('common.loading', 'Submitting Review...')}</Text>
                   </View>
                 ) : (
-                  <Text style={styles.submitBtnText}>SUBMIT REVIEW</Text>
+                  <Text style={styles.submitBtnText}>
+                    {existingReview ? t('product.updateReview', 'Update Review').toUpperCase() : t('product.submitReview', 'Submit Review').toUpperCase()}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>

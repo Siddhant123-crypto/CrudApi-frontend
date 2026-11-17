@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -35,6 +36,7 @@ const NOTIFICATION_TYPES: NotificationType[] = [
 const RECEIVER_TYPES: Array<'CUSTOMER' | 'FARMER'> = ['CUSTOMER', 'FARMER'];
 
 export const AdminSendNotificationScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
   const [fetchingUsers, setFetchingUsers] = useState(false);
@@ -61,7 +63,7 @@ export const AdminSendNotificationScreen = () => {
       setUsersList(Array.isArray(response.data) ? response.data : response.data?.data || []);
     } catch (error) {
       console.log('Failed to fetch users:', error);
-      Alert.alert('Error', `Failed to load ${receiverType.toLowerCase()}s list.`);
+      Alert.alert(t('common.error', 'Error'), t('admin.failedFetchCustomers', `Failed to load ${receiverType.toLowerCase()}s list.`));
     } finally {
       setFetchingUsers(false);
     }
@@ -69,11 +71,11 @@ export const AdminSendNotificationScreen = () => {
 
   const handleSend = async () => {
     if (!title.trim() || !message.trim()) {
-      Alert.alert('Error', 'Title and message are required.');
+      Alert.alert(t('common.error', 'Error'), t('admin.titleAndMessageRequired', 'Title and message are required.'));
       return;
     }
     if (recipient === 'SPECIFIC' && !specificUserId) {
-      Alert.alert('Error', `Please select a specific ${receiverType.toLowerCase()}.`);
+      Alert.alert(t('common.error', 'Error'), t('admin.selectCustomer', `Please select a specific ${receiverType.toLowerCase()}.`));
       return;
     }
 
@@ -88,12 +90,12 @@ export const AdminSendNotificationScreen = () => {
       };
 
       await NotificationService.sendNotification(payload);
-      Alert.alert('Success', 'Notification sent successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert(t('common.success', 'Success'), t('admin.notificationSentSuccess', 'Notification sent successfully!'), [
+        { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
       console.error('Send notification error:', error);
-      Alert.alert('Error', 'Failed to send notification.');
+      Alert.alert(t('common.error', 'Error'), t('admin.failedSendNotification', 'Failed to send notification.'));
     } finally {
       setLoading(false);
     }
@@ -120,8 +122,8 @@ export const AdminSendNotificationScreen = () => {
       >
         <AdminHeader
           variant="inner"
-          title="Send Notification"
-          subtitle="System & push alerts dispatch"
+          title={t('admin.sendNotification', 'Send Notification')}
+          subtitle={t('admin.sendNotification', 'System & push alerts dispatch')}
           onBack={() => navigation.goBack()}
         />
 
@@ -132,14 +134,14 @@ export const AdminSendNotificationScreen = () => {
           showsVerticalScrollIndicator={false}
         >
           {/* Target Audience Section */}
-          {renderSectionHeader('TARGET AUDIENCE')}
+          {renderSectionHeader(t('admin.recipientAudience', 'TARGET AUDIENCE'))}
           <AdminCard style={styles.card}>
-            <Text style={styles.fieldLabel}>Receiver Role</Text>
+            <Text style={styles.fieldLabel}>{t('admin.receiverRole', 'Receiver Role')}</Text>
             <View style={styles.chipsRow}>
               {RECEIVER_TYPES.map((rt) => (
                 <AdminChip
                   key={rt}
-                  label={rt === 'CUSTOMER' ? 'Customers' : 'Farmers'}
+                  label={rt === 'CUSTOMER' ? t('admin.customers', 'Customers') : t('admin.farmers', 'Farmers')}
                   active={receiverType === rt}
                   onPress={() => {
                     setReceiverType(rt);
@@ -150,16 +152,16 @@ export const AdminSendNotificationScreen = () => {
               ))}
             </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Audience Scope</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>{t('admin.audienceScope', 'Audience Scope')}</Text>
             <View style={styles.chipsRow}>
               <AdminChip
-                label={`All ${receiverType === 'CUSTOMER' ? 'Customers' : 'Farmers'}`}
+                label={`All ${receiverType === 'CUSTOMER' ? t('admin.customers', 'Customers') : t('admin.farmers', 'Farmers')}`}
                 active={recipient === 'ALL'}
                 onPress={() => setRecipient('ALL')}
                 style={styles.flex1}
               />
               <AdminChip
-                label={`Specific ${receiverType === 'CUSTOMER' ? 'Customer' : 'Farmer'}`}
+                label={`Specific ${receiverType === 'CUSTOMER' ? t('admin.customers', 'Customer') : t('admin.farmers', 'Farmer')}`}
                 active={recipient === 'SPECIFIC'}
                 onPress={() => setRecipient('SPECIFIC')}
                 style={styles.flex1}
@@ -169,7 +171,7 @@ export const AdminSendNotificationScreen = () => {
             {recipient === 'SPECIFIC' && (
               <View style={styles.specificPicker}>
                 <AdminInput
-                  placeholder={`Search ${receiverType.toLowerCase()} by name or email...`}
+                  placeholder={t('admin.searchRecipientPlaceholder', `Search ${receiverType.toLowerCase()} by name or email...`)}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   leftIcon={<SearchIcon size={16} color="#8A93AB" />}
@@ -179,7 +181,7 @@ export const AdminSendNotificationScreen = () => {
                 {fetchingUsers ? (
                   <ActivityIndicator size="small" color="#4F5BD5" style={{ marginVertical: 12 }} />
                 ) : filteredUsers.length === 0 ? (
-                  <Text style={styles.emptyText}>No users found.</Text>
+                  <Text style={styles.emptyText}>{t('admin.noCustomersFound', 'No users found.')}</Text>
                 ) : (
                   <View style={styles.usersList}>
                     {filteredUsers.slice(0, 8).map((u) => {
@@ -213,7 +215,7 @@ export const AdminSendNotificationScreen = () => {
           </AdminCard>
 
           {/* Notification Category */}
-          {renderSectionHeader('NOTIFICATION TYPE')}
+          {renderSectionHeader(t('admin.notificationChannel', 'NOTIFICATION TYPE'))}
           <AdminCard style={styles.card}>
             <View style={styles.typeChipsGrid}>
               {NOTIFICATION_TYPES.map((t) => (
@@ -229,20 +231,20 @@ export const AdminSendNotificationScreen = () => {
           </AdminCard>
 
           {/* Content Section */}
-          {renderSectionHeader('CONTENT')}
+          {renderSectionHeader(t('admin.messageDetails', 'CONTENT'))}
           <AdminCard style={styles.card}>
             <AdminInput
-              label="Notification Title"
+              label={t('admin.notificationTitle', 'Notification Title')}
               required
-              placeholder="e.g. Scheduled Platform Maintenance"
+              placeholder={t('admin.egMaintenance', 'e.g. Scheduled Platform Maintenance')}
               value={title}
               onChangeText={setTitle}
             />
 
             <AdminInput
-              label="Message Body"
+              label={t('admin.messageBodyUpper', 'Message Body')}
               required
-              placeholder="Enter notification message details..."
+              placeholder={t('admin.enterNotificationDetails', 'Enter notification message details...')}
               value={message}
               onChangeText={setMessage}
               multiline
@@ -253,7 +255,7 @@ export const AdminSendNotificationScreen = () => {
 
         <AdminStickyBar>
           <AdminPrimaryButton
-            title="Dispatch Notification"
+            title={t('admin.dispatchNotification', 'Dispatch Notification')}
             onPress={handleSend}
             loading={loading}
           />

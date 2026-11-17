@@ -53,7 +53,7 @@ export const THEME = {
     // Icons & badges
     star: '#F0A020',
     heartActive: '#B8470F',
-    notificationDot: '#F59A4A',
+    notificationDot: '#EF4444',
 
     // Status colors
     success: '#2E7D4F',

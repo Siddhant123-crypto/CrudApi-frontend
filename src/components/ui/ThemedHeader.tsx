@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import { useNotification } from '../../context/NotificationContext';
 import { THEME } from '../../constants/theme';
 import {
   ArrowLeftIcon,
@@ -35,6 +37,7 @@ interface ThemedHeaderProps {
   cartCount?: number;
   onCartPress?: () => void;
   showBell?: boolean;
+  unreadCount?: number;
   onBellPress?: () => void;
   rightAction?: React.ReactNode;
   // Inner variant right action
@@ -59,18 +62,29 @@ export const ThemedHeader: React.FC<ThemedHeaderProps> = ({
   cartCount = 0,
   onCartPress,
   showBell,
+  unreadCount: propUnreadCount,
   onBellPress,
   rightAction,
   rightIcon,
   onRightPress,
   hasSearch,
-  searchPlaceholder = 'Search for fresh product',
+  searchPlaceholder,
   searchValue,
   onSearchChange,
   onFilterPress,
 }) => {
+  const { t } = useTranslation();
+  const effectivePlaceholder = searchPlaceholder || t('home.searchPlaceholder', 'Search fresh fruits, vegetables, grains...');
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  let ctxUnreadCount = 0;
+  try {
+    const notificationCtx = useNotification();
+    ctxUnreadCount = notificationCtx?.unreadCount ?? 0;
+  } catch {
+    ctxUnreadCount = 0;
+  }
+  const unreadCount = propUnreadCount ?? ctxUnreadCount;
 
   const handleBack = () => {
     if (onBackPress) {
@@ -148,6 +162,7 @@ export const ThemedHeader: React.FC<ThemedHeaderProps> = ({
                       activeOpacity={0.8}
                     >
                       <BellIcon size={22} color={THEME.colors.white} strokeWidth={1.9} />
+                      {unreadCount > 0 && <View style={styles.notificationDot} />}
                     </TouchableOpacity>
                   )}
                   {showCart && (
@@ -179,7 +194,7 @@ export const ThemedHeader: React.FC<ThemedHeaderProps> = ({
               </View>
               <TextInput
                 style={styles.searchInput}
-                placeholder={searchPlaceholder}
+                placeholder={effectivePlaceholder}
                 placeholderTextColor={THEME.colors.placeholder}
                 value={searchValue}
                 onChangeText={onSearchChange}
@@ -227,7 +242,7 @@ export const ThemedHeader: React.FC<ThemedHeaderProps> = ({
             style={styles.glassButton}
             onPress={handleBack}
             activeOpacity={0.8}
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back', 'Back')}
           >
             <ArrowLeftIcon size={22} color={THEME.colors.white} strokeWidth={2.4} />
           </TouchableOpacity>
@@ -370,6 +385,22 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.headerGlassBg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 7,
+    right: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.7,
+    shadowRadius: 3,
+    elevation: 4,
   },
   glassSpacer: {
     width: 44,

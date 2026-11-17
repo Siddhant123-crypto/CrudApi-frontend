@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { NotificationService } from '../services/NotificationService';
 import { NotificationSendRequest } from '../types';
 import api from '../services/api';
@@ -27,6 +28,7 @@ import { FarmerHeader } from '../components/farmer/FarmerHeader';
 import { FARMER_THEME } from '../constants/farmerTheme';
 
 export const FarmerMessageCustomerScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -61,7 +63,7 @@ export const FarmerMessageCustomerScreen = () => {
       setCustomersList(customers);
     } catch (error) {
       console.log('Failed to fetch customers:', error);
-      Alert.alert('Error', 'Failed to load customers list.');
+      Alert.alert(t('common.error', 'Error'), t('support.failedLoadCustomers', 'Failed to load customers list.'));
     } finally {
       setFetchingUsers(false);
     }
@@ -109,16 +111,16 @@ export const FarmerMessageCustomerScreen = () => {
     }
 
     if (!currentTitle.trim() || !currentMessage.trim()) {
-      Alert.alert('Error', 'Title and message are required.');
+      Alert.alert(t('common.error', 'Error'), t('support.titleAndMessageRequired', 'Title and message are required.'));
       return;
     }
     if (recipient === 'SPECIFIC' && !specificUserId) {
-      Alert.alert('Error', 'Please select a specific customer.');
+      Alert.alert(t('common.error', 'Error'), t('support.selectCustomerRequired', 'Please select a specific customer.'));
       return;
     }
     setLoading(true);
     try {
-      const senderName = user?.name || user?.email || 'A Farmer';
+      const senderName = user?.name || user?.email || t('common.farmerRole', 'Farm2Home Producer');
       const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
       const payload: NotificationSendRequest = {
         receiverType: isAdminMessage ? 'ADMIN' : 'CUSTOMER',
@@ -128,13 +130,13 @@ export const FarmerMessageCustomerScreen = () => {
         notificationType: isAdminMessage ? 'ADMIN' : 'FARMER',
       };
       await NotificationService.sendNotification(payload);
-      Alert.alert('Success', 'Your message send successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert(t('common.success', 'Success'), t('support.messageSentSuccess', 'Message sent successfully'), [
+        { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
       console.error('Send message error:', error);
       setTimeout(() => {
-        Alert.alert('Error', 'Failed to send message.');
+        Alert.alert(t('common.error', 'Error'), t('support.failedSendMessage', 'Failed to send message.'));
       }, 100);
     } finally {
       setLoading(false);
@@ -150,7 +152,7 @@ export const FarmerMessageCustomerScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor="#1F7A4D" />
       <FarmerHeader
         variant="inner"
-        title={isAdminMessage ? 'Message Admin' : 'Message Customer'}
+        title={isAdminMessage ? t('support.messageAdmin', 'Message Admin') : t('support.messageCustomer', 'Message Customer')}
         onBackPress={() => navigation.goBack()}
       />
       <KeyboardAvoidingView
@@ -170,13 +172,13 @@ export const FarmerMessageCustomerScreen = () => {
               <Ionicons name="shield-checkmark" size={30} color="#FFFFFF" />
             </View>
             <View style={styles.adminInfo}>
-              <Text style={styles.adminName}>{preSelectedName || 'System Administrator'}</Text>
-              <Text style={styles.adminRole}>Support & Verification</Text>
+              <Text style={styles.adminName}>{preSelectedName || t('support.systemAdmin', 'System Administrator')}</Text>
+              <Text style={styles.adminRole}>{t('support.supportVerification', 'Support & Verification')}</Text>
             </View>
           </View>
         ) : (
           <>
-            <Text style={styles.label}>Receiver</Text>
+            <Text style={styles.label}>{t('support.receiver', 'Receiver')}</Text>
             <View style={styles.rowSelector}>
               <TouchableOpacity
                 style={[styles.selectorBtn, recipient === 'ALL' && styles.selectorBtnActive]}
@@ -184,7 +186,7 @@ export const FarmerMessageCustomerScreen = () => {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.selectorText, recipient === 'ALL' && styles.selectorTextActive]}>
-                  All Customers
+                  {t('support.allCustomers', 'All Customers')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -193,7 +195,7 @@ export const FarmerMessageCustomerScreen = () => {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.selectorText, recipient === 'SPECIFIC' && styles.selectorTextActive]}>
-                  Select Customer
+                  {t('support.selectCustomer', 'Select Customer')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -205,7 +207,7 @@ export const FarmerMessageCustomerScreen = () => {
               <Ionicons name="search" size={20} color="#5C6B60" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search by name or email..."
+                placeholder={t('support.searchCustomersPlaceholder', 'Search by name or email...')}
                 placeholderTextColor="#7D8D81"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -214,7 +216,7 @@ export const FarmerMessageCustomerScreen = () => {
             {fetchingUsers ? (
               <ActivityIndicator size="small" color="#1F7A4D" />
             ) : filteredCustomers.length === 0 ? (
-              <Text style={styles.infoText}>No customers found.</Text>
+              <Text style={styles.infoText}>{t('support.noCustomersFound', 'No customers found.')}</Text>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll}>
                 {filteredCustomers.map((user) => {
@@ -240,26 +242,26 @@ export const FarmerMessageCustomerScreen = () => {
         )}
         {!isAdminMessage && (
           <View style={styles.readOnlyContainer}>
-            <Text style={styles.label}>Notification Type</Text>
+            <Text style={styles.label}>{t('support.notificationType', 'Notification Type')}</Text>
             <View style={styles.readOnlyBadge}>
               <Text style={styles.readOnlyBadgeText}>FARMER</Text>
             </View>
           </View>
         )}
-        <Text style={styles.label}>Title</Text>
+        <Text style={styles.label}>{t('support.title', 'Title')}</Text>
         <TextInput
           ref={titleInputRef}
           style={styles.input}
-          placeholder="e.g., Fresh Produce Available"
+          placeholder={t('farmer.freshProducePlaceholder', 'e.g., Fresh Produce Available')}
           value={title}
           onChangeText={handleTitleChange}
           placeholderTextColor="#7D8D81"
         />
-        <Text style={styles.label}>Message</Text>
+        <Text style={styles.label}>{t('support.message', 'Message')}</Text>
         <TextInput
           ref={messageInputRef}
           style={[styles.input, styles.textArea]}
-          placeholder="Enter your message here..."
+          placeholder={t('support.enterMessagePlaceholder', 'Enter your message here...')}
           value={message}
           onChangeText={handleMessageChange}
           multiline
@@ -276,7 +278,7 @@ export const FarmerMessageCustomerScreen = () => {
           {loading ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.sendButtonText}>Send Message</Text>
+            <Text style={styles.sendButtonText}>{t('support.sendMessage', 'Send Message')}</Text>
           )}
         </TouchableOpacity>
         </ScrollView>
@@ -287,8 +289,8 @@ export const FarmerMessageCustomerScreen = () => {
             <View style={styles.successIconContainer}>
               <Ionicons name="checkmark-circle" size={56} color="#17663F" />
             </View>
-            <Text style={styles.successModalTitle}>Success!</Text>
-            <Text style={styles.successModalMessage}>Message sent successfully</Text>
+            <Text style={styles.successModalTitle}>{t('common.success', 'Success!')}</Text>
+            <Text style={styles.successModalMessage}>{t('support.messageSentSuccess', 'Message sent successfully')}</Text>
           </View>
         </View>
       </Modal>

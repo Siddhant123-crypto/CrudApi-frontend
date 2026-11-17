@@ -12,6 +12,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { saveFarmDetails, updateFarmDetails } from '../services/farmDetailsService';
 import { uploadGalleryFile } from '../services/farmGalleryService';
@@ -27,6 +28,7 @@ import { FarmerStickyBar } from '../components/farmer/FarmerUI';
 import { CameraIcon, CheckmarkIcon, ChevronDownIcon } from '../components/farmer/FarmerIcons';
 
 const EditFarmDetailsScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const existingData = route.params?.farmDetails || {};
   const [farmName, setFarmName] = useState(existingData.farmName || '');
@@ -101,11 +103,11 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
 
   const handleSave = async () => {
     if (!farmName.trim() || !location.trim()) {
-      Alert.alert('Error', 'Farm Name and Location are required.');
+      Alert.alert(t('common.error', 'Error'), t('farmer.farmRequiredAlert', 'Farm Name and Location are required.'));
       return;
     }
     if (!user?.farmerId) {
-      Alert.alert('Error', 'Farmer session missing.');
+      Alert.alert(t('common.error', 'Error'), t('farmer.farmerSessionMissing', 'Farmer session missing.'));
       return;
     }
 
@@ -167,15 +169,15 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
         await Promise.all(galleryUploads);
       }
 
-      Alert.alert('Success', 'Farm details saved successfully!', [
+      Alert.alert(t('common.success', 'Success'), t('farmer.farmDetailsSaved', 'Farm details saved successfully!'), [
         {
-          text: 'OK',
+          text: t('common.ok', 'OK'),
           onPress: () => navigation.goBack(),
         },
       ]);
     } catch (error: any) {
       console.log('Save Error:', error);
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to save farm details.');
+      Alert.alert(t('common.error', 'Error'), error?.response?.data?.message || t('farmer.failedToSaveFarm', 'Failed to save farm details.'));
     } finally {
       setSaving(false);
     }
@@ -188,7 +190,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
       {/* Header */}
       <FarmerHeader
         variant="inner"
-        title="Edit Farm Details"
+        title={t('farmer.editFarm', 'Edit Farm Details')}
         onBackPress={() => navigation.goBack()}
       />
 
@@ -212,7 +214,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                 style={styles.sectionHeading}
                 maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
               >
-                MEDIA & PHOTOS
+                {t('farmer.mediaPhotos', 'MEDIA & PHOTOS')}
               </Text>
               <View style={styles.sectionDivider} />
             </View>
@@ -234,7 +236,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                       style={styles.mediaBoxLabel}
                       maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                     >
-                      Farmer Photo
+                      {t('farmer.farmerPhoto', 'Farmer Photo')}
                     </Text>
                   </View>
                 )}
@@ -244,7 +246,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                       style={styles.mediaOverlayText}
                       maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                     >
-                      Change Photo
+                      {t('farmer.changePhoto', 'Change Photo')}
                     </Text>
                   </View>
                 )}
@@ -262,7 +264,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                       style={styles.videoSuccessText}
                       maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                     >
-                      Video Selected
+                      {t('farmer.videoSelected', 'Video Selected')}
                     </Text>
                   </View>
                 ) : (
@@ -278,7 +280,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                       style={styles.mediaBoxLabel}
                       maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                     >
-                      Farm Video
+                      {t('farmer.farmVideo', 'Farm Video')}
                     </Text>
                   </View>
                 )}
@@ -293,60 +295,60 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                 style={styles.sectionHeading}
                 maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
               >
-                GENERAL INFORMATION
+                {t('farmer.generalInfo', 'GENERAL INFORMATION')}
               </Text>
               <View style={styles.sectionDivider} />
             </View>
 
             <FarmerInput
-              label="Farm Name"
+              label={t('farmer.farmName', 'Farm Name')}
               required
               value={farmName}
               onChangeText={setFarmName}
-              placeholder="E.g. Green Valley Farm"
+              placeholder={t('farmer.farmNamePlaceholder', 'E.g. Green Valley Farm')}
             />
 
             <FarmerInput
-              label="Tagline"
+              label={t('farmer.tagline', 'Tagline')}
               value={tagline}
               onChangeText={setTagline}
-              placeholder="E.g. Fresh from the roots"
+              placeholder={t('farmer.taglinePlaceholder', 'E.g. Fresh from the roots')}
             />
 
             <FarmerInput
-              label="Location"
+              label={t('farmer.location', 'Location')}
               required
               value={location}
               onChangeText={setLocation}
-              placeholder="E.g. Nashik, Maharashtra"
+              placeholder={t('farmer.locationPlaceholder', 'E.g. Nashik, Maharashtra')}
             />
 
             <View style={styles.twoColRow}>
               <View style={styles.twoColItem}>
                 <FarmerInput
-                  label="Farming Since"
+                  label={t('farmer.farmingSince', 'Farming Since')}
                   value={farmingSince}
                   onChangeText={setFarmingSince}
-                  placeholder="YYYY"
+                  placeholder={t('farmer.farmingSincePlaceholder', 'YYYY')}
                   keyboardType="numeric"
                   maxLength={4}
                 />
               </View>
               <View style={styles.twoColItem}>
                 <FarmerInput
-                  label="Farming Type"
+                  label={t('farmer.farmingType', 'Farming Type')}
                   value={farmingType}
                   onChangeText={setFarmingType}
-                  placeholder="E.g. Organic"
+                  placeholder={t('farmer.farmingTypePlaceholder', 'E.g. Organic')}
                 />
               </View>
             </View>
 
             <FarmerInput
-              label="About Farm"
+              label={t('farmer.aboutFarm', 'About Farm')}
               value={aboutFarm}
               onChangeText={setAboutFarm}
-              placeholder="Tell us about your farming practices and story..."
+              placeholder={t('farmer.aboutFarmPlaceholder', 'Tell us about your farming practices and story...')}
               multiline
               numberOfLines={4}
             />
@@ -359,7 +361,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                 style={styles.sectionHeading}
                 maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
               >
-                METRICS & AREA
+                {t('farmer.metricsArea', 'METRICS & AREA')}
               </Text>
               <View style={styles.sectionDivider} />
             </View>
@@ -367,16 +369,16 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
             <View style={styles.twoColRow}>
               <View style={styles.twoColItem}>
                 <FarmerInput
-                  label="Farm Area"
+                  label={t('farmer.farmArea', 'Farm Area')}
                   value={farmArea}
                   onChangeText={setFarmArea}
-                  placeholder="E.g. 5.5"
+                  placeholder={t('farmer.farmAreaPlaceholder', 'E.g. 5.5')}
                   keyboardType="numeric"
                 />
               </View>
               <View style={styles.twoColItem}>
                 <FarmerInput
-                  label="Unit"
+                  label={t('farmer.unit', 'Unit')}
                   value={farmAreaUnit}
                   isTouchable
                   onPressContainer={() => setShowUnitDropdown(true)}
@@ -388,19 +390,19 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
             <View style={styles.twoColRow}>
               <View style={styles.twoColItem}>
                 <FarmerInput
-                  label="Crops Grown Count"
+                  label={t('farmer.cropsGrownCount', 'Crops Grown Count')}
                   value={cropsGrownCount}
                   onChangeText={setCropsGrownCount}
-                  placeholder="E.g. 15"
+                  placeholder={t('farmer.cropsGrownCountPlaceholder', 'E.g. 15')}
                   keyboardType="numeric"
                 />
               </View>
               <View style={styles.twoColItem}>
                 <FarmerInput
-                  label="Years Experience"
+                  label={t('farmer.yearsExperience', 'Years Experience')}
                   value={yearsExperience}
                   onChangeText={setYearsExperience}
-                  placeholder="E.g. 6"
+                  placeholder={t('farmer.yearsExperiencePlaceholder', 'E.g. 6')}
                   keyboardType="numeric"
                 />
               </View>
@@ -414,37 +416,37 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                 style={styles.sectionHeading}
                 maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
               >
-                AGRICULTURAL DETAILS
+                {t('farmer.agriDetails', 'AGRICULTURAL DETAILS')}
               </Text>
               <View style={styles.sectionDivider} />
             </View>
 
             <FarmerInput
-              label="Farmer Name"
+              label={t('farmer.farmerName', 'Farmer Name')}
               value={farmerName}
               onChangeText={setFarmerName}
-              placeholder="Enter your full name"
+              placeholder={t('farmer.farmerNamePlaceholder', 'Enter your full name')}
             />
 
             <FarmerInput
-              label="Main Crops (comma separated)"
+              label={t('farmer.mainCrops', 'Main Crops (comma separated)')}
               value={mainCrops}
               onChangeText={setMainCrops}
-              placeholder="E.g. Tomato, Onion, Wheat"
+              placeholder={t('farmer.mainCropsPlaceholder', 'E.g. Tomato, Onion, Wheat')}
             />
 
             <FarmerInput
-              label="Irrigation Source"
+              label={t('farmer.irrigationSource', 'Irrigation Source')}
               value={irrigationSource}
               onChangeText={setIrrigationSource}
-              placeholder="E.g. Drip Irrigation, Canal"
+              placeholder={t('farmer.irrigationSourcePlaceholder', 'E.g. Drip Irrigation, Canal')}
             />
 
             <FarmerInput
-              label="Soil Type"
+              label={t('farmer.soilType', 'Soil Type')}
               value={soilType}
               onChangeText={setSoilType}
-              placeholder="E.g. Black Cotton Soil, Red Loam"
+              placeholder={t('farmer.soilTypePlaceholder', 'E.g. Black Cotton Soil, Red Loam')}
             />
           </FarmerCard>
       </KeyboardAwareScrollView>
@@ -452,7 +454,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
       {/* Sticky Save Bar */}
       <FarmerStickyBar>
         <FarmerDeepButton
-          title="Save Farm Details"
+          title={t('farmer.saveFarmDetails', 'Save Farm Details')}
           onPress={handleSave}
           loading={saving}
           disabled={saving}
@@ -477,7 +479,7 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
                 style={styles.dropdownTitle}
                 maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
               >
-                Select Farm Unit
+                {t('farmer.selectFarmUnit', 'Select Farm Unit')}
               </Text>
               {UNITS.map((u) => {
                 const isActive = farmAreaUnit === u;

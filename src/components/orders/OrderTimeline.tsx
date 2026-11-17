@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { THEME } from '../../constants/theme';
 import { FARMER_THEME } from '../../constants/farmerTheme';
 import { AdminFonts } from '../../constants/adminTheme';
@@ -12,12 +13,13 @@ interface OrderTimelineProps {
 }
 
 export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer = false, variant = 'default' }) => {
+  const { t } = useTranslation();
   const statuses = [
-    { id: 'PENDING', label: 'Order placed, waiting for farmer' },
-    { id: 'CONFIRMED', label: 'Farmer accepted order' },
-    { id: 'PROCESSING', label: 'Products being prepared' },
-    { id: 'OUT_FOR_DELIVERY', label: 'Order on the way' },
-    { id: 'DELIVERED', label: 'Order delivered successfully' },
+    { id: 'PENDING', label: t('orders.timelinePending', 'Order placed, waiting for farmer') },
+    { id: 'CONFIRMED', label: t('orders.timelineConfirmed', 'Farmer accepted order') },
+    { id: 'PROCESSING', label: t('orders.timelineProcessing', 'Products being prepared') },
+    { id: 'OUT_FOR_DELIVERY', label: t('orders.timelineOutForDelivery', 'Order on the way') },
+    { id: 'DELIVERED', label: t('orders.timelineDelivered', 'Order delivered successfully') },
   ];
 
   if (variant === 'admin') {
@@ -27,7 +29,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer =
           <View style={[styles.timelineItem, { alignItems: 'center', minHeight: 40 }]}>
             <View style={[styles.adminTimelineDot, { backgroundColor: '#D64545', marginRight: 10 }]} />
             <Text style={[styles.adminTimelineText, { color: '#D64545', fontFamily: AdminFonts.bold }]}>
-              Order Cancelled
+              {t('orders.timelineCancelled', 'Order Cancelled')}
             </Text>
           </View>
         </View>
@@ -91,7 +93,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer =
           <View style={[styles.timelineItem, { alignItems: 'center', minHeight: 40 }]}>
             <View style={[styles.farmerTimelineDot, { backgroundColor: '#C0392B', marginRight: 10 }]} />
             <Text style={[styles.farmerTimelineText, { color: '#C0392B', fontFamily: FARMER_THEME.fonts.bold }]}>
-              Order Cancelled
+              {t('orders.timelineCancelled', 'Order Cancelled')}
             </Text>
           </View>
         </View>
@@ -155,7 +157,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer =
           <View style={[styles.timelineItem, { alignItems: 'center', minHeight: 40 }]}>
             <View style={[styles.customerTimelineDot, { backgroundColor: THEME.colors.error, marginRight: 10 }]} />
             <Text style={[styles.customerTimelineText, { color: THEME.colors.error, fontFamily: THEME.fonts.bold }]}>
-              Order Cancelled
+              {t('orders.timelineCancelled', 'Order Cancelled')}
             </Text>
           </View>
         </View>
@@ -218,7 +220,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status, isFarmer =
         <View style={styles.timelineItem}>
           <View style={[styles.timelineDot, { backgroundColor: '#EF4444' }]} />
           <Text style={[styles.timelineText, { color: '#EF4444', fontWeight: '700' }]}>
-            Order Cancelled
+            {t('orders.timelineCancelled', 'Order Cancelled')}
           </Text>
         </View>
       </View>

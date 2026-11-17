@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -29,6 +30,7 @@ import { OrderTimeline } from '../../components/orders/OrderTimeline';
 import { PaymentStatusBadge } from '../../components/orders/PaymentStatusBadge';
 
 export const AdminOrderDetailsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { orderId } = route.params || {};
@@ -61,7 +63,7 @@ export const AdminOrderDetailsScreen: React.FC = () => {
   if (loading) {
     return (
       <AdminPageBackground>
-        <AdminHeader variant="inner" title="Order Details" showBackButton={true} />
+        <AdminHeader variant="inner" title={t('orders.orderDetails', 'Order Details')} showBackButton={true} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={ADMIN_THEME.colors.indigo} />
         </View>
@@ -72,11 +74,11 @@ export const AdminOrderDetailsScreen: React.FC = () => {
   if (!order) {
     return (
       <AdminPageBackground>
-        <AdminHeader variant="inner" title="Order Details" showBackButton={true} />
+        <AdminHeader variant="inner" title={t('orders.orderDetails', 'Order Details')} showBackButton={true} />
         <AdminEmptyState
           icon={<ShoppingBagIcon size={44} color={ADMIN_THEME.colors.indigo} strokeWidth={1.8} />}
-          title="Order not found"
-          subtitle="The requested order could not be located."
+          title={t('admin.orderNotFound', 'Order not found')}
+          subtitle={t('orders.noOrdersSubtitle', 'The requested order could not be located.')}
         />
       </AdminPageBackground>
     );
@@ -93,7 +95,7 @@ export const AdminOrderDetailsScreen: React.FC = () => {
   return (
     <AdminPageBackground>
       {/* 1) INNER HEADER */}
-      <AdminHeader variant="inner" title="Order Details" showBackButton={true} />
+      <AdminHeader variant="inner" title={t('orders.orderDetails', 'Order Details')} showBackButton={true} />
 
       <ScrollView
         style={styles.content}
@@ -120,14 +122,14 @@ export const AdminOrderDetailsScreen: React.FC = () => {
 
         {/* 3) CUSTOMER & DELIVERY INFO */}
         <AdminCard style={styles.card}>
-          <Text style={styles.cardSectionTitle}>Customer & Delivery</Text>
+          <Text style={styles.cardSectionTitle}>{t('admin.customerAndDelivery', 'Customer & Delivery')}</Text>
 
           <View style={styles.infoRow}>
             <View style={styles.infoIconCircle}>
               <UserIcon size={16} color={ADMIN_THEME.colors.indigo} />
             </View>
             <View style={styles.infoTextWrapper}>
-              <Text style={styles.infoLabel}>Customer</Text>
+              <Text style={styles.infoLabel}>{t('orders.customer', 'Customer')}</Text>
               <Text style={styles.infoValue}>{order.customerName || 'N/A'}</Text>
             </View>
           </View>
@@ -137,7 +139,7 @@ export const AdminOrderDetailsScreen: React.FC = () => {
               <PhoneIcon size={16} color={ADMIN_THEME.colors.indigo} />
             </View>
             <View style={styles.infoTextWrapper}>
-              <Text style={styles.infoLabel}>Contact</Text>
+              <Text style={styles.infoLabel}>{t('admin.contact', 'Contact')}</Text>
               <Text style={styles.infoValue}>{order.customerMobile || 'N/A'}</Text>
             </View>
           </View>
@@ -147,7 +149,7 @@ export const AdminOrderDetailsScreen: React.FC = () => {
               <LocationIcon size={16} color={ADMIN_THEME.colors.indigo} />
             </View>
             <View style={styles.infoTextWrapper}>
-              <Text style={styles.infoLabel}>Delivery Address</Text>
+              <Text style={styles.infoLabel}>{t('checkout.deliveryAddress', 'Delivery Address')}</Text>
               <Text style={styles.infoValue}>{order.customerAddress || 'N/A'}</Text>
             </View>
           </View>
@@ -155,7 +157,7 @@ export const AdminOrderDetailsScreen: React.FC = () => {
 
         {/* 4) PRODUCTS LIST */}
         <AdminCard style={styles.card}>
-          <Text style={styles.cardSectionTitle}>Products ({order.items?.length || 0})</Text>
+          <Text style={styles.cardSectionTitle}>{t('admin.productsCatalog', 'Products')} ({order.items?.length || 0})</Text>
 
           {order.items?.map((item: any, index: number) => (
             <View
@@ -191,10 +193,10 @@ export const AdminOrderDetailsScreen: React.FC = () => {
                   {item.productName}
                 </Text>
                 <Text style={styles.farmerName}>
-                  Farmer: {item.farmerName || 'Unknown'}
+                  {t('orders.farmer', 'Farmer')}: {item.farmerName || 'Unknown'}
                 </Text>
                 <Text style={styles.productQuantityPrice}>
-                  ₹{item.price}/{item.unit || 'unit'} • Qty: {item.quantity}
+                  ₹{item.price}/{item.unit || 'unit'} • {t('common.qty', 'Qty')}: {item.quantity}
                 </Text>
               </View>
 
@@ -207,15 +209,15 @@ export const AdminOrderDetailsScreen: React.FC = () => {
 
         {/* 5) PAYMENT SUMMARY */}
         <AdminCard style={styles.card}>
-          <Text style={styles.cardSectionTitle}>Payment Summary</Text>
+          <Text style={styles.cardSectionTitle}>{t('admin.paymentSummary', 'Payment Summary')}</Text>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Payment Status</Text>
+            <Text style={styles.summaryLabel}>{t('orders.paymentStatus', 'Payment Status')}</Text>
             <PaymentStatusBadge status={order.paymentStatus} variant="admin" />
           </View>
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalLabel}>{t('cart.totalAmount', 'Total Amount')}</Text>
             <Text style={styles.totalValue}>₹{order.totalAmount}</Text>
           </View>
         </AdminCard>

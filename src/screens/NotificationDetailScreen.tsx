@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import {
   getNotificationIcon,
   formatNotificationDate,
@@ -40,6 +41,7 @@ import { ADMIN_THEME, AdminFonts } from '../constants/adminTheme';
 import { ClockIcon } from '../components/admin/AdminIcons';
 
 const NotificationDetailScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const notification: NotificationResponse = route.params?.notification;
@@ -63,14 +65,14 @@ const NotificationDetailScreen = () => {
         <AdminPageBackground>
           <AdminHeader
             variant="inner"
-            title="Notification"
+            title={t('notifications.notification', 'Notification')}
             onBack={() => navigation.goBack()}
           />
           <View style={styles.centerContainer}>
             <AdminCard style={styles.adminErrorCard}>
-              <Text style={styles.adminErrorText}>Notification details not found.</Text>
+              <Text style={styles.adminErrorText}>{t('notifications.notFound', 'Notification details not found.')}</Text>
               <AdminOutlineButton
-                title="Go Back"
+                title={t('common.goBack', 'Go Back')}
                 onPress={() => navigation.goBack()}
                 style={{ marginTop: 14 }}
               />
@@ -94,12 +96,12 @@ const NotificationDetailScreen = () => {
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
               <Ionicons name="chevron-back" size={24} color={headerTextColor} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: headerTextColor }]}>Error</Text>
+            <Text style={[styles.headerTitle, { color: headerTextColor }]}>{t('common.error', 'Error')}</Text>
           </View>
           <View style={styles.headerRightPlaceholder} />
         </View>
         <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>Notification details not found.</Text>
+          <Text style={styles.errorText}>{t('notifications.notFound', 'Notification details not found.')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -125,7 +127,7 @@ const NotificationDetailScreen = () => {
       <PageBackground style={{ flex: 1 }}>
         <ThemedHeader
           variant="inner"
-          title="Notification"
+          title={t('notifications.notification', 'Notification')}
           onBackPress={() => navigation.goBack()}
         />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 130 }}>
@@ -183,7 +185,7 @@ const NotificationDetailScreen = () => {
       <FarmerPageBackground>
         <FarmerHeader
           variant="inner"
-          title="Notification Detail"
+          title={t('notifications.detailTitle', 'Notification Detail')}
           onBackPress={() => navigation.goBack()}
         />
 
@@ -211,6 +213,44 @@ const NotificationDetailScreen = () => {
             <View style={styles.farmerMessageBox}>
               <Text style={styles.farmerMessageText}>{actualMessage}</Text>
             </View>
+
+            {notification.orderId && (
+              <View style={styles.orderDetailCard}>
+                <View style={styles.orderDetailHeader}>
+                  <Ionicons name="receipt-outline" size={16} color="#047857" style={{ marginRight: 6 }} />
+                  <Text style={styles.orderDetailTitle}>
+                    Order #{notification.orderNumber || notification.orderId.substring(0, 8)}
+                  </Text>
+                </View>
+
+                {notification.previousAddress ? (
+                  <View style={styles.addressDiffBox}>
+                    <Text style={styles.addressDiffLabel}>Previous Delivery Address:</Text>
+                    <Text style={styles.addressDiffText}>{notification.previousAddress}</Text>
+                  </View>
+                ) : null}
+
+                {notification.newAddress ? (
+                  <View style={[styles.addressDiffBox, styles.newAddressBox]}>
+                    <Text style={[styles.addressDiffLabel, { color: '#047857' }]}>Updated Delivery Address:</Text>
+                    <Text style={[styles.addressDiffText, { color: '#064E3B', fontWeight: '600' }]}>{notification.newAddress}</Text>
+                  </View>
+                ) : null}
+
+                <FarmerDeepButton
+                  title={t('orders.viewOrderDetails', 'View Order Details')}
+                  onPress={() => {
+                    navigation.navigate('FarmerOrderDetails', {
+                      orderId: notification.orderId,
+                      addressUpdated: true,
+                      previousAddress: notification.previousAddress,
+                      newAddress: notification.newAddress,
+                    });
+                  }}
+                  style={{ marginTop: 12 }}
+                />
+              </View>
+            )}
 
             {canReply && (
               <FarmerDeepButton
@@ -251,7 +291,7 @@ const NotificationDetailScreen = () => {
     <AdminPageBackground>
       <AdminHeader
         variant="inner"
-        title="Notification Detail"
+        title={t('notifications.detailTitle', 'Notification Detail')}
         subtitle={notification.type || 'System update'}
         onBack={() => navigation.goBack()}
       />
@@ -260,7 +300,7 @@ const NotificationDetailScreen = () => {
         <AdminCard style={styles.adminCard}>
           <View style={styles.adminSenderRow}>
             <View style={styles.adminSenderLeft}>
-              <Text style={styles.adminFieldLabel}>FROM</Text>
+              <Text style={styles.adminFieldLabel}>{t('notifications.fromUpper', 'FROM')}</Text>
               <Text style={styles.adminSenderName}>
                 {senderName || (notification.senderType ? `${notification.senderType} Notification` : 'System')}
               </Text>
@@ -281,12 +321,12 @@ const NotificationDetailScreen = () => {
 
           <View style={styles.adminTitleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.adminFieldLabel}>TITLE</Text>
+              <Text style={styles.adminFieldLabel}>{t('notifications.titleUpper', 'TITLE')}</Text>
               <Text style={styles.adminTitleText}>{notification.title}</Text>
             </View>
             {canAdminReply && (
               <AdminPrimaryButton
-                title="Reply"
+                title={t('notifications.reply', 'Reply')}
                 icon={<Ionicons name="chatbubble-ellipses" size={14} color="#FFFFFF" />}
                 onPress={() => {
                   navigation.navigate('AdminMessage', {
@@ -303,7 +343,7 @@ const NotificationDetailScreen = () => {
           <View style={styles.adminDivider} />
 
           <View style={styles.adminMessageBox}>
-            <Text style={styles.adminFieldLabel}>MESSAGE BODY</Text>
+            <Text style={styles.adminFieldLabel}>{t('notifications.messageBodyUpper', 'MESSAGE BODY')}</Text>
             <Text style={styles.adminMessageText}>{actualMessage}</Text>
           </View>
         </AdminCard>
@@ -538,6 +578,48 @@ const styles = StyleSheet.create({
     color: ADMIN_THEME.colors.ink,
     lineHeight: 22,
     marginTop: 4,
+  },
+  orderDetailCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  orderDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  orderDetailTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  addressDiffBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  newAddressBox: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  addressDiffLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  addressDiffText: {
+    fontSize: 13,
+    color: '#374151',
+    lineHeight: 18,
   },
 });
 

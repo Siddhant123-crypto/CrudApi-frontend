@@ -1,0 +1,336 @@
+{
+  "ignoreFiles": [
+    "src/i18n/locales/**",
+    "src/i18n/i18n.test.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx"
+  ],
+  "exactStrings": [
+    {
+      "value": "Farm2Home",
+      "reason": "Brand name"
+    },
+    {
+      "value": "Farm",
+      "reason": "Brand name syllable in stylised Farm2Home wordmark"
+    },
+    {
+      "value": "F A R M 2 H O M E",
+      "reason": "Stylized brand logo text"
+    },
+    {
+      "value": "₹",
+      "reason": "Currency symbol"
+    },
+    {
+      "value": "kg",
+      "reason": "Unit of measurement"
+    },
+    {
+      "value": "g",
+      "reason": "Unit of measurement"
+    },
+    {
+      "value": "km",
+      "reason": "Unit of measurement"
+    },
+    {
+      "value": "N/A",
+      "reason": "Standard fallback abbreviation"
+    },
+    {
+      "value": "•",
+      "reason": "Bullet separator"
+    },
+    {
+      "value": "/",
+      "reason": "Separator"
+    },
+    {
+      "value": "-",
+      "reason": "Dash separator"
+    },
+    {
+      "value": "+",
+      "reason": "Plus symbol"
+    },
+    {
+      "value": "%",
+      "reason": "Percentage symbol"
+    },
+    {
+      "value": ":",
+      "reason": "Colon separator"
+    },
+    {
+      "value": "|",
+      "reason": "Pipe separator"
+    },
+    {
+      "value": ",",
+      "reason": "Comma separator"
+    },
+    {
+      "value": "...",
+      "reason": "Ellipsis"
+    },
+    {
+      "value": "••••••••",
+      "reason": "Masked password bullet placeholder"
+    },
+    {
+      "value": "YYYY-MM-DD",
+      "reason": "Standard ISO-8601 date format placeholder"
+    },
+    {
+      "value": "Admin",
+      "reason": "Internal system role name / code identifier"
+    },
+    {
+      "value": "Farmer",
+      "reason": "Internal system role name / code identifier"
+    },
+    {
+      "value": "Customer",
+      "reason": "Internal system role name / code identifier"
+    },
+    {
+      "value": "ADMIN",
+      "reason": "Backend role enum value"
+    },
+    {
+      "value": "FARMER",
+      "reason": "Backend role enum value"
+    },
+    {
+      "value": "CUSTOMER",
+      "reason": "Backend role enum value"
+    },
+    {
+      "value": "PENDING",
+      "reason": "Backend status enum value"
+    },
+    {
+      "value": "CONFIRMED",
+      "reason": "Backend status enum value"
+    },
+    {
+      "value": "PACKED",
+      "reason": "Backend status enum value"
+    },
+    {
+      "value": "SHIPPED",
+      "reason": "Backend status enum value"
+    },
+    {
+      "value": "OUT_FOR_DELIVERY",
+      "reason": "Backend status enum value"
+    },
+    {
+      "value": "DELIVERED",
+      "reason": "Backend status enum value"
+    },
+    {
+      "value": "CANCELLED",
+      "reason": "Backend status enum value"
+    },
+    {
+      "value": "PAID",
+      "reason": "Backend payment enum value"
+    },
+    {
+      "value": "UNPAID",
+      "reason": "Backend payment enum value"
+    },
+    {
+      "value": "COD",
+      "reason": "Payment method abbreviation"
+    },
+    {
+      "value": "ONLINE",
+      "reason": "Payment method code"
+    },
+    {
+      "value": "UPI",
+      "reason": "Payment protocol name"
+    },
+    {
+      "value": "Razorpay",
+      "reason": "Third-party payment gateway name"
+    },
+    {
+      "value": "Google",
+      "reason": "Third-party provider name"
+    },
+    {
+      "value": "GPS",
+      "reason": "Technical protocol abbreviation"
+    },
+    {
+      "value": "PDF",
+      "reason": "Document format"
+    },
+    {
+      "value": "Home",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Market",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Orders",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Profile",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Wishlist",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Cart",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Users",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Products",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Markets",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "Analytics",
+      "reason": "Navigation route name / icon identifier"
+    },
+    {
+      "value": "FARM2HOME",
+      "reason": "Uppercase brand name in certificate stamp"
+    },
+    {
+      "value": "Farm2Home AI",
+      "reason": "AI chatbot brand name"
+    },
+    {
+      "value": "English",
+      "reason": "Fixed language identifier"
+    },
+    {
+      "value": "हिन्दी",
+      "reason": "Fixed native language identifier"
+    },
+    {
+      "value": "Hindi",
+      "reason": "Fixed language identifier"
+    },
+    {
+      "value": "मराठी",
+      "reason": "Fixed native language identifier"
+    },
+    {
+      "value": "Marathi",
+      "reason": "Fixed language identifier"
+    },
+    {
+      "value": "தமிழ்",
+      "reason": "Fixed native language identifier"
+    },
+    {
+      "value": "Tamil",
+      "reason": "Fixed language identifier"
+    },
+    {
+      "value": "বাংলা",
+      "reason": "Fixed native language identifier"
+    },
+    {
+      "value": "Bengali",
+      "reason": "Fixed language identifier"
+    },
+    {
+      "value": "ಕನ್ನಡ",
+      "reason": "Fixed native language identifier"
+    },
+    {
+      "value": "Kannada",
+      "reason": "Fixed language identifier"
+    },
+    {
+      "value": "ଓଡ଼ିଆ",
+      "reason": "Fixed native language identifier"
+    },
+    {
+      "value": "Odia",
+      "reason": "Fixed language identifier"
+    },
+    {
+      "value": "संस्कृतम्",
+      "reason": "Fixed native language identifier"
+    },
+    {
+      "value": "Sanskrit",
+      "reason": "Fixed language identifier"
+    },
+    {
+      "value": "తెలుగు",
+      "reason": "Fixed native language identifier"
+    },
+    {
+      "value": "Telugu",
+      "reason": "Fixed language identifier"
+    }
+  ],
+  "patterns": [
+    {
+      "pattern": "^#[0-9a-fA-F]{3,8}$",
+      "reason": "Hex color code"
+    },
+    {
+      "pattern": "^rgba?\\([0-9,\\s\\.]+\\)$",
+      "reason": "RGB/RGBA color code"
+    },
+    {
+      "pattern": "^[0-9]+(\\.[0-9]+)?$",
+      "reason": "Numeric literal"
+    },
+    {
+      "pattern": "^[0-9]+(\\.[0-9]+)?\\s*(kg|g|km|%|₹|x|m|cm|mm)$",
+      "reason": "Numeric measure literal"
+    },
+    {
+      "pattern": "^[A-Za-z0-9_\\-\\.]+\\.(png|jpg|jpeg|gif|webp|svg|mp4)$",
+      "reason": "Asset or media file path"
+    },
+    {
+      "pattern": "^https?://",
+      "reason": "URL or endpoint string"
+    },
+    {
+      "pattern": "^@farm2home_",
+      "reason": "AsyncStorage key prefix"
+    },
+    {
+      "pattern": "^[a-z0-9\\-]+:[a-z0-9\\-]+",
+      "reason": "URI scheme or icon name"
+    },
+    {
+      "pattern": "^\\\\+[0-9]+$",
+      "reason": "Decorative count badge e.g. +6"
+    }
+  ],
+  "dynamicKeyPrefixes": [
+    "status.",
+    "categories.",
+    "errors.",
+    "payments.",
+    "common.",
+    "nav."
+  ]
+}

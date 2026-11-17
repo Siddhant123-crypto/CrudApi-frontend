@@ -14,10 +14,12 @@ import MapView, { Marker, Region } from 'react-native-maps';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { PrimaryButton } from '../components/ui/Buttons';
 import { THEME } from '../constants/theme';
+import { formatDateTime } from '../utils/formatters';
 
 interface TrackingLocation {
   farmerName: string;
@@ -28,6 +30,7 @@ interface TrackingLocation {
 }
 
 const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
   const { orderId } = route.params;
   const [locations, setLocations] = useState<TrackingLocation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,14 +66,14 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
         }
         
         setLocations(validLocations);
-        setError(validLocations.length === 0 ? "Waiting for farmer's live location. Please keep the Farmer delivery screen open." : null);
+        setError(validLocations.length === 0 ? t('orders.waitingFarmerLocation', "Waiting for farmer's live location. Please keep the Farmer delivery screen open.") : null);
         setIsStale(allStale);
 
         // We will fit map to coordinates in a separate effect when customer location is also available
         // to avoid race conditions. We just mark stale as false.
       } else {
         setLocations([]);
-        setError('No tracking data found for this order.');
+        setError(t('orders.noTrackingData', 'No tracking data found for this order.'));
       }
     } catch (err: any) {
       console.log('Error fetching tracking data:', err);
@@ -78,7 +81,7 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
       if (locations.length > 0) {
         setIsStale(true);
       } else {
-        setError(err?.response?.data?.message || 'Failed to load tracking data.');
+        setError(err?.response?.data?.message || t('orders.failedTrackingData', 'Failed to load tracking data.'));
       }
     } finally {
       if (!isBackground) {
@@ -91,7 +94,10 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Please allow location access to see your position on the map.');
+        Alert.alert(
+          t('common.error', 'Permission Denied'),
+          t('orders.allowLocationMap', 'Please allow location access to see your position on the map.')
+        );
         return;
       }
 
@@ -153,22 +159,13 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
     }, [orderId])
   );
 
-  const formatDate = (dateString: string) => {
-    try {
-      const d = new Date(dateString);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString();
-    } catch {
-      return dateString;
-    }
-  };
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#3B1008" />
       <ThemedHeader
         variant="inner"
-        title="Track Order"
-        subtitle={`Order #${orderId}`}
+        title={t('orders.trackOrder', 'Track Order')}
+        subtitle={t('orders.orderNumber', { id: orderId, defaultValue: `Order #${orderId}` })}
         onBackPress={() => navigation.goBack()}
       />
 
@@ -176,14 +173,14 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
         {loading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={THEME.colors.accent} />
-            <Text style={styles.loadingText}>Locating your order...</Text>
+            <Text style={styles.loadingText}>{t('orders.locatingOrder', 'Locating your order...')}</Text>
           </View>
         ) : error && locations.length === 0 ? (
           <View style={styles.centerContainer}>
             <Ionicons name="location-outline" size={48} color="#CDBBB0" />
             <Text style={styles.errorText}>{error}</Text>
             <PrimaryButton
-              title="Retry"
+              title={t('common.retry', 'Retry')}
               onPress={() => fetchTrackingData(false)}
               style={{ minWidth: 120, height: 44 }}
             />
@@ -213,8 +210,8 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
             {customerLocation && (
               <Marker
                 coordinate={{ latitude: customerLocation.latitude, longitude: customerLocation.longitude }}
-                title="Your Location"
-                description="Current GPS Location"
+                title={t('orders.yourLocation', 'Your Location')}
+                description={t('orders.currentGpsLocation', 'Current GPS Location')}
                 pinColor="blue"
               >
                 <View style={[styles.markerContainer, { borderColor: '#2563EB' }]}>
@@ -227,7 +224,7 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
                 key={`${loc.farmerName}-${index}`}
                 coordinate={{ latitude: loc.latitude, longitude: loc.longitude }}
                 title={loc.farmerName}
-                description={loc.farmName || 'Farm2Home Partner'}
+                description={loc.farmName || t('orders.farm2homePartner', 'Farm2Home Partner')}
               >
                 <View style={styles.markerContainer}>
                   <Ionicons name="bicycle" size={24} color="#1E3A8A" />
@@ -242,10 +239,10 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
         {isStale && (
           <View style={styles.staleBanner}>
             <Ionicons name="warning-outline" size={16} color="#B8470F" />
-            <Text style={styles.staleText}>Lost connection. Displaying last known location.</Text>
+            <Text style={styles.staleText}>{t('orders.lostConnectionStale', 'Lost connection. Displaying last known location.')}</Text>
           </View>
         )}
-        <Text style={styles.sectionTitle}>Farmer Locations</Text>
+        <Text style={styles.sectionTitle}>{t('orders.farmerLocations', 'Farmer Locations')}</Text>
         <ScrollView style={styles.farmerList} showsVerticalScrollIndicator={false}>
           {locations.map((loc, index) => (
             <View key={index} style={styles.farmerCard}>
@@ -254,13 +251,15 @@ const CustomerOrderTrackingScreen = ({ route, navigation }: any) => {
               </View>
               <View style={styles.farmerDetails}>
                 <Text style={styles.farmerName}>{loc.farmerName}</Text>
-                <Text style={styles.farmName}>{loc.farmName || 'Farm2Home Partner'}</Text>
-                <Text style={styles.lastUpdated}>Updated: {formatDate(loc.lastUpdated)}</Text>
+                <Text style={styles.farmName}>{loc.farmName || t('orders.farm2homePartner', 'Farm2Home Partner')}</Text>
+                <Text style={styles.lastUpdated}>
+                  {t('orders.updatedAt', { date: formatDateTime(loc.lastUpdated), defaultValue: `Updated: ${formatDateTime(loc.lastUpdated)}` })}
+                </Text>
               </View>
             </View>
           ))}
           {locations.length === 0 && !loading && (
-            <Text style={styles.noDataText}>No farmer locations to display.</Text>
+            <Text style={styles.noDataText}>{t('orders.noFarmerLocations', 'No farmer locations to display.')}</Text>
           )}
         </ScrollView>
       </View>

@@ -17,6 +17,7 @@ import { Card } from '../components/ui/Card';
 import { PrimaryButton, OutlineButton } from '../components/ui/Buttons';
 import { THEME } from '../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 export interface PaymentSuccessParams {
   orderId: string;
@@ -28,6 +29,7 @@ export interface PaymentSuccessParams {
 }
 
 const PaymentSuccessScreen = ({ route, navigation }: any) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const params: PaymentSuccessParams = route.params || {};
   const { user } = useAuth();
@@ -146,19 +148,19 @@ const PaymentSuccessScreen = ({ route, navigation }: any) => {
           {loading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={THEME.colors.accent} />
-              <Text style={styles.loadingText}>Loading payment details...</Text>
+              <Text style={styles.loadingText}>{t('common.loading', 'Loading payment details...')}</Text>
             </View>
           ) : (
             <Card style={styles.detailsCard}>
               <View style={styles.detailRow}>
-                <Text style={styles.label}>Amount Paid</Text>
+                <Text style={styles.label}>{t('payments.amountPaid', 'Amount Paid')}</Text>
                 <Text style={styles.amountValue}>₹{resolvedAmount.toFixed(2)}</Text>
               </View>
 
               <View style={styles.divider} />
 
               <View style={styles.detailRow}>
-                <Text style={styles.label}>Order Number</Text>
+                <Text style={styles.label}>{t('orders.orderNumber', 'Order Number')}</Text>
                 <Text style={styles.value}>
                   {resolvedOrderNumber ? resolvedOrderNumber.substring(0, 16) : 'N/A'}
                 </Text>
@@ -167,31 +169,31 @@ const PaymentSuccessScreen = ({ route, navigation }: any) => {
               <View style={styles.divider} />
 
               <View style={styles.detailRow}>
-                <Text style={styles.label}>Payment ID</Text>
+                <Text style={styles.label}>{t('payments.paymentId', 'Payment ID')}</Text>
                 <Text style={styles.valueMonospace}>{shortenId(resolvedPaymentId)}</Text>
               </View>
 
               <View style={styles.divider} />
 
               <View style={styles.detailRow}>
-                <Text style={styles.label}>Payment Method</Text>
-                <Text style={styles.value}>Online Payment</Text>
+                <Text style={styles.label}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
+                <Text style={styles.value}>{t('checkout.onlinePayment', 'Online Payment')}</Text>
               </View>
 
               <View style={styles.divider} />
 
               <View style={styles.detailRow}>
-                <Text style={styles.label}>Date & Time</Text>
+                <Text style={styles.label}>{t('payments.dateTime', 'Date & Time')}</Text>
                 <Text style={styles.valueSmall}>{formatPaymentDateTime(resolvedPaidAt)}</Text>
               </View>
 
               <View style={styles.divider} />
 
               <View style={styles.detailRow}>
-                <Text style={styles.label}>Status</Text>
+                <Text style={styles.label}>{t('orders.paymentStatus', 'Status')}</Text>
                 <View style={styles.statusBadge}>
                   <Ionicons name="checkmark" size={13} color={THEME.colors.success} style={{ marginRight: 4 }} />
-                  <Text style={styles.statusBadgeText}>Paid</Text>
+                  <Text style={styles.statusBadgeText}>{t('status.paid', 'Paid')}</Text>
                 </View>
               </View>
 
@@ -199,7 +201,7 @@ const PaymentSuccessScreen = ({ route, navigation }: any) => {
                 <View style={styles.testModeNoteBox}>
                   <Ionicons name="information-circle-outline" size={14} color="#B45309" style={{ marginRight: 5 }} />
                   <Text style={styles.testModeNoteText}>
-                    Test payment: no real money was charged.
+                    {t('payments.testModeHint', 'Test payment: no real money was charged.')}
                   </Text>
                 </View>
               )}
@@ -209,11 +211,11 @@ const PaymentSuccessScreen = ({ route, navigation }: any) => {
 
         <View style={styles.bottomActions}>
           <PrimaryButton
-            title="View Order"
+            title={t('payments.viewOrder', 'View Order')}
             onPress={handleViewOrder}
           />
           <OutlineButton
-            title="Continue Shopping"
+            title={t('payments.continueShopping', 'Continue Shopping')}
             onPress={handleContinueShopping}
             style={{ marginTop: 12 }}
           />

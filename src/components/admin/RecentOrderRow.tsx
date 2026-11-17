@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { ADMIN_THEME } from '../../constants/adminTheme';
 import { ShoppingBagIcon } from './AdminIcons';
 
@@ -108,11 +109,12 @@ export const RecentOrderRow: React.FC<RecentOrderRowProps> = ({
 };
 
 export const RecentOrdersEmptyState: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyContainer}>
       <ShoppingBagIcon size={24} color={ADMIN_THEME.colors.muted} strokeWidth={1.8} />
-      <Text style={styles.emptyTitle}>No orders yet</Text>
-      <Text style={styles.emptySubtitle}>New orders will show up here</Text>
+      <Text style={styles.emptyTitle}>{t('orders.noOrdersTitle', 'No orders yet')}</Text>
+      <Text style={styles.emptySubtitle}>{t('admin.newOrdersAppearHere', 'New orders will show up here')}</Text>
     </View>
   );
 };
