@@ -1,0 +1,26 @@
+diff --git a/node_modules/expo-av/android/src/main/java/expo/modules/av/AVManager.java b/node_modules/expo-av/android/src/main/java/expo/modules/av/AVManager.java
+index 964af5d..e181f54 100644
+--- a/node_modules/expo-av/android/src/main/java/expo/modules/av/AVManager.java
++++ b/node_modules/expo-av/android/src/main/java/expo/modules/av/AVManager.java
+@@ -191,7 +191,20 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
+   @OptIn(markerClass = FrameworkAPI.class)
+   private void installBindings() {
+     final JavaScriptContextProvider jsContextProvider = mModuleRegistry.getModule(JavaScriptContextProvider.class);
+-    final long jsContextRef = jsContextProvider.getJavaScriptContextRef();
++    // Farm2Home patch: this runs synchronously while ExponentAV is first required during the initial
++    // bundle evaluation. In bridgeless mode the JS context is not ready yet, so never throw here and
++    // never pass a null (0) runtime pointer to native code.
++    long jsContextRef = 0;
++    try {
++      jsContextRef = jsContextProvider != null ? jsContextProvider.getJavaScriptContextRef() : 0;
++    } catch (Throwable e) {
++      Log.w("AVManager", "JS context not ready; skipping AV JSI bindings", e);
++    }
++    if (jsContextRef == 0) {
++      Log.w("AVManager", "JS context not ready; skipping AV JSI bindings");
++      return;
++    }
++    // Upstream expo-av 16.0.8 behaviour preserved below (it skips installation when a context exists).
+     if (jsContextRef != 0) {
+       Log.e("AVManager", "Cannot install JSI bindings for AV module because JS context is not available");
+       return;
