@@ -1,4 +1,19 @@
-import api from './api';
+import api, { BASE_URL, resolveBaseUrl } from './api';
+
+export const getUserProfileImageUrl = (photo?: string | null): string | null => {
+  if (!photo || typeof photo !== 'string') return null;
+  const trimmed = photo.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return null;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  const activeBase = resolveBaseUrl();
+  const clean = trimmed.replace(/^\/?(uploads\/)+/, '');
+  return `${activeBase}/user/image/${clean}`;
+};
+
+export const getCurrentUserProfile = async () => {
+  const response = await api.get('/user/me');
+  return response.data;
+};
 export const getAllUsers = async () => {
   const response = await api.get('/user/getAll');
   return response.data;

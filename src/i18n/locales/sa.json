@@ -64,7 +64,8 @@
     "email": "विद्युत्पत्रम्",
     "phone": "दूरभाषः",
     "description": "विवरणम्",
-    "validationError": "प्रमाणीकरणदोषः"
+    "validationError": "प्रमाणीकरणदोषः",
+    "serverWaking": "सेवकेन सह सम्पर्कः स्थाप्यते, कृपया क्षणमेकं प्रतीक्षताम्..."
   },
   "language": {
     "selectLanguage": "भाषां चिनुत",

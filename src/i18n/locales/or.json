@@ -64,7 +64,8 @@
     "email": "ଇମେଲ୍",
     "phone": "ଫୋନ୍",
     "description": "ବିବରଣୀ",
-    "validationError": "ପ୍ରମାଣୀକରଣ ତ୍ରୁଟି"
+    "validationError": "ପ୍ରମାଣୀକରଣ ତ୍ରୁଟି",
+    "serverWaking": "ସର୍ଭର୍ ସହିତ ସଂଯୋଗ ହେଉଛି, ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ..."
   },
   "language": {
     "selectLanguage": "ଭାଷା ବାଛନ୍ତୁ",

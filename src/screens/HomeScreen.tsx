@@ -48,6 +48,7 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useNotification } from '../context/NotificationContext';
 import api, { BASE_URL, resolveMediaUrl } from '../services/api';
+import { getProductImageUrl } from '../services/productService';
 import { getUserById } from '../services/userService';
 import {
   MenuIcon,
@@ -797,7 +798,33 @@ const CustomerDashboard = ({ navigation }: any) => {
                 ))}
               </ScrollView>
             </>
-          ) : null}
+          ) : (
+            <>
+              <SectionHeader
+                title={t('home.farmerShorts', 'Farmer Shorts')}
+                actionText={t('farmer.watchAll', 'Watch All')}
+                onPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <TouchableOpacity
+                style={styles.emptyShortsTeaserHome}
+                onPress={() => navigation.navigate('FarmerShorts')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.emptyShortsIconHome}>
+                  <PlayIcon size={20} fill="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.emptyShortsTitleHome}>
+                    {t('shorts.discoverStories', 'Discover Farmer Stories')}
+                  </Text>
+                  <Text style={styles.emptyShortsDescHome}>
+                    {t('shorts.watchFarmVideos', 'Watch fresh harvests & farming videos')}
+                  </Text>
+                </View>
+                <ArrowRightIcon size={16} color="#2FA66B" strokeWidth={2.2} />
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* ─── 7) FRESH VEGETABLES ───────────────────────────────── */}
           <SectionHeader
@@ -873,9 +900,9 @@ const CustomerDashboard = ({ navigation }: any) => {
                       </Svg>
 
                       {/* Product Image */}
-                      {product.productPhoto ? (
+                      {getProductImageUrl(product.productPhoto) ? (
                         <Image
-                          source={{ uri: `${BASE_URL}/product/image/${product.productPhoto}` }}
+                          source={{ uri: getProductImageUrl(product.productPhoto)! }}
                           style={styles.productImage}
                           resizeMode="contain"
                         />
@@ -1429,6 +1456,48 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 18,
+  },
+  emptyShortsTeaserHome: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    marginHorizontal: 20,
+    marginVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#EBD9B3',
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(90, 40, 15, 0.08)',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  emptyShortsIconHome: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2FA66B',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyShortsTitleHome: {
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 14,
+    color: '#3B1A0E',
+  },
+  emptyShortsDescHome: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 12,
+    color: '#8E9A90',
+    marginTop: 1,
   },
   shortCard: {
     width: 158,

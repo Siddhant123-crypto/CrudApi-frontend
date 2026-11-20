@@ -64,7 +64,8 @@
     "email": "ಇಮೇಲ್",
     "phone": "ದೂರವಾಣಿ",
     "description": "ವಿವರಣೆ",
-    "validationError": "ದೃಢೀಕರಣ ದೋಷ"
+    "validationError": "ದೃಢೀಕರಣ ದೋಷ",
+    "serverWaking": "ಸರ್ವರ್‌ಗೆ ಸಂಪರ್ಕಿಸಲಾಗುತ್ತಿದೆ, ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯ ಕಾಯಿರಿ..."
   },
   "language": {
     "selectLanguage": "ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",

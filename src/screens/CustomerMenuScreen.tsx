@@ -13,9 +13,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../services/api';
+import { getUserProfileImageUrl, getCurrentUserProfile } from '../services/userService';
 import { THEME } from '../constants/theme';
 import { LogoutModal } from '../components/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,8 +27,30 @@ const CustomerMenuScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserData } = useAuth();
   const [logoutModalVisible, setLogoutModalVisible] = React.useState(false);
+  const [imgError, setImgError] = React.useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshProfile = async () => {
+        try {
+          const meData = await getCurrentUserProfile().catch(() => null);
+          const profile = meData?.response || meData;
+          if (profile && (profile.profilePhoto !== user?.profilePhoto || profile.name !== user?.name)) {
+            updateUserData({
+              profilePhoto: profile.profilePhoto,
+              name: profile.name,
+              userId: profile.userId || user?.userId,
+            });
+          }
+        } catch (e) {
+          // silent refresh
+        }
+      };
+      refreshProfile();
+    }, [user?.profilePhoto, user?.name])
+  );
 
   const state = navigation.getState();
   let activeRoute = route?.params?.activeScreen;
@@ -62,9 +85,11 @@ const CustomerMenuScreen: React.FC = () => {
     setLogoutModalVisible(true);
   };
 
-  const photoUrl = user?.profilePhoto
-    ? `${BASE_URL}/user/image/${user.profilePhoto}`
-    : null;
+  const photoUrl = getUserProfileImageUrl(user?.profilePhoto);
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [photoUrl]);
 
   return (
     <View style={styles.modalOverlay}>
@@ -89,8 +114,12 @@ const CustomerMenuScreen: React.FC = () => {
 
             <View style={styles.headerTop}>
               <View style={styles.userInfoRow}>
-                {photoUrl ? (
-                  <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+                {photoUrl && !imgError ? (
+                  <Image
+                    source={{ uri: photoUrl }}
+                    style={styles.avatarImage}
+                    onError={() => setImgError(true)}
+                  />
                 ) : (
                   <View style={styles.avatarCircle}>
                     <Text style={styles.avatarText}>
@@ -242,6 +271,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
     borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   avatarCircle: {
     width: 48,

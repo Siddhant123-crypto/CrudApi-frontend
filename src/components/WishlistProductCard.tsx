@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { WishlistResponse } from '../types';
-import { BASE_URL } from '../services/api';
+import { getProductImageUrl } from '../services/productService';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { StarRating } from './reviews/StarRating';
@@ -73,8 +73,8 @@ const WishlistProductCard: React.FC<WishlistProductCardProps> = ({
 
         <Image
           source={
-            item.productPhoto
-              ? { uri: `${BASE_URL}/product/image/${item.productPhoto}` }
+            getProductImageUrl(item.productPhoto)
+              ? { uri: getProductImageUrl(item.productPhoto)! }
               : { uri: 'https://placehold.co/200x200/FFF1DE/B8470F?text=Fresh' }
           }
           style={styles.image}

@@ -9,6 +9,7 @@ import {
   Modal,
   TouchableOpacity,
   Platform,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNotification } from '../context/NotificationContext';
-import { getAllProducts } from '../services/productService';
+import { getAllProducts, getProductsByFarmer, getProductImageUrl } from '../services/productService';
 import { getFarmerOrders, getFarmerItemsStatus } from '../services/orderService';
 import { getFarmerById } from '../services/farmerService';
 import api, { BASE_URL, resolveMediaUrl } from '../services/api';
@@ -56,11 +57,12 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   const { unreadCount } = useNotification();
   const { user, logout } = useAuth();
 
-  const [, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [allGlobalProducts, setAllGlobalProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [farmShorts, setFarmShorts] = useState<FarmerShortItem[]>([]);
   const [loadingShorts, setLoadingShorts] = useState(true);
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -101,10 +103,12 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
 
   const fetchData = async () => {
     try {
-      const [allProducts, farmerOrders, farmerDetails] = await Promise.all([
-        getAllProducts(),
-        getFarmerOrders(),
-        user?.farmerId ? getFarmerById(user.farmerId).catch(() => null) : Promise.resolve(null),
+      const currentFarmerId = user?.farmerId || (user as any)?.id || (user as any)?.userId;
+      const [allProducts, farmerOrders, farmerDetails, myFarmerProducts] = await Promise.all([
+        getAllProducts().catch(() => []),
+        getFarmerOrders().catch(() => []),
+        currentFarmerId ? getFarmerById(currentFarmerId).catch(() => null) : Promise.resolve(null),
+        currentFarmerId ? getProductsByFarmer(currentFarmerId).catch(() => []) : Promise.resolve([]),
       ]);
       fetchFarmShorts();
 
@@ -128,8 +132,18 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
       }
 
       setAllGlobalProducts(allProducts || []);
-      const myProducts = (allProducts || []).filter((p: any) => p.farmerId === user?.farmerId);
-      setProducts(myProducts);
+      let farmerProductsList: any[] = [];
+      if (Array.isArray(myFarmerProducts) && myFarmerProducts.length > 0) {
+        farmerProductsList = myFarmerProducts;
+      } else if (Array.isArray(allProducts)) {
+        farmerProductsList = allProducts.filter(
+          (p: any) => p.farmerId === currentFarmerId || (user?.email && p.createdBy === user?.name)
+        );
+      }
+      const visibleProducts = farmerProductsList.filter(
+        (p: any) => p.isDelete !== true && p.status !== 'DELETED'
+      );
+      setProducts(visibleProducts);
       setOrders(farmerOrders || []);
     } catch (error) {
       console.log('Error fetching data:', error);
@@ -281,6 +295,100 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
             />
           </View>
 
+          {/* 5.5) MY PRODUCTS SECTION */}
+          <FarmerSectionHeader
+            title={t('farmer.myProducts', 'My products')}
+            linkText={products.length > 0 ? t('common.viewAll', 'View all') : undefined}
+            onLinkPress={() => navigation.navigate('MyProducts')}
+          />
+          {products.length === 0 ? (
+            <View style={styles.emptyProductsCard}>
+              <View style={styles.emptyProductsIconCircle}>
+                <LeafIcon size={26} color="#17663F" strokeWidth={2} />
+              </View>
+              <Text style={styles.emptyProductsTitle}>
+                {t('farmer.noProductsYet', 'No products added yet')}
+              </Text>
+              <Text style={styles.emptyProductsSubtitle}>
+                {t('farmer.addFirstProductDesc', 'Start selling fresh produce directly from your farm')}
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyAddProductBtn}
+                onPress={() => navigation.navigate('AddProduct')}
+                activeOpacity={0.85}
+              >
+                <PlusIcon size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.emptyAddProductBtnText}>
+                  {t('farmer.addProduct', 'Add Product')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.bleedScroll}
+              contentContainerStyle={styles.productsScrollContent}
+            >
+              {products.map((item, idx) => {
+                const imgUri = item.productPhoto
+                  ? getProductImageUrl(item.productPhoto)
+                  : item.imageUrl
+                  ? getProductImageUrl(item.imageUrl)
+                  : null;
+                const isActive = item.status === 'ACTIVE' || item.isActive === true;
+                return (
+                  <TouchableOpacity
+                    key={item.productId || `prod-${idx}`}
+                    style={styles.productDashboardCard}
+                    activeOpacity={0.88}
+                    onPress={() => navigation.navigate('AddProduct', { product: item })}
+                  >
+                    <View style={styles.productCardImageContainer}>
+                      {imgUri && !brokenImages[item.productId || String(idx)] ? (
+                        <Image
+                          source={{ uri: imgUri }}
+                          style={styles.productCardImage}
+                          resizeMode="cover"
+                          onError={() => setBrokenImages(prev => ({ ...prev, [item.productId || String(idx)]: true }))}
+                        />
+                      ) : (
+                        <View style={styles.productCardImagePlaceholder}>
+                          <LeafIcon size={28} color="#17663F" strokeWidth={1.8} />
+                        </View>
+                      )}
+                      <View style={[styles.statusBadge, isActive ? styles.statusActive : styles.statusInactive]}>
+                        <Text style={styles.statusBadgeText}>
+                          {isActive ? t('common.active', 'ACTIVE') : t('common.inactive', 'INACTIVE')}
+                        </Text>
+                      </View>
+                      {item.productVideo ? (
+                        <View style={styles.videoIndicatorBadge}>
+                          <Ionicons name="play" size={10} color="#FFFFFF" />
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.productCardBody}>
+                      <Text style={styles.productCardName} numberOfLines={1}>
+                        {item.productName}
+                      </Text>
+                      <Text style={styles.productCardCategory} numberOfLines={1}>
+                        {item.category || 'General'}
+                      </Text>
+                      <View style={styles.productCardPriceRow}>
+                        <Text style={styles.productCardPrice}>₹{item.price}</Text>
+                        <Text style={styles.productCardUnit}>/{item.unit || 'kg'}</Text>
+                      </View>
+                      <Text style={styles.productCardStock} numberOfLines={1}>
+                        {t('product.stock', 'Stock')}: {item.quantity ?? 0} {item.unit || 'kg'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+
           {/* 6) FARMER SHORTS SECTION */}
           {loadingShorts ? (
             <>
@@ -323,7 +431,33 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
                 ))}
               </ScrollView>
             </>
-          ) : null}
+          ) : (
+            <>
+              <FarmerSectionHeader
+                title={t('farmer.farmerShorts', 'Farmer shorts')}
+                linkText={t('common.viewAll', 'Watch all')}
+                onLinkPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <TouchableOpacity
+                style={styles.emptyShortsTeaser}
+                onPress={() => navigation.navigate('FarmerShorts')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.emptyShortsIconBox}>
+                  <Ionicons name="videocam" size={22} color="#17663F" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.emptyShortsTitle}>
+                    {t('shorts.shareFarmShorts', 'Explore Farm Shorts')}
+                  </Text>
+                  <Text style={styles.emptyShortsDesc}>
+                    {t('shorts.shareFarmShortsDesc', 'Watch daily farm videos & stories')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#17663F" />
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* 7) RECENT ORDERS SECTION */}
           <FarmerSectionHeader
@@ -706,6 +840,181 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontFamily: FARMER_THEME.fonts.bold,
+  },
+  // My Products Section Styles
+  productsScrollContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+    paddingBottom: 4,
+  },
+  productDashboardCard: {
+    width: 154,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2ECE5',
+    shadowColor: '#0E3B29',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  productCardImageContainer: {
+    height: 104,
+    backgroundColor: '#EEF5F0',
+    position: 'relative',
+  },
+  productCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  productCardImagePlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0F6F2',
+  },
+  statusBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  statusActive: {
+    backgroundColor: '#17663F',
+  },
+  statusInactive: {
+    backgroundColor: '#6B7280',
+  },
+  statusBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontFamily: FARMER_THEME.fonts.bold,
+    letterSpacing: 0.3,
+  },
+  videoIndicatorBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  productCardBody: {
+    padding: 10,
+  },
+  productCardName: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 13,
+    color: '#0E3B29',
+  },
+  productCardCategory: {
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 11,
+    color: '#5C6B60',
+    marginTop: 2,
+  },
+  productCardPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 4,
+  },
+  productCardPrice: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 14,
+    color: '#17663F',
+  },
+  productCardUnit: {
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 11,
+    color: '#5C6B60',
+  },
+  productCardStock: {
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 10.5,
+    color: '#7C8A7F',
+    marginTop: 2,
+  },
+  emptyProductsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2ECE5',
+    marginHorizontal: 20,
+  },
+  emptyProductsIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E6F4EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  emptyProductsTitle: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 15,
+    color: '#0E3B29',
+    marginBottom: 4,
+  },
+  emptyProductsSubtitle: {
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 12,
+    color: '#5C6B60',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  emptyAddProductBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#17663F',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 12,
+    gap: 6,
+  },
+  emptyAddProductBtnText: {
+    color: '#FFFFFF',
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 13,
+  },
+  emptyShortsTeaser: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E2ECE5',
+    marginHorizontal: 20,
+  },
+  emptyShortsIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E6F4EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyShortsTitle: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 13.5,
+    color: '#0E3B29',
+  },
+  emptyShortsDesc: {
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 11.5,
+    color: '#5C6B60',
+    marginTop: 1,
   },
 });
 

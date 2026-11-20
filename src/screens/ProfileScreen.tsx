@@ -21,7 +21,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import CustomButton from '../components/CustomButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {useAuth} from '../context/AuthContext';
-import {getUserById, updateUser, uploadUserPhoto} from '../services/userService';
+import {getUserById, updateUser, uploadUserPhoto, getUserProfileImageUrl, getCurrentUserProfile} from '../services/userService';
 import {getFarmerById, updateFarmerStatus, updateFarmer, uploadFarmerPhoto} from '../services/farmerService';
 import {BASE_URL} from '../services/api';
 import {useNavigation} from '@react-navigation/native';
@@ -61,6 +61,7 @@ const ProfileScreen = () => {
   const [status, setStatus] = useState('');
   const [inactiveReason, setInactiveReason] = useState('');
   const [selectedPhotoUri, setSelectedPhotoUri] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Status Modal State
@@ -79,10 +80,28 @@ const ProfileScreen = () => {
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [selectedPhotoUri, profileData?.profilePhoto, user?.profilePhoto]);
   const fetchProfile = async () => {
     try {
-      if (user?.role === 'FARMER' && user?.farmerId) {
-        const data = await getFarmerById(user.farmerId);
+      const meData = await getCurrentUserProfile().catch(() => null);
+      const currentProfile = meData?.response || meData;
+      if (currentProfile) {
+        setProfileData(currentProfile);
+        updateUserData({
+          profilePhoto: currentProfile.profilePhoto,
+          name: currentProfile.name,
+          farmerId: currentProfile.farmerId || user?.farmerId,
+          userId: currentProfile.userId || user?.userId,
+        });
+        return;
+      }
+
+      if (user?.role === 'FARMER' && (user?.farmerId || (user as any)?.id)) {
+        const fId = user?.farmerId || (user as any)?.id;
+        const data = await getFarmerById(fId);
         const profile = data?.response || data;
         setProfileData(profile);
         if (profile) {
@@ -91,8 +110,9 @@ const ProfileScreen = () => {
             name: profile.name,
           });
         }
-      } else if (user?.userId) {
-        const data = await getUserById(user.userId);
+      } else if (user?.userId || (user as any)?.id) {
+        const uId = user?.userId || (user as any)?.id;
+        const data = await getUserById(uId);
         const profile = data?.response || data;
         setProfileData(profile);
         if (profile) {
@@ -267,9 +287,7 @@ const ProfileScreen = () => {
   if (loading) {
     return <LoadingSpinner message={t('common.loading', 'Loading profile...')} />;
   }
-  const photoUrl = profileData?.profilePhoto
-    ? `${BASE_URL}/user/image/${profileData.profilePhoto}`
-    : null;
+  const photoUrl = selectedPhotoUri || getUserProfileImageUrl(profileData?.profilePhoto || user?.profilePhoto);
 
   if (isFarmer) {
     return (
@@ -299,15 +317,20 @@ const ProfileScreen = () => {
                 style={styles.farmerAvatarWrapper}
                 activeOpacity={0.8}
               >
-                {selectedPhotoUri || photoUrl ? (
+                {photoUrl && !imgError ? (
                   <Image
-                    source={{ uri: (selectedPhotoUri || photoUrl) ?? undefined }}
+                    key={photoUrl}
+                    source={{ uri: photoUrl }}
                     style={styles.farmerAvatar}
+                    onError={() => {
+                      console.log('[ProfileScreen] Farmer avatar load failed:', photoUrl);
+                      setImgError(true);
+                    }}
                   />
                 ) : (
                   <View style={styles.farmerAvatarPlaceholder}>
                     <Text style={styles.farmerAvatarText}>
-                      {(user?.name || 'F').charAt(0).toUpperCase()}
+                      {(profileData?.name || user?.name || 'F').charAt(0).toUpperCase()}
                     </Text>
                   </View>
                 )}
@@ -687,15 +710,20 @@ const ProfileScreen = () => {
               style={styles.customerAvatarWrapper}
               activeOpacity={0.8}
             >
-              {selectedPhotoUri || photoUrl ? (
+              {photoUrl && !imgError ? (
                 <Image
-                  source={{ uri: (selectedPhotoUri || photoUrl) ?? undefined }}
+                  key={photoUrl}
+                  source={{ uri: photoUrl }}
                   style={styles.customerAvatar}
+                  onError={() => {
+                    console.log('[ProfileScreen] Customer avatar load failed:', photoUrl);
+                    setImgError(true);
+                  }}
                 />
               ) : (
                 <View style={styles.customerAvatarPlaceholder}>
                   <Text style={styles.customerAvatarText}>
-                    {(user?.name || 'U').charAt(0).toUpperCase()}
+                    {(profileData?.name || user?.name || 'U').charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}

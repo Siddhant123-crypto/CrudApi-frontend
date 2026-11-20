@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { setUnauthorizedHandler } from '../services/api';
 import { clearChatTimestampOnLogout } from '../services/aiService';
+import { getCurrentUserProfile } from '../services/userService';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -79,6 +80,16 @@ export const AuthProvider: React.FC<{
         console.log(
           'Stored login restored successfully',
         );
+
+        // Seamless background refresh from /user/me to sync profilePhoto and latest details
+        getCurrentUserProfile().then(meData => {
+          const profile = meData?.response || meData;
+          if (profile && (profile.profilePhoto !== parsedUser.profilePhoto || profile.name !== parsedUser.name || profile.farmerId !== parsedUser.farmerId)) {
+            const merged = { ...parsedUser, ...profile };
+            setUser(merged);
+            AsyncStorage.setItem('userData', JSON.stringify(merged)).catch(() => {});
+          }
+        }).catch(() => {});
       } else {
         await AsyncStorage.removeItem(
           'userData',

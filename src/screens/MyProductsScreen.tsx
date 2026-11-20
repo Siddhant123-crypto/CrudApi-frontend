@@ -14,7 +14,8 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import api, { BASE_URL } from '../services/api';
+import api, { BASE_URL, resolveMediaUrl } from '../services/api';
+import { getProductImageUrl } from '../services/productService';
 import { useAuth } from '../context/AuthContext';
 
 import { FARMER_THEME } from '../constants/farmerTheme';
@@ -89,15 +90,23 @@ const MyProductsScreen = ({ navigation, route }: any) => {
   }, [route?.params?.searchQuery]);
 
   const fetchProducts = async () => {
-    if (!user?.farmerId) {
+    const currentFarmerId = user?.farmerId || (user as any)?.id || (user as any)?.userId;
+    if (!currentFarmerId) {
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
       setHasError(false);
-      const response = await api.get(`/product/farmer/${user.farmerId}`);
-      const raw: Product[] = Array.isArray(response.data) ? response.data : [];
+      const response = await api.get(`/product/farmer/${currentFarmerId}`);
+      let raw: Product[] = Array.isArray(response.data) ? response.data : [];
+      if (raw.length === 0) {
+        const allRes = await api.get('/product/getAll').catch(() => ({ data: [] }));
+        const all: Product[] = Array.isArray(allRes.data) ? allRes.data : [];
+        raw = all.filter(
+          (p: any) => p.farmerId === currentFarmerId || (user?.email && p.createdBy === user?.name)
+        );
+      }
       const visible = raw.filter(
         (p) => p.isDelete !== true && p.status !== 'DELETED'
       );
@@ -159,7 +168,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
   };
 
   const handlePlayVideo = (videoFilename: string) => {
-    const videoUrl = `${BASE_URL}/product/video/${videoFilename}`;
+    const videoUrl = resolveMediaUrl(videoFilename) || `${BASE_URL}/product/video/${videoFilename}`;
     Linking.openURL(videoUrl).catch(() =>
       Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Could not open video. Please try again.'))
     );
@@ -190,7 +199,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
   };
 
   const photoUrl = (filename?: string) =>
-    filename ? `${BASE_URL}/product/image/${filename}` : null;
+    filename ? getProductImageUrl(filename) : null;
 
   const formatDisplayDate = (dateStr?: string) => {
     if (!dateStr) return '—';

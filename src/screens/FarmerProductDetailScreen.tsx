@@ -299,7 +299,7 @@ const FarmerProductDetailScreen = ({ route, navigation }: any) => {
                             <View style={styles.videoOverlay} />
                           </View>
                         ) : (
-                          <Image source={{ uri: url }} style={styles.galleryThumbnail} />
+                          <Image source={{ uri: url ?? undefined }} style={styles.galleryThumbnail} />
                         )}
                       </TouchableOpacity>
                     );

@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { FARMER_THEME } from '../constants/farmerTheme';
 import { BASE_URL } from '../services/api';
 import { getFarmerById } from '../services/farmerService';
+import { getUserProfileImageUrl, getCurrentUserProfile } from '../services/userService';
 import { LogoutModal } from '../components/ui';
 import { useTranslation } from 'react-i18next';
 
@@ -32,6 +33,7 @@ const FarmerMenuScreen: React.FC = () => {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(user?.profilePhoto || null);
+  const [imgError, setImgError] = useState(false);
   const [farmerDisplayName, setFarmerDisplayName] = useState<string>(
     user?.name || user?.email?.split('@')[0] || 'Farmer'
   );
@@ -47,8 +49,29 @@ const FarmerMenuScreen: React.FC = () => {
 
       const loadLatestProfile = async () => {
         try {
-          if (user?.farmerId) {
-            const data = await getFarmerById(user.farmerId);
+          // 1. Fetch current profile from /user/me
+          const meData = await getCurrentUserProfile().catch(() => null);
+          const currentProfile = meData?.response || meData;
+          if (currentProfile) {
+            if (currentProfile.profilePhoto) {
+              setProfilePhoto(currentProfile.profilePhoto);
+            }
+            if (currentProfile.name) {
+              setFarmerDisplayName(currentProfile.name);
+            }
+            updateUserData({
+              profilePhoto: currentProfile.profilePhoto,
+              name: currentProfile.name,
+              farmerId: currentProfile.farmerId || user?.farmerId,
+              userId: currentProfile.userId || user?.userId,
+            });
+            return;
+          }
+
+          // 2. Fallback to getFarmerById
+          const fId = user?.farmerId || (user as any)?.id;
+          if (fId) {
+            const data = await getFarmerById(fId);
             const profile = data?.response || data;
             if (profile) {
               if (profile.profilePhoto) {
@@ -101,15 +124,11 @@ const FarmerMenuScreen: React.FC = () => {
   };
 
   const initial = (farmerDisplayName || 'F').charAt(0).toUpperCase();
-  const photoUrl = profilePhoto
-    ? (profilePhoto.startsWith('http')
-        ? profilePhoto
-        : `${BASE_URL}/user/image/${profilePhoto}`)
-    : (user?.profilePhoto
-        ? (user.profilePhoto.startsWith('http')
-            ? user.profilePhoto
-            : `${BASE_URL}/user/image/${user.profilePhoto}`)
-        : null);
+  const photoUrl = getUserProfileImageUrl(profilePhoto || user?.profilePhoto);
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [photoUrl, profilePhoto, user?.profilePhoto]);
 
   const paddingTop = Platform.OS === 'android' ? Math.max(insets.top, 38) + 6 : insets.top || 20;
 
@@ -147,11 +166,16 @@ const FarmerMenuScreen: React.FC = () => {
 
           <View style={styles.headerTop}>
             <View style={styles.userInfoRow}>
-              {photoUrl ? (
+              {photoUrl && !imgError ? (
                 <Image
+                  key={photoUrl}
                   source={{ uri: photoUrl }}
                   style={styles.avatarImage}
                   resizeMode="cover"
+                  onError={() => {
+                    console.log('[FarmerMenu] Photo failed to load:', photoUrl);
+                    setImgError(true);
+                  }}
                 />
               ) : (
                 <View style={styles.avatarCircle}>
@@ -307,6 +331,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
     borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   avatarCircle: {
     width: 48,

@@ -64,7 +64,8 @@
     "email": "ईमेल",
     "phone": "फोन",
     "description": "वर्णन",
-    "validationError": "प्रमाणीकरण त्रुटी"
+    "validationError": "प्रमाणीकरण त्रुटी",
+    "serverWaking": "सर्व्हरशी कनेक्ट होत आहे, कृपया थोडा वेळ प्रतीक्षा करा..."
   },
   "language": {
     "selectLanguage": "भाषा निवडा",

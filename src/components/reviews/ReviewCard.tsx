@@ -76,10 +76,10 @@ export const ReviewCard = ({
               <TouchableOpacity
                 key={photo.mediaId}
                 activeOpacity={0.8}
-                onPress={() => onImagePress && onImagePress(imageUrl)}
+                onPress={() => onImagePress && onImagePress(imageUrl ?? '')}
                 style={isCustomer ? styles.customerMediaWrapper : styles.mediaWrapper}
               >
-                <Image source={{ uri: imageUrl }} style={styles.thumbnail} />
+                <Image source={{ uri: imageUrl ?? undefined }} style={styles.thumbnail} />
               </TouchableOpacity>
             );
           })}

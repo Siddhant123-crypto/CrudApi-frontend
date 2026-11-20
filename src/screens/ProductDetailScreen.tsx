@@ -150,6 +150,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [categoryDropdownVisible, setCategoryDropdownVisible] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -207,7 +208,13 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   );
   const imageUrl = productData.productPhoto
     ? getProductImageUrl(productData.productPhoto)
+    : productData.imageUrl
+    ? getProductImageUrl(productData.imageUrl)
     : null;
+
+  React.useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
   const isFarmerInactive = productData.farmerActive === false || productData.farmerStatus === 'INACTIVE';
 
   const handleGoToCart = async () => {
@@ -362,8 +369,13 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               <Rect x="0" y="0" width="100%" height={250} rx={24} fill="url(#prodHeroGrad)" />
             </Svg>
 
-            {imageUrl ? (
-              <Image source={{uri: imageUrl}} style={styles.heroImage} resizeMode="contain" />
+            {imageUrl && !imageError ? (
+              <Image
+                source={{uri: imageUrl}}
+                style={styles.heroImage}
+                resizeMode="contain"
+                onError={() => setImageError(true)}
+              />
             ) : (
               <Text style={{fontSize: 60}}>🌱</Text>
             )}
@@ -563,7 +575,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                               <View style={styles.videoOverlay} />
                             </View>
                           ) : (
-                            <Image source={{ uri: url }} style={styles.galleryThumbnail} />
+                            <Image source={{ uri: url ?? undefined }} style={styles.galleryThumbnail} />
                           )}
                         </TouchableOpacity>
                       );

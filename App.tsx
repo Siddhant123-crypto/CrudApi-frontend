@@ -41,6 +41,7 @@ import { WishlistProvider } from './src/context/WishlistContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { THEME } from './src/constants/theme';
+import { warmUpBackend, resolveBaseUrl } from './src/services/api';
 
 // Set global cap on font scaling to prevent text clipping
 if ((Text as any).defaultProps == null) {
@@ -68,8 +69,8 @@ const navigationTheme = {
 const linking: LinkingOptions<any> = {
   prefixes: [
     'farm2home://',
-    'http://172.16.21.145:8080',
     'https://farm2home.app',
+    resolveBaseUrl(),
   ],
   config: {
     screens: {
@@ -104,6 +105,7 @@ const App = () => {
 
   React.useEffect(() => {
     initAppLanguage();
+    warmUpBackend();
   }, []);
 
   if (!fontsLoaded) {

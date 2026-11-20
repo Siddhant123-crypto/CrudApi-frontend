@@ -41,12 +41,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isWishlisted = false,
   onAddToCart,
 }) => {
-  const imageUrl = product.productPhoto
-    ? getProductImageUrl(product.productPhoto)
-    : product.imageUrl
-    ? getProductImageUrl(product.imageUrl)
-    : null;
+  const [imgError, setImgError] = React.useState(false);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const photoField = product.productPhoto || product.imageUrl || product.photo;
+  const imageUrl = photoField ? getProductImageUrl(photoField) : null;
   const addedTimeStr = formatAddedTime(product.createdOn, product.addedTime);
+
+  React.useEffect(() => {
+    setImgError(false);
+    setRetryCount(0);
+  }, [imageUrl, product?.productId]);
+
+  const handleImageError = (e: any) => {
+    if (retryCount < 2) {
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+      }, 1500);
+    } else {
+      console.log('[ProductCard] Failed image load:', imageUrl, e?.nativeEvent);
+      setImgError(true);
+    }
+  };
 
   // ─── CUSTOMER DASHBOARD THEMED VARIANT ───────────────────────────────────
   if (variant === 'customer') {
@@ -80,11 +95,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
             />
           </Svg>
 
-          {imageUrl ? (
+          {imageUrl && !imgError ? (
             <Image
+              key={`${imageUrl}-${retryCount}`}
               source={{ uri: imageUrl }}
               style={styles.customerProductImage}
               resizeMode="contain"
+              onError={handleImageError}
             />
           ) : (
             <Text style={{ fontSize: 46 }}>🌱</Text>
@@ -165,8 +182,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
       activeOpacity={0.85}
     >
       <View style={styles.imageContainer}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.image} />
+        {imageUrl && !imgError ? (
+          <Image
+            key={`${imageUrl}-${retryCount}`}
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            onError={handleImageError}
+          />
         ) : (
           <View style={styles.placeholderImage}>
             <Text style={styles.placeholderText}>🌾</Text>

@@ -17,7 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
-import { saveProductFormData, updateProductFormData } from '../services/productService';
+import { saveProductFormData, updateProductFormData, getProductImageUrl } from '../services/productService';
 import { BASE_URL } from '../services/api';
 
 import { FARMER_THEME } from '../constants/farmerTheme';
@@ -503,7 +503,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
     setLoading(true);
     try {
       const productPayload = {
-        farmerId: user?.farmerId,
+        farmerId: user?.farmerId || (user as any)?.id || (user as any)?.userId,
         productName: form.productName.trim(),
         category: form.category,
         price: parseFloat(form.price),
@@ -605,7 +605,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
                 <>
                   <Image
                     source={{
-                      uri: selectedPhoto || `${BASE_URL}/product/image/${editProduct?.productPhoto}`,
+                      uri: selectedPhoto || getProductImageUrl(editProduct?.productPhoto) || undefined,
                     }}
                     style={styles.mediaPreview}
                     resizeMode="cover"

@@ -15,7 +15,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import api, { BASE_URL } from '../services/api';
+import api from '../services/api';
+import { getProductImageUrl } from '../services/productService';
 import { useAuth } from '../context/AuthContext';
 import { StarRating } from '../components/reviews/StarRating';
 import { FARMER_THEME } from '../constants/farmerTheme';
@@ -132,9 +133,9 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
             end={{ x: 0.9, y: 0.9 }}
             style={styles.imageGradient}
           >
-            {item.productPhoto ? (
+            {getProductImageUrl(item.productPhoto) ? (
               <Image
-                source={{ uri: `${BASE_URL}/product/image/${item.productPhoto}` }}
+                source={{ uri: getProductImageUrl(item.productPhoto)! }}
                 style={styles.productImage}
                 resizeMode="cover"
               />

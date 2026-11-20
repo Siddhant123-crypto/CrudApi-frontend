@@ -11,8 +11,9 @@ import { Alert, NativeModules, Platform } from 'react-native';
 // LOCAL DEV:  Fill in your current LAN IP below and leave EXPO_PUBLIC_API_URL unset.
 //             When you switch Wi-Fi, update this IP.
 //
-export const MANUAL_SERVER_IP = ''; // <-- Set your local IPv4 here for LAN dev (leave '' for production)
+export const MANUAL_SERVER_IP: string = ''; // <-- Set your local IPv4 here for LAN dev (leave '' for production)
 export const SERVER_PORT = '8080';
+export const PRODUCTION_BACKEND_URL = 'https://farm2home-backend-vjo8.onrender.com';
 // ============================================================================
 
 const getDevServerHost = (): string | null => {
@@ -31,22 +32,19 @@ const getDevServerHost = (): string | null => {
 };
 
 export const resolveBaseUrl = (): string => {
-  // 1. Manual LAN IP takes priority (local dev only — keep this empty for production)
-  if (MANUAL_SERVER_IP && MANUAL_SERVER_IP.trim() !== '') {
+  // 1. Explicit local developer override (ONLY when MANUAL_SERVER_IP is manually set)
+  if (__DEV__ && MANUAL_SERVER_IP && MANUAL_SERVER_IP.trim() !== '') {
     return `http://${MANUAL_SERVER_IP.trim()}:${SERVER_PORT}`;
   }
-  // 2. Production / EAS / .env EXPO_PUBLIC_API_URL
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
+
+  // 2. Production / EAS / .env EXPO_PUBLIC_API_URL takes first priority
+  const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (envUrl && envUrl !== '') {
+    return envUrl;
   }
-  // 3. Dev Metro bundler host auto-detection
-  if (__DEV__) {
-    const devHost = getDevServerHost();
-    if (devHost) {
-      return `http://${devHost}:${SERVER_PORT}`;
-    }
-  }
-  return Platform.OS === 'android' ? `http://10.0.2.2:${SERVER_PORT}` : `http://localhost:${SERVER_PORT}`;
+
+  // 3. By default always use the live production Render backend
+  return PRODUCTION_BACKEND_URL;
 };
 
 export let BASE_URL = resolveBaseUrl();
@@ -57,9 +55,12 @@ export const resolveMediaUrl = (path?: string | null): string | null => {
 
   // If path is already a full URL:
   if (path.startsWith('http://') || path.startsWith('https://')) {
-    // Protect external CDN URLs (Cloudinary, S3, GCS, etc.) — do NOT rewrite them.
-    // Only rewrite URLs that point to localhost / known LAN IP ranges so that
-    // media served by the Spring Boot backend tracks the current activeBase.
+    // 1. Never rewrite HTTPS URLs (Cloudinary, AWS S3, Render, CDN, etc.)
+    if (path.startsWith('https://')) {
+      return path;
+    }
+
+    // 2. Protect external CDN URLs even if HTTP
     const isExternalCdn =
       path.includes('cloudinary.com') ||
       path.includes('amazonaws.com') ||
@@ -67,19 +68,32 @@ export const resolveMediaUrl = (path?: string | null): string | null => {
       path.includes('storage.googleapis.com');
 
     if (isExternalCdn) {
-      return path; // External CDN URL — return as-is
+      return path;
     }
 
-    const isLocalOrLan = /^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2|172\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)/i.test(path);
-    if (isLocalOrLan) {
-      const urlMatch = path.match(/^(https?:\/\/[^/]+)(\/.*)?$/i);
+    // 3. Always rewrite localhost, 127.0.0.1, or 10.0.2.2 so media stays reachable on phone
+    const isLocalOrLoopback = /^http:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)/i.test(path);
+    if (isLocalOrLoopback) {
+      const urlMatch = path.match(/^(http:\/\/[^/]+)(\/.*)?$/i);
       if (urlMatch) {
         const pathSuffix = urlMatch[2] ?? '';
         return `${activeBase}${pathSuffix}`;
       }
     }
 
-    // Unknown external URL (e.g. Render HTTPS domain) — return as-is
+    // 4. In dev mode, rewrite local LAN URLs so media stays reachable on phone
+    if (__DEV__) {
+      const isLan = /^http:\/\/(172\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)/i.test(path);
+      if (isLan) {
+        const urlMatch = path.match(/^(http:\/\/[^/]+)(\/.*)?$/i);
+        if (urlMatch) {
+          const pathSuffix = urlMatch[2] ?? '';
+          return `${activeBase}${pathSuffix}`;
+        }
+      }
+    }
+
+    // Return external URL as-is
     return path;
   }
 
@@ -89,10 +103,28 @@ export const resolveMediaUrl = (path?: string | null): string | null => {
     return `${activeBase}/${normalized.substring(uploadsIdx)}`;
   }
   const cleanPath = normalized.startsWith('/') ? normalized.slice(1) : normalized;
-  if (cleanPath.startsWith('user/') || cleanPath.startsWith('product/')) {
+  if (cleanPath.startsWith('user/') || cleanPath.startsWith('product/') || cleanPath.startsWith('farmer/')) {
     return `${activeBase}/${cleanPath}`;
   }
   return `${activeBase}/uploads/${cleanPath}`;
+};
+
+let hasWarmedUp = false;
+export const warmUpBackend = async (): Promise<void> => {
+  if (hasWarmedUp) return;
+  hasWarmedUp = true;
+  try {
+    const healthUrl = `${resolveBaseUrl()}/health`;
+    if (__DEV__) {
+      console.log(`[API] Triggering backend warm-up ping to ${healthUrl}`);
+    }
+    await axios.get(healthUrl, { timeout: 15000 });
+    if (__DEV__) {
+      console.log('[API] Backend warm-up ping acknowledged.');
+    }
+  } catch {
+    // Silent non-blocking catch — server will spin up on its own
+  }
 };
 
 const MAX_RETRIES = 2;
@@ -101,7 +133,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000,
+  timeout: 90000,
 });
 
 api.interceptors.request.use(
@@ -262,3 +294,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

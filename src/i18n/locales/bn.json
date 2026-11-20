@@ -64,7 +64,8 @@
     "email": "ইমেইল",
     "phone": "ফোন",
     "description": "বিবরণ",
-    "validationError": "যাচাইকরণ ত্রুটি"
+    "validationError": "যাচাইকরণ ত্রুটি",
+    "serverWaking": "সার্ভারের সাথে সংযোগ হচ্ছে, অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন..."
   },
   "language": {
     "selectLanguage": "ভাষা নির্বাচন করুন",

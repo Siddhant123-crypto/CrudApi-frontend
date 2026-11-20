@@ -64,7 +64,8 @@
     "email": "Email",
     "phone": "Phone",
     "description": "Description",
-    "validationError": "Validation Error"
+    "validationError": "Validation Error",
+    "serverWaking": "Connecting to server, please wait a moment..."
   },
   "language": {
     "selectLanguage": "Select language",

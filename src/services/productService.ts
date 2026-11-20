@@ -1,4 +1,4 @@
-import api, {BASE_URL} from './api';
+import api, {BASE_URL, resolveBaseUrl, resolveMediaUrl} from './api';
 export const saveProduct = async (productData: any) => {
   const response = await api.post('/product/save', productData);
   return response.data;
@@ -31,6 +31,10 @@ export const saveProductFormData = async (data: any, photoUri?: string, videoUri
 };
 export const getAllProducts = async () => {
   const response = await api.get('/product/getAll');
+  return response.data;
+};
+export const getProductsByFarmer = async (farmerId: string) => {
+  const response = await api.get(`/product/farmer/${farmerId}`);
   return response.data;
 };
 export const getProductById = async (id: number | string) => {
@@ -89,9 +93,33 @@ export const updateProductFormData = async (
   const response = await api.put(`/product/update/${id}`, formData);
   return response.data;
 };
-export const getProductImageUrl = (fileName: string) => {
-  return `${BASE_URL}/product/image/${fileName}`;
+export const getProductImageUrl = (fileName?: string | null): string | null => {
+  if (!fileName || fileName === 'null' || fileName.trim() === '') return null;
+  const clean = fileName.trim();
+  const activeBase = resolveBaseUrl();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return resolveMediaUrl(clean);
+  }
+  if (clean.startsWith('uploads/') || clean.startsWith('/uploads/')) {
+    return resolveMediaUrl(clean);
+  }
+  if (clean.startsWith('product/')) {
+    return `${activeBase}/${clean}`;
+  }
+  return `${activeBase}/product/image/${clean}`;
 };
-export const getProductVideoUrl = (fileName: string) => {
-  return `${BASE_URL}/product/video/${fileName}`;
+export const getProductVideoUrl = (fileName?: string | null): string | null => {
+  if (!fileName || fileName === 'null' || fileName.trim() === '') return null;
+  const clean = fileName.trim();
+  const activeBase = resolveBaseUrl();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return resolveMediaUrl(clean);
+  }
+  if (clean.startsWith('uploads/') || clean.startsWith('/uploads/')) {
+    return resolveMediaUrl(clean);
+  }
+  if (clean.startsWith('product/')) {
+    return `${activeBase}/${clean}`;
+  }
+  return `${activeBase}/product/video/${clean}`;
 };

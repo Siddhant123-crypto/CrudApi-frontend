@@ -64,7 +64,8 @@
     "email": "ఈమెయిల్",
     "phone": "ఫోన్",
     "description": "వివరణ",
-    "validationError": "ధృవీకరణ లోపం"
+    "validationError": "ధృవీకరణ లోపం",
+    "serverWaking": "సర్వర్‌కు కనెక్ట్ అవుతోంది, దయచేసి కాసేపు వేచి ఉండండి..."
   },
   "language": {
     "selectLanguage": "భాషను ఎంచుకోండి",
