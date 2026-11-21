@@ -385,7 +385,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
       }
       const isVideo = mediaSelectionType === 'Videos';
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: isVideo ? ['images', 'videos'] : 'images',
+        mediaTypes: isVideo ? ['images', 'videos'] : ['images'],
         allowsEditing: false,
         quality: isVideo ? 1 : 0.8,
         videoMaxDuration: isVideo ? 120 : undefined,
@@ -409,9 +409,17 @@ const AddProductScreen = ({ navigation, route }: any) => {
           setPhotoPreviewModalVisible(true);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('Error picking media from gallery:', error);
-      Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to pick media from gallery'));
+      const errMsg = String(error?.message || error || '');
+      if (errMsg.includes('ActivityResultLauncher') || errMsg.includes('unregistered')) {
+        Alert.alert(
+          t('common.error', 'Gallery Refresh Needed'),
+          'Android gallery launcher was reset after a hot reload. Please close and reopen the app once.'
+        );
+      } else {
+        Alert.alert(t('common.error', 'Error'), t('errors.generic', 'Failed to pick media from gallery'));
+      }
     }
     setMediaModalVisible(false);
   };
