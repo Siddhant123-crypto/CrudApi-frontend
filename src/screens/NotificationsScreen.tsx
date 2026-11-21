@@ -43,6 +43,9 @@ const NotificationsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  const isSelectionMode = selectedIds.length > 0;
 
   const fetchNotifications = async () => {
     try {
@@ -84,10 +87,78 @@ const NotificationsScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
+      setSelectedIds([]);
       fetchNotifications();
       refreshUnreadCount();
     }, [])
   );
+
+  const toggleSelectNotification = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectGroup = (group: NotificationGroup) => {
+    const groupIds = group.notifications.map((n) => n.notificationId);
+    setSelectedIds((prev) => {
+      const allSelected = groupIds.every((id) => prev.includes(id));
+      if (allSelected) {
+        return prev.filter((id) => !groupIds.includes(id));
+      }
+      const merged = new Set([...prev, ...groupIds]);
+      return Array.from(merged);
+    });
+  };
+
+  const isGroupSelected = (group: NotificationGroup) =>
+    group.notifications.length > 0 &&
+    group.notifications.every((n) => selectedIds.includes(n.notificationId));
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0 || deleting) return;
+    const count = selectedIds.length;
+    import('react-native').then(({ Alert }) => {
+      Alert.alert(
+        t('notifications.deleteMessageTitle', 'Delete Messages'),
+        count === 1
+          ? t('notifications.deleteMessageConfirm', 'Are you sure you want to delete this message?')
+          : t('notifications.deleteSelectedConfirm', {
+              count,
+              defaultValue: `Are you sure you want to delete ${count} selected messages?`,
+            }),
+        [
+          { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+          {
+            text: t('common.delete', 'Delete'),
+            style: 'destructive',
+            onPress: async () => {
+              const idsToDelete = [...selectedIds];
+              setDeleting(true);
+              try {
+                setNotifications((prev) =>
+                  prev.filter((n) => !idsToDelete.includes(n.notificationId))
+                );
+                setSelectedIds([]);
+                const api = (await import('../services/api')).default;
+                await Promise.allSettled(
+                  idsToDelete.map((id) => api.delete(`/notifications/${id}`))
+                );
+                refreshUnreadCount();
+              } catch (err) {
+                console.log('Failed to delete selected notifications:', err);
+                fetchNotifications();
+              } finally {
+                setDeleting(false);
+              }
+            },
+          },
+        ]
+      );
+    });
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -291,11 +362,41 @@ const NotificationsScreen = () => {
       <PageBackground style={{ flex: 1 }}>
         <ThemedHeader
           variant="inner"
-          title={t('notifications.title', 'Notifications')}
-          subtitle={unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : undefined}
-          onBackPress={() => navigation.goBack()}
+          title={
+            isSelectionMode
+              ? `${selectedIds.length} ${t('common.selected', 'Selected')}`
+              : t('notifications.title', 'Notifications')
+          }
+          subtitle={
+            !isSelectionMode && unreadCount > 0
+              ? t('notifications.unreadCount', { count: unreadCount })
+              : undefined
+          }
+          onBackPress={() => {
+            if (isSelectionMode) {
+              clearSelection();
+            } else {
+              navigation.goBack();
+            }
+          }}
           rightAction={
-            notifications.some((n) => !n.isRead) ? (
+            isSelectionMode ? (
+              <TouchableOpacity
+                onPress={handleDeleteSelected}
+                disabled={deleting}
+                style={styles.headerDeleteBtn}
+                activeOpacity={0.8}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="trash-outline" size={17} color="#FFFFFF" style={{ marginRight: 5 }} />
+                    <Text style={styles.headerDeleteText}>{t('common.delete', 'Delete')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : notifications.some((n) => !n.isRead) ? (
               <TouchableOpacity
                 onPress={handleMarkAllAsRead}
                 style={styles.customerMarkReadBtn}
@@ -342,7 +443,12 @@ const NotificationsScreen = () => {
                   return (
                     <NotificationGroupCard
                       group={item.data}
-                      onPress={handleGroupPress}
+                      onPress={(grp) =>
+                        isSelectionMode ? toggleSelectGroup(grp) : handleGroupPress(grp)
+                      }
+                      onLongPress={toggleSelectGroup}
+                      isSelected={isGroupSelected(item.data)}
+                      selectionMode={isSelectionMode}
                       variant="customer"
                     />
                   );
@@ -350,8 +456,14 @@ const NotificationsScreen = () => {
                 return (
                   <NotificationCard
                     notification={item.data}
-                    onPress={handleNotificationPress}
-                    onDelete={handleNotificationDelete}
+                    onPress={(notif) =>
+                      isSelectionMode
+                        ? toggleSelectNotification(notif.notificationId)
+                        : handleNotificationPress(notif)
+                    }
+                    onLongPress={(notif) => toggleSelectNotification(notif.notificationId)}
+                    isSelected={selectedIds.includes(item.data.notificationId)}
+                    selectionMode={isSelectionMode}
                     variant="customer"
                   />
                 );
@@ -413,11 +525,41 @@ const NotificationsScreen = () => {
       <FarmerPageBackground>
         <FarmerHeader
           variant="inner"
-          title={t('notifications.title', 'Notifications')}
-          subtitle={unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : undefined}
-          onBackPress={() => navigation.goBack()}
+          title={
+            isSelectionMode
+              ? `${selectedIds.length} ${t('common.selected', 'Selected')}`
+              : t('notifications.title', 'Notifications')
+          }
+          subtitle={
+            !isSelectionMode && unreadCount > 0
+              ? t('notifications.unreadCount', { count: unreadCount })
+              : undefined
+          }
+          onBackPress={() => {
+            if (isSelectionMode) {
+              clearSelection();
+            } else {
+              navigation.goBack();
+            }
+          }}
           rightComponent={
-            notifications.some((n) => !n.isRead) ? (
+            isSelectionMode ? (
+              <TouchableOpacity
+                onPress={handleDeleteSelected}
+                disabled={deleting}
+                style={styles.headerDeleteBtn}
+                activeOpacity={0.8}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="trash-outline" size={17} color="#FFFFFF" style={{ marginRight: 5 }} />
+                    <Text style={styles.headerDeleteText}>{t('common.delete', 'Delete')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : notifications.some((n) => !n.isRead) ? (
               <TouchableOpacity
                 onPress={handleMarkAllAsRead}
                 style={styles.farmerMarkReadBtn}
@@ -470,7 +612,12 @@ const NotificationsScreen = () => {
                   return (
                     <NotificationGroupCard
                       group={item.data}
-                      onPress={handleGroupPress}
+                      onPress={(grp) =>
+                        isSelectionMode ? toggleSelectGroup(grp) : handleGroupPress(grp)
+                      }
+                      onLongPress={toggleSelectGroup}
+                      isSelected={isGroupSelected(item.data)}
+                      selectionMode={isSelectionMode}
                       variant="farmer"
                     />
                   );
@@ -478,8 +625,14 @@ const NotificationsScreen = () => {
                 return (
                   <NotificationCard
                     notification={item.data}
-                    onPress={handleNotificationPress}
-                    onDelete={handleNotificationDelete}
+                    onPress={(notif) =>
+                      isSelectionMode
+                        ? toggleSelectNotification(notif.notificationId)
+                        : handleNotificationPress(notif)
+                    }
+                    onLongPress={(notif) => toggleSelectNotification(notif.notificationId)}
+                    isSelected={selectedIds.includes(item.data.notificationId)}
+                    selectionMode={isSelectionMode}
                     variant="farmer"
                   />
                 );
@@ -717,6 +870,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: THEME.fonts.semiBold,
     fontSize: 12,
+  },
+  headerDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DC2626',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+  },
+  headerDeleteText: {
+    color: '#FFFFFF',
+    fontFamily: THEME.fonts.bold,
+    fontSize: 12.5,
   },
   customerListContent: {
     paddingHorizontal: 16,

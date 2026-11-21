@@ -20,10 +20,20 @@ export interface NotificationGroup {
 interface Props {
   group: NotificationGroup;
   onPress: (group: NotificationGroup) => void;
+  onLongPress?: (group: NotificationGroup) => void;
+  isSelected?: boolean;
+  selectionMode?: boolean;
   variant?: 'default' | 'customer' | 'farmer' | 'admin';
 }
 
-export const NotificationGroupCard = ({ group, onPress, variant = 'default' }: Props) => {
+export const NotificationGroupCard = ({
+  group,
+  onPress,
+  onLongPress,
+  isSelected = false,
+  selectionMode = false,
+  variant = 'default',
+}: Props) => {
   const { latestNotification, senderName, unreadCount } = group;
   let cleanMessage = latestNotification.message;
   const match = cleanMessage.match(/^From:\s.*?\n\n(.*)/s);
@@ -69,9 +79,12 @@ export const NotificationGroupCard = ({ group, onPress, variant = 'default' }: P
       <TouchableOpacity
         style={[
           styles.farmerCard,
-          unreadCount > 0 && styles.farmerUnreadCard
+          unreadCount > 0 && styles.farmerUnreadCard,
+          isSelected && styles.farmerSelectedCard,
         ]}
         onPress={() => onPress(group)}
+        onLongPress={onLongPress ? () => onLongPress(group) : undefined}
+        delayLongPress={250}
         activeOpacity={0.8}
       >
         <View style={styles.farmerIconContainer}>
@@ -88,11 +101,19 @@ export const NotificationGroupCard = ({ group, onPress, variant = 'default' }: P
             {cleanMessage}
           </Text>
         </View>
-        {unreadCount > 0 && (
+        {selectionMode ? (
+          <View style={styles.selectionCheckContainer}>
+            <Ionicons
+              name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={isSelected ? '#17663F' : '#A7BFB1'}
+            />
+          </View>
+        ) : unreadCount > 0 ? (
           <View style={styles.farmerBadge}>
             <Text style={styles.farmerBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
           </View>
-        )}
+        ) : null}
       </TouchableOpacity>
     );
   }
@@ -102,9 +123,12 @@ export const NotificationGroupCard = ({ group, onPress, variant = 'default' }: P
       <TouchableOpacity
         style={[
           styles.customerCard,
-          unreadCount > 0 && styles.customerUnreadCard
+          unreadCount > 0 && styles.customerUnreadCard,
+          isSelected && styles.customerSelectedCard,
         ]}
         onPress={() => onPress(group)}
+        onLongPress={onLongPress ? () => onLongPress(group) : undefined}
+        delayLongPress={250}
         activeOpacity={0.8}
       >
         <View style={styles.customerIconContainer}>
@@ -121,11 +145,19 @@ export const NotificationGroupCard = ({ group, onPress, variant = 'default' }: P
             {cleanMessage}
           </Text>
         </View>
-        {unreadCount > 0 && (
+        {selectionMode ? (
+          <View style={styles.selectionCheckContainer}>
+            <Ionicons
+              name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={isSelected ? '#D9651B' : '#C4B5A5'}
+            />
+          </View>
+        ) : unreadCount > 0 ? (
           <View style={styles.customerBadge}>
             <Text style={styles.customerBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
           </View>
-        )}
+        ) : null}
       </TouchableOpacity>
     );
   }
@@ -436,5 +468,20 @@ const styles = StyleSheet.create({
     color: '#0B1326',
     fontSize: 10.5,
     fontFamily: AdminFonts.bold,
+  },
+  customerSelectedCard: {
+    backgroundColor: '#FFF3E4',
+    borderColor: '#D9651B',
+    borderWidth: 1.5,
+  },
+  farmerSelectedCard: {
+    backgroundColor: '#E8F7EE',
+    borderColor: '#17663F',
+    borderWidth: 1.5,
+  },
+  selectionCheckContainer: {
+    marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

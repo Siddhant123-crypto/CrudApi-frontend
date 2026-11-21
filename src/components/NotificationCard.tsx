@@ -9,7 +9,10 @@ import { ADMIN_THEME, AdminFonts } from '../constants/adminTheme';
 interface Props {
   notification: NotificationResponse;
   onPress: (notification: NotificationResponse) => void;
+  onLongPress?: (notification: NotificationResponse) => void;
   onDelete?: (notification: NotificationResponse) => void;
+  isSelected?: boolean;
+  selectionMode?: boolean;
   variant?: 'default' | 'customer' | 'farmer' | 'admin';
 }
 
@@ -128,7 +131,15 @@ export const formatNotificationDate = (dateString: string) => {
   }
 };
 
-export const NotificationCard = ({ notification, onPress, onDelete, variant = 'default' }: Props) => {
+export const NotificationCard = ({
+  notification,
+  onPress,
+  onLongPress,
+  onDelete,
+  isSelected = false,
+  selectionMode = false,
+  variant = 'default',
+}: Props) => {
   if (variant === 'admin') {
     const iconConfig = getAdminNotificationIcon(notification);
     return (
@@ -178,9 +189,12 @@ export const NotificationCard = ({ notification, onPress, onDelete, variant = 'd
       <TouchableOpacity
         style={[
           styles.customerCard,
-          !notification.isRead && styles.customerUnreadCard
+          !notification.isRead && styles.customerUnreadCard,
+          isSelected && styles.customerSelectedCard,
         ]}
         onPress={() => onPress(notification)}
+        onLongPress={onLongPress ? () => onLongPress(notification) : undefined}
+        delayLongPress={250}
         activeOpacity={0.8}
       >
         <View style={[styles.customerIconContainer, { backgroundColor: iconConfig.bg }]}>
@@ -193,14 +207,22 @@ export const NotificationCard = ({ notification, onPress, onDelete, variant = 'd
             </Text>
             <View style={styles.customerTimeRow}>
               <Text style={styles.customerDateText}>{formatNotificationDate(notification.createdAt)}</Text>
-              {!notification.isRead && <View style={styles.customerUnreadDot} />}
+              {!notification.isRead && !selectionMode && <View style={styles.customerUnreadDot} />}
             </View>
           </View>
           <Text style={styles.customerMessage} numberOfLines={2}>
             {notification.message}
           </Text>
         </View>
-        {onDelete && (
+        {selectionMode ? (
+          <View style={styles.selectionCheckContainer}>
+            <Ionicons
+              name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={isSelected ? '#D9651B' : '#C4B5A5'}
+            />
+          </View>
+        ) : onDelete ? (
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={(e) => {
@@ -210,7 +232,7 @@ export const NotificationCard = ({ notification, onPress, onDelete, variant = 'd
           >
             <Ionicons name="trash-outline" size={18} color="#C0392B" />
           </TouchableOpacity>
-        )}
+        ) : null}
       </TouchableOpacity>
     );
   }
@@ -222,8 +244,11 @@ export const NotificationCard = ({ notification, onPress, onDelete, variant = 'd
         style={[
           styles.farmerCard,
           !notification.isRead && styles.farmerUnreadCard,
+          isSelected && styles.farmerSelectedCard,
         ]}
         onPress={() => onPress(notification)}
+        onLongPress={onLongPress ? () => onLongPress(notification) : undefined}
+        delayLongPress={250}
         activeOpacity={0.8}
       >
         <View style={[styles.farmerIconContainer, { backgroundColor: iconConfig.bg }]}>
@@ -236,7 +261,7 @@ export const NotificationCard = ({ notification, onPress, onDelete, variant = 'd
             </Text>
             <View style={styles.farmerTimeRow}>
               <Text style={styles.farmerDateText}>{formatNotificationDate(notification.createdAt)}</Text>
-              {!notification.isRead && <View style={styles.farmerUnreadDot} />}
+              {!notification.isRead && !selectionMode && <View style={styles.farmerUnreadDot} />}
             </View>
           </View>
           {notification.orderNumber && (
@@ -257,7 +282,15 @@ export const NotificationCard = ({ notification, onPress, onDelete, variant = 'd
             </View>
           )}
         </View>
-        {onDelete && (
+        {selectionMode ? (
+          <View style={styles.selectionCheckContainer}>
+            <Ionicons
+              name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={isSelected ? '#17663F' : '#A7BFB1'}
+            />
+          </View>
+        ) : onDelete ? (
           <TouchableOpacity
             style={styles.farmerDeleteButton}
             onPress={(e) => {
@@ -267,7 +300,7 @@ export const NotificationCard = ({ notification, onPress, onDelete, variant = 'd
           >
             <Ionicons name="trash-outline" size={18} color="#C0392B" />
           </TouchableOpacity>
-        )}
+        ) : null}
       </TouchableOpacity>
     );
   }
@@ -606,5 +639,20 @@ const styles = StyleSheet.create({
   adminDeleteButton: {
     padding: 6,
     marginLeft: 8,
+  },
+  customerSelectedCard: {
+    backgroundColor: '#FFF3E4',
+    borderColor: '#D9651B',
+    borderWidth: 1.5,
+  },
+  farmerSelectedCard: {
+    backgroundColor: '#E8F7EE',
+    borderColor: '#17663F',
+    borderWidth: 1.5,
+  },
+  selectionCheckContainer: {
+    marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
