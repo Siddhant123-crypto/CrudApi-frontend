@@ -41,28 +41,37 @@ export const ReviewCard = ({
   return (
     <View style={isCustomer ? styles.customerCard : isFarmer ? styles.farmerCard : styles.card}>
       <View style={styles.header}>
-        <View>
-          <Text style={isCustomer ? styles.customerNameThemed : isFarmer ? styles.farmerNameThemed : styles.customerName}>
+        <View style={styles.headerTopRow}>
+          <Text
+            style={[
+              isCustomer ? styles.customerNameThemed : isFarmer ? styles.farmerNameThemed : styles.customerName,
+              styles.nameFlex,
+            ]}
+            numberOfLines={1}
+          >
             {review.customerDisplayName}
           </Text>
-          <View style={styles.ratingRow}>
-            <StarRating
-              rating={review.rating}
-              size={isCustomer || isFarmer ? 16 : 20}
-              disabled={true}
-              variant={isCustomer ? 'customer' : isFarmer ? 'farmer' : 'default'}
-            />
-            <Text style={isCustomer ? styles.dateThemed : isFarmer ? styles.farmerDateThemed : styles.date}>{formattedDate}</Text>
-          </View>
+          {review.isVerifiedPurchase && (
+            <View style={isCustomer ? styles.verifiedBadgeThemed : isFarmer ? styles.farmerVerifiedBadge : styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={13} color={isCustomer ? '#2E7D4F' : isFarmer ? '#17663F' : '#15803D'} />
+              <Text
+                style={isCustomer ? styles.verifiedTextThemed : isFarmer ? styles.farmerVerifiedText : styles.verifiedText}
+                numberOfLines={1}
+              >
+                {t('reviews.verifiedPurchase', 'Verified Purchase')}
+              </Text>
+            </View>
+          )}
         </View>
-        {review.isVerifiedPurchase && (
-          <View style={isCustomer ? styles.verifiedBadgeThemed : isFarmer ? styles.farmerVerifiedBadge : styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={14} color={isCustomer ? '#2E7D4F' : isFarmer ? '#17663F' : '#15803D'} />
-            <Text style={isCustomer ? styles.verifiedTextThemed : isFarmer ? styles.farmerVerifiedText : styles.verifiedText}>
-              {t('reviews.verifiedPurchase', 'Verified Purchase')}
-            </Text>
-          </View>
-        )}
+        <View style={styles.ratingRow}>
+          <StarRating
+            rating={review.rating}
+            size={isCustomer || isFarmer ? 16 : 20}
+            disabled={true}
+            variant={isCustomer ? 'customer' : isFarmer ? 'farmer' : 'default'}
+          />
+          <Text style={isCustomer ? styles.dateThemed : isFarmer ? styles.farmerDateThemed : styles.date}>{formattedDate}</Text>
+        </View>
       </View>
       {review.reviewText ? (
         <Text style={isCustomer ? styles.reviewTextThemed : isFarmer ? styles.farmerReviewText : styles.reviewText}>{review.reviewText}</Text>
@@ -128,10 +137,18 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   header: {
+    marginBottom: 8,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  nameFlex: {
+    flex: 1,
+    minWidth: 0,
   },
   customerName: {
     fontSize: 14,
