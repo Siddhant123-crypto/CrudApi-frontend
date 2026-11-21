@@ -87,7 +87,10 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
     }
   }, [orderId]);
 
-  const fStatus = getFarmerItemsStatus(order?.items || []);
+  const fStatus =
+    order?.status === 'CANCELLED'
+      ? 'CANCELLED'
+      : getFarmerItemsStatus(order?.items || []);
 
   const updateStatus = async (newStatus: string) => {
     setUpdating(true);
@@ -232,6 +235,32 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Prominent Cancelled Order Sign & Reason Banner at Top */}
+        {fStatus === 'CANCELLED' && (
+          <FarmerCard style={styles.cancelledCard}>
+            <View style={styles.cancellationHeader}>
+              <View style={styles.cancelledIconCircle}>
+                <Ionicons name="close-circle" size={24} color="#DC2626" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.cancellationReasonTitle}>
+                  {t('orders.orderCancelled', 'Order Cancelled')}
+                </Text>
+                <Text style={styles.cancellationSubLabel}>
+                  {t('orders.cancellationReason', 'Cancellation Reason')}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.cancellationReasonBox}>
+              <Text style={styles.cancellationReasonText}>
+                {order.cancellationReason && order.cancellationReason.trim().length > 0
+                  ? order.cancellationReason
+                  : t('orders.noReasonProvided', 'No specific reason provided by the customer.')}
+              </Text>
+            </View>
+          </FarmerCard>
+        )}
+
         {/* Customer & Delivery Address Card */}
         <FarmerCard style={styles.sectionCard}>
           <View style={styles.cardHeaderRow}>
@@ -303,19 +332,6 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
           </View>
           <OrderTimeline status={fStatus} isFarmer={true} variant="farmer" />
         </FarmerCard>
-
-        {/* Cancellation Reason Card (if cancelled) */}
-        {fStatus === 'CANCELLED' && (
-          <FarmerCard style={styles.cancelledCard}>
-            <View style={styles.cancellationHeader}>
-              <Ionicons name="alert-circle" size={20} color="#C0392B" />
-              <Text style={styles.cancellationReasonTitle}>{t('orders.cancellationReason', 'Cancellation Reason')}</Text>
-            </View>
-            <Text style={styles.cancellationReasonText}>
-              {order.cancellationReason || t('orders.noReasonProvided', 'No specific reason provided by the customer.')}
-            </Text>
-          </FarmerCard>
-        )}
 
         {/* Ordered Items & Bill Summary Card */}
         <FarmerCard style={styles.sectionCard}>
@@ -541,23 +557,46 @@ const styles = StyleSheet.create({
   cancelledCard: {
     marginBottom: 14,
     padding: 16,
-    borderColor: '#FECACA',
-    backgroundColor: '#FDE6E2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1.2,
+    backgroundColor: '#FEF2F2',
   },
   cancellationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  cancelledIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cancellationReasonTitle: {
-    fontSize: 15,
+    fontSize: 15.5,
     fontFamily: FARMER_THEME.fonts.bold,
-    color: '#C0392B',
-    marginLeft: 8,
+    color: '#B91C1C',
+  },
+  cancellationSubLabel: {
+    fontSize: 12,
+    fontFamily: FARMER_THEME.fonts.medium,
+    color: '#991B1B',
+    marginTop: 1,
+  },
+  cancellationReasonBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   cancellationReasonText: {
     fontSize: 13.5,
-    fontFamily: FARMER_THEME.fonts.regular,
+    fontFamily: FARMER_THEME.fonts.medium,
     color: '#7F1D1D',
     lineHeight: 20,
   },

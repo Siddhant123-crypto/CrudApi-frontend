@@ -90,7 +90,7 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
       const activeTab = tabs.find((t) => t.id === filter);
       if (activeTab) {
         filtered = orders.filter((o) => {
-          const fStatus = getFarmerItemsStatus(o.items || []);
+          const fStatus = o.status === 'CANCELLED' ? 'CANCELLED' : getFarmerItemsStatus(o.items || []);
           return activeTab.statuses.includes(fStatus);
         });
       }
@@ -131,8 +131,9 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
     const rawImageUrl =
       mainItem?.imageUrl || mainItem?.productPhoto || mainItem?.product?.productPhoto;
     const imageUrl = rawImageUrl ? getProductImageUrl(rawImageUrl) : null;
-    const fStatus = getFarmerItemsStatus(item.items || []);
+    const fStatus = item.status === 'CANCELLED' ? 'CANCELLED' : getFarmerItemsStatus(item.items || []);
     const isNew = fStatus === 'PENDING';
+    const isCancelled = fStatus === 'CANCELLED';
 
     const orderIdLabel = `${t('orders.orderNumber', 'Order #').replace('{{id}}', '')}${
       item.orderNumber ? item.orderNumber.substring(0, 12) : item.orderId.substring(0, 8)
@@ -149,7 +150,13 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
         activeOpacity={0.85}
         style={styles.cardTouchable}
       >
-        <FarmerCard style={styles.orderCard}>
+        <FarmerCard
+          style={
+            isCancelled
+              ? { ...styles.orderCard, ...styles.cancelledOrderCard }
+              : styles.orderCard
+          }
+        >
           {/* Header Row: Order ID + Status Badge */}
           <View style={styles.cardHeader}>
             <View style={styles.orderIdRow}>
@@ -158,17 +165,36 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
                   <Text style={styles.newBadgeText}>{t('status.pending', 'NEW')}</Text>
                 </View>
               )}
-              <Text style={styles.orderNumber}>{orderIdLabel}</Text>
+              {isCancelled && (
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color="#DC2626"
+                  style={{ marginRight: 6 }}
+                />
+              )}
+              <Text style={[styles.orderNumber, isCancelled && styles.cancelledOrderNumber]}>
+                {orderIdLabel}
+              </Text>
             </View>
             <View style={styles.headerRight}>
               <Text style={styles.orderDate}>
                 {item.createdOn ? formatDate(item.createdOn) : ''}
               </Text>
-              <FarmerBadge
-                label={formatOrderStatus(fStatus, t)}
-                variant={getBadgeVariant(fStatus)}
-                size="sm"
-              />
+              {isCancelled ? (
+                <View style={styles.cancelledSignBadge}>
+                  <Ionicons name="close-circle" size={13} color="#DC2626" style={{ marginRight: 4 }} />
+                  <Text style={styles.cancelledSignText}>
+                    {formatOrderStatus('CANCELLED', t)}
+                  </Text>
+                </View>
+              ) : (
+                <FarmerBadge
+                  label={formatOrderStatus(fStatus, t)}
+                  variant={getBadgeVariant(fStatus)}
+                  size="sm"
+                />
+              )}
             </View>
           </View>
 
@@ -220,6 +246,23 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
               </View>
             </View>
           </View>
+
+          {/* Cancellation Reason Banner directly on cancelled order card */}
+          {isCancelled && (
+            <View style={styles.cancelReasonBanner}>
+              <View style={styles.cancelReasonHeader}>
+                <Ionicons name="close-circle" size={15} color="#DC2626" style={{ marginRight: 6 }} />
+                <Text style={styles.cancelReasonLabel}>
+                  {t('orders.cancellationReason', 'Cancellation Reason')}
+                </Text>
+              </View>
+              <Text style={styles.cancelReasonText}>
+                {item.cancellationReason && item.cancellationReason.trim().length > 0
+                  ? item.cancellationReason
+                  : t('orders.noReasonProvided', 'No specific reason provided by the customer.')}
+              </Text>
+            </View>
+          )}
         </FarmerCard>
       </TouchableOpacity>
     );
@@ -466,6 +509,53 @@ const styles = StyleSheet.create({
     fontFamily: FARMER_THEME.fonts.bold,
     fontSize: 10,
     color: FARMER_THEME.colors.forestGreen,
+  },
+  cancelledOrderCard: {
+    borderColor: '#FCA5A5',
+    borderWidth: 1.2,
+    backgroundColor: '#FFFBFB',
+  },
+  cancelledOrderNumber: {
+    color: '#991B1B',
+  },
+  cancelledSignBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  cancelledSignText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 11,
+    color: '#DC2626',
+  },
+  cancelReasonBanner: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  cancelReasonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  cancelReasonLabel: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 12,
+    color: '#B91C1C',
+  },
+  cancelReasonText: {
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 12.5,
+    color: '#7F1D1D',
+    lineHeight: 18,
   },
 });
 
