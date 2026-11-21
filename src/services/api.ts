@@ -136,6 +136,21 @@ const api = axios.create({
   timeout: 90000,
 });
 
+// In-memory auth token cache to avoid AsyncStorage read races right after login
+let activeAuthToken: string | null = null;
+let lastLoginTimestamp = 0;
+const POST_LOGIN_401_GRACE_MS = 8000;
+
+export const setAuthToken = (token: string | null, markFreshLogin = false) => {
+  activeAuthToken = token;
+  if (token && markFreshLogin) {
+    lastLoginTimestamp = Date.now();
+    isHandling401 = false;
+  } else if (!token) {
+    lastLoginTimestamp = 0;
+  }
+};
+
 api.interceptors.request.use(
   async config => {
     if (__DEV__) {
@@ -143,7 +158,10 @@ api.interceptors.request.use(
       BASE_URL = activeBase;
       config.baseURL = activeBase;
     }
-    const token = await AsyncStorage.getItem('userToken');
+    const token = activeAuthToken || (await AsyncStorage.getItem('userToken'));
+    if (token && !activeAuthToken) {
+      activeAuthToken = token;
+    }
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -221,14 +239,61 @@ api.interceptors.response.use(
       }
     }
 
-    // 2. HTTP 401: Clear auth storage and navigate to login exactly once
+    // 2. HTTP 401: Never blindly kick out a freshly logged-in user on a stale/background request
     if (status === 401) {
+      const reqAuthHeader = String(
+        config?.headers?.['Authorization'] || config?.headers?.Authorization || ''
+      );
+      const reqToken = reqAuthHeader.startsWith('Bearer ')
+        ? reqAuthHeader.slice(7).trim()
+        : '';
+      const currentToken = activeAuthToken || (await AsyncStorage.getItem('userToken'));
+      const msSinceLogin = Date.now() - lastLoginTimestamp;
+      const isBackgroundPoll = Boolean(
+        config?.url?.includes('/notifications/unread/count') ||
+        config?.url?.includes('/order/farmer/new-orders-count') ||
+        config?.url?.includes('/farmer/notifications') ||
+        config?.url?.includes('/shorts')
+      );
+
+      // Ignore 401 from an unauthenticated request or from a stale/superseded token
+      if (!reqToken || (currentToken && reqToken !== currentToken)) {
+        if (__DEV__) {
+          console.log('[API] Ignoring 401 from stale/unauthenticated request:', config?.url);
+        }
+        return Promise.reject(error);
+      }
+
+      // During the post-login grace window or on non-critical background polls, retry once with the active token instead of immediately logging out
+      const authRetry = (config as any)?._authRetry;
+      if (!authRetry && config && (msSinceLogin < POST_LOGIN_401_GRACE_MS || isBackgroundPoll)) {
+        (config as any)._authRetry = true;
+        if (currentToken && config.headers) {
+          config.headers['Authorization'] = `Bearer ${currentToken}`;
+        }
+        if (__DEV__) {
+          console.log('[API] Retrying 401 request once before logout:', config.url);
+        }
+        await sleep(600);
+        return api(config);
+      }
+
+      // Still inside post-login grace window for a background poll? Reject silently instead of kicking user back to login
+      if (isBackgroundPoll && msSinceLogin < POST_LOGIN_401_GRACE_MS * 2) {
+        if (__DEV__) {
+          console.log('[API] Suppressing auto-logout on background poll 401 shortly after login:', config?.url);
+        }
+        return Promise.reject(error);
+      }
+
       if (!isHandling401) {
         isHandling401 = true;
         if (__DEV__) {
           console.log('[API] 401 Unauthorized received — clearing auth storage and resetting session');
         }
         try {
+          activeAuthToken = null;
+          lastLoginTimestamp = 0;
           await AsyncStorage.multiRemove(['userToken', 'userData']);
           if (unauthorizedHandler) {
             unauthorizedHandler();

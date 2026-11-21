@@ -29,7 +29,14 @@ const WishlistProductCard: React.FC<WishlistProductCardProps> = ({
   const { toggleWishlist, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
 
+  const isUnavailable =
+    item.available === false ||
+    item.farmerActive === false ||
+    item.productActive === false ||
+    (item.quantity !== undefined && item.quantity !== null && Number(item.quantity) <= 0);
+
   const handleAddToCart = async () => {
+    if (isUnavailable) return;
     const success = await addToCart(item.productId, 1);
     if (success) {
       await removeFromWishlist(item.productId, false);
@@ -119,18 +126,28 @@ const WishlistProductCard: React.FC<WishlistProductCardProps> = ({
         </View>
 
         <TouchableOpacity
-          style={styles.addToCartBtn}
+          style={[styles.addToCartBtn, isUnavailable && { opacity: 0.55 }]}
           onPress={handleAddToCart}
+          disabled={isUnavailable}
           activeOpacity={0.85}
         >
           <LinearGradient
-            colors={THEME.colors.ctaOrangeGradient}
+            colors={isUnavailable ? ['#9CA3AF', '#6B7280'] : THEME.colors.ctaOrangeGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.addToCartGradient}
           >
-            <Ionicons name="cart-outline" size={16} color={THEME.colors.white} style={{ marginRight: 6 }} />
-            <Text style={styles.addToCartText}>{t('product.addToCart', 'Add to Cart')}</Text>
+            <Ionicons
+              name={isUnavailable ? 'ban-outline' : 'cart-outline'}
+              size={16}
+              color={THEME.colors.white}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.addToCartText}>
+              {isUnavailable
+                ? t('product.unavailable', 'Unavailable')
+                : t('product.addToCart', 'Add to Cart')}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

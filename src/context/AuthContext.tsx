@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
-import { setUnauthorizedHandler } from '../services/api';
+import { setUnauthorizedHandler, setAuthToken } from '../services/api';
 import { clearChatTimestampOnLogout } from '../services/aiService';
 import { getCurrentUserProfile } from '../services/userService';
 interface AuthContextType {
@@ -74,6 +74,7 @@ export const AuthProvider: React.FC<{
         storedToken ? 'YES' : 'NO',
       );
       if (storedUser && storedToken) {
+        setAuthToken(storedToken, false);
         const parsedUser =
           JSON.parse(storedUser);
         setUser(parsedUser);
@@ -130,6 +131,7 @@ export const AuthProvider: React.FC<{
         JSON.stringify(userData),
       );
       if (token) {
+        setAuthToken(token, true);
         await AsyncStorage.setItem(
           'userToken',
           token,
@@ -167,6 +169,7 @@ export const AuthProvider: React.FC<{
   };
   const logout = async () => {
     try {
+      setAuthToken(null);
       await clearChatTimestampOnLogout(user?.userId);
       await AsyncStorage.removeItem(
         'userData',

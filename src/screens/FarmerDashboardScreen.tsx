@@ -110,7 +110,6 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
         currentFarmerId ? getFarmerById(currentFarmerId).catch(() => null) : Promise.resolve(null),
         currentFarmerId ? getProductsByFarmer(currentFarmerId).catch(() => []) : Promise.resolve([]),
       ]);
-      fetchFarmShorts();
 
       if (farmerDetails) {
         if (farmerDetails.status === 'INACTIVE' && farmerDetails.blockReason) {

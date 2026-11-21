@@ -263,28 +263,46 @@ const MyProductsScreen = ({ navigation, route }: any) => {
             </View>
 
             <View style={styles.categoryRatingRow}>
-              <View style={styles.categoryPill}>
-                <Text
-                  style={styles.categoryText}
-                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
-                >
-                  {formatCategory(product.category, t)}
-                </Text>
-              </View>
-
-              {product.averageRating !== undefined &&
-              product.averageRating !== null &&
-              product.reviewCount ? (
-                <View style={styles.ratingPill}>
-                  <StarIcon size={10} color={FARMER_THEME.colors.star} filled />
+              <View style={styles.categoryLeftGroup}>
+                <View style={styles.categoryPill}>
                   <Text
-                    style={styles.ratingPillText}
+                    style={styles.categoryText}
+                    numberOfLines={1}
                     maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                   >
-                    {product.averageRating.toFixed(1)} ({product.reviewCount})
+                    {formatCategory(product.category, t)}
                   </Text>
                 </View>
-              ) : null}
+
+                {product.averageRating !== undefined &&
+                product.averageRating !== null &&
+                product.reviewCount ? (
+                  <View style={styles.ratingPill}>
+                    <StarIcon size={10} color={FARMER_THEME.colors.star} filled />
+                    <Text
+                      style={styles.ratingPillText}
+                      maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                    >
+                      {product.averageRating.toFixed(1)} ({product.reviewCount})
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <TouchableOpacity
+                style={styles.reviewsPillBtn}
+                onPress={() => navigation?.navigate('FarmerProductReviews', { product })}
+                activeOpacity={0.75}
+              >
+                <StarIcon size={11} color={FARMER_THEME.colors.star} filled />
+                <Text
+                  style={styles.reviewsPillText}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                >
+                  {t('product.reviews', 'Reviews')}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* Price and Stock Row */}
@@ -351,23 +369,10 @@ const MyProductsScreen = ({ navigation, route }: any) => {
             <EditIcon size={13} color={FARMER_THEME.colors.primaryGreen} strokeWidth={2} />
             <Text
               style={styles.actionBtnText}
+              numberOfLines={1}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
               {t('common.edit', 'Edit')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => navigation?.navigate('FarmerProductReviews', { product })}
-            activeOpacity={0.75}
-          >
-            <StarIcon size={12} color={FARMER_THEME.colors.star} filled />
-            <Text
-              style={styles.actionBtnText}
-              maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
-            >
-              {t('product.reviews', 'Reviews')}
             </Text>
           </TouchableOpacity>
 
@@ -379,6 +384,7 @@ const MyProductsScreen = ({ navigation, route }: any) => {
             <TrashIcon size={13} color={FARMER_THEME.colors.error} strokeWidth={2} />
             <Text
               style={[styles.actionBtnText, { color: FARMER_THEME.colors.error }]}
+              numberOfLines={1}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
               {t('common.delete', 'Delete')}
@@ -660,8 +666,32 @@ const styles = StyleSheet.create({
   categoryRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+    marginTop: 4,
+  },
+  categoryLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
     gap: 5,
-    marginTop: 2,
+  },
+  reviewsPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9EC',
+    borderWidth: 1,
+    borderColor: '#F3DC9B',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+    flexShrink: 0,
+  },
+  reviewsPillText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 10,
+    color: FARMER_THEME.colors.headings,
   },
   categoryPill: {
     backgroundColor: FARMER_THEME.colors.inputBg,
@@ -731,19 +761,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 5,
+    gap: 8,
   },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 5.5,
+    paddingVertical: 7,
+    paddingHorizontal: 6,
     borderRadius: 10,
     backgroundColor: FARMER_THEME.colors.inputBg,
     borderWidth: 1,
     borderColor: FARMER_THEME.colors.inputBorder,
-    gap: 3,
+    gap: 4,
   },
   toggleBtn: {
     backgroundColor: '#FFFFFF',

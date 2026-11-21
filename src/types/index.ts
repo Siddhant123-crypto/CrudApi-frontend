@@ -116,6 +116,10 @@ export interface WishlistResponse {
   productVideo?: string;
   averageRating?: number;
   reviewCount?: number;
+  farmerActive?: boolean;
+  farmerInactiveReason?: string;
+  productActive?: boolean;
+  available?: boolean;
   createdAt: string;
 }
 export interface WishlistCheckResponse {

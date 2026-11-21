@@ -1,0 +1,28 @@
+diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/services/UIManagerModuleWrapper.java b/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/services/UIManagerModuleWrapper.java
+index 2d46c59..b4eb836 100644
+--- a/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/services/UIManagerModuleWrapper.java
++++ b/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/services/UIManagerModuleWrapper.java
+@@ -262,13 +262,21 @@ public class UIManagerModuleWrapper implements
+   }
+ 
+   public long getJavaScriptContextRef() {
+-    return mReactContext.getJavaScriptContextHolder().get();
++    // Farm2Home patch: in bridgeless (New Architecture) mode the JavaScriptContextHolder is null
++    // while the initial JS bundle is still being evaluated. Return 0 ("not available") instead of
++    // throwing a NullPointerException inside a JSI HostFunction.
++    com.facebook.react.bridge.JavaScriptContextHolder holder = mReactContext.getJavaScriptContextHolder();
++    return holder != null ? holder.get() : 0;
+   }
+ 
+   @androidx.annotation.OptIn(markerClass = FrameworkAPI.class)
+   @SuppressWarnings("deprecation")
+   public CallInvokerHolderImpl getJSCallInvokerHolder() {
+-    return (CallInvokerHolderImpl) mReactContext.getCatalystInstance().getJSCallInvokerHolder();
++    try {
++      return (CallInvokerHolderImpl) mReactContext.getCatalystInstance().getJSCallInvokerHolder();
++    } catch (Throwable e) {
++      return null;
++    }
+   }
+ 
+   @Override
