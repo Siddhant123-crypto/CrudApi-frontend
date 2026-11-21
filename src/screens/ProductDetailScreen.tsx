@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useRef, useLayoutEffect} from 'react';
+import React, { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -19,18 +19,18 @@ import {
 } from 'react-native';
 import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Rect } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useAuth} from '../context/AuthContext';
-import {getProductImageUrl, getProductById, getProductVideoUrl} from '../services/productService';
-import {getProductReviews} from '../services/reviewService';
-import {StarRating} from '../components/reviews/StarRating';
-import {ReviewCard} from '../components/reviews/ReviewCard';
-import {MediaViewerModal} from '../components/reviews/MediaViewerModal';
-import {Review} from '../types';
-import {formatAddedTime} from '../utils/dateUtils';
-import {useFocusEffect} from '@react-navigation/native';
+import { useAuth } from '../context/AuthContext';
+import { getProductImageUrl, getProductById, getProductVideoUrl } from '../services/productService';
+import { getProductReviews } from '../services/reviewService';
+import { StarRating } from '../components/reviews/StarRating';
+import { ReviewCard } from '../components/reviews/ReviewCard';
+import { MediaViewerModal } from '../components/reviews/MediaViewerModal';
+import { Review } from '../types';
+import { formatAddedTime } from '../utils/dateUtils';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import api, {BASE_URL} from '../services/api';
+import api, { BASE_URL } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { THEME } from '../constants/theme';
@@ -54,7 +54,7 @@ const formatDisplayPrice = (val: any) => {
   return num.toFixed(2).replace(/\.00$/, '').replace(/(\.[0-9])0$/, '$1');
 };
 
-const {width} = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const PRODUCT_CARD_WIDTH = width * 0.4;
 const PRICE_PRESETS = [
   { label: 'All', min: 0, max: 99999 },
@@ -126,11 +126,11 @@ const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   );
 };
 
-const ProductDetailScreen = ({route, navigation}: any) => {
+const ProductDetailScreen = ({ route, navigation }: any) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const {product} = route.params;
-  const {user} = useAuth();
+  const { product } = route.params;
+  const { user } = useAuth();
   const { addToCart, cart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(0);
@@ -209,8 +209,8 @@ const ProductDetailScreen = ({route, navigation}: any) => {
   const imageUrl = productData.productPhoto
     ? getProductImageUrl(productData.productPhoto)
     : productData.imageUrl
-    ? getProductImageUrl(productData.imageUrl)
-    : null;
+      ? getProductImageUrl(productData.imageUrl)
+      : null;
 
   React.useEffect(() => {
     setImageError(false);
@@ -230,9 +230,9 @@ const ProductDetailScreen = ({route, navigation}: any) => {
         t('product.tempUnavailable', 'Product Unavailable'),
         productData.farmerInactiveReason
           ? t('product.farmerInactiveNoteReason', {
-              reason: productData.farmerInactiveReason,
-              defaultValue: `This farmer is currently inactive (${productData.farmerInactiveReason}). This product cannot be added to your cart.`
-            })
+            reason: productData.farmerInactiveReason,
+            defaultValue: `This farmer is currently inactive (${productData.farmerInactiveReason}). This product cannot be added to your cart.`
+          })
           : t('product.farmerInactiveNote', 'This farmer is temporarily inactive. This product cannot be added to your cart.')
       );
       return;
@@ -271,9 +271,9 @@ const ProductDetailScreen = ({route, navigation}: any) => {
         t('product.tempUnavailable', 'Product Unavailable'),
         productData.farmerInactiveReason
           ? t('product.farmerInactiveNoteReason', {
-              reason: productData.farmerInactiveReason,
-              defaultValue: `This farmer is currently inactive (${productData.farmerInactiveReason}). This product cannot be ordered.`
-            })
+            reason: productData.farmerInactiveReason,
+            defaultValue: `This farmer is currently inactive (${productData.farmerInactiveReason}). This product cannot be ordered.`
+          })
           : t('product.farmerInactiveNote', 'This farmer is temporarily inactive. This product cannot be ordered.')
       );
       return;
@@ -303,8 +303,14 @@ const ProductDetailScreen = ({route, navigation}: any) => {
       navigation.navigate('Checkout', { orderItems, totalAmount });
     }, 120);
   };
-  const isCustomer = user?.role === 'USER';
-  const isFarmer = user?.role === 'FARMER';
+  const normalizedRole = (user?.role || '').toUpperCase();
+  const isCustomer =
+    normalizedRole === 'USER' ||
+    normalizedRole === 'CUSTOMER' ||
+    normalizedRole === 'ROLE_USER' ||
+    normalizedRole === 'ROLE_CUSTOMER';
+  const isFarmer =
+    normalizedRole === 'FARMER' || normalizedRole === 'ROLE_FARMER';
   const availableCategories = [
     'All',
     'Vegetable',
@@ -354,7 +360,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           </View>
         }
       />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: isCustomer ? 130 : 60}}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isCustomer ? 130 : 60 }}>
         {/* Large Peach Radial Hero Image Card */}
         <View style={styles.heroCardWrapper}>
           <Card style={styles.heroCard} bordered={false}>
@@ -371,17 +377,17 @@ const ProductDetailScreen = ({route, navigation}: any) => {
 
             {imageUrl && !imageError ? (
               <Image
-                source={{uri: imageUrl}}
+                source={{ uri: imageUrl }}
                 style={styles.heroImage}
                 resizeMode="contain"
                 onError={() => setImageError(true)}
               />
             ) : (
-              <Text style={{fontSize: 60}}>🌱</Text>
+              <Text style={{ fontSize: 60 }}>🌱</Text>
             )}
 
             <View style={styles.organicTagOverlay}>
-              <Ionicons name="leaf" size={13} color={THEME.colors.success} style={{marginRight: 4}} />
+              <Ionicons name="leaf" size={13} color={THEME.colors.success} style={{ marginRight: 4 }} />
               <Text style={styles.organicTagText}>{t('product.freshAndOrganic', '100% Fresh & Organic')}</Text>
             </View>
           </Card>
@@ -391,7 +397,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           <Text style={styles.productName}>{productData.productName}</Text>
           <View style={styles.authorRow}>
             <Text style={styles.authorText}>by {productData.farmerName || t('product.farmer', 'Farmer')}</Text>
-            <Ionicons name="checkmark-circle" size={16} color={THEME.colors.success} style={{marginLeft: 4}} />
+            <Ionicons name="checkmark-circle" size={16} color={THEME.colors.success} style={{ marginLeft: 4 }} />
           </View>
           {isFarmerInactive && (
             <View style={styles.inactiveFarmerWarningBanner}>
@@ -401,9 +407,9 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                 <Text style={styles.inactiveFarmerWarningText}>
                   {productData.farmerInactiveReason
                     ? t('product.farmerInactiveNoteReason', {
-                        reason: productData.farmerInactiveReason,
-                        defaultValue: `Farmer note: "${productData.farmerInactiveReason}". This product is temporarily unavailable for purchase.`
-                      })
+                      reason: productData.farmerInactiveReason,
+                      defaultValue: `Farmer note: "${productData.farmerInactiveReason}". This product is temporarily unavailable for purchase.`
+                    })
                     : t('product.farmerInactiveNote', 'This farmer is temporarily inactive. This product cannot be purchased right now.')}
                 </Text>
               </View>
@@ -423,7 +429,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           </View>
 
           <View style={styles.priceStatusRow}>
-            <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
               <Text style={styles.price}>
                 {formatCurrency(productData.price)}
               </Text>
@@ -434,7 +440,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               variant={productData.isActive ? 'success' : 'neutral'}
             />
           </View>
-          {}
+          { }
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsContainer}>
             <View style={styles.tag}>
               <Ionicons name="nutrition-outline" size={14} color={THEME.colors.accentDeep} />
@@ -449,7 +455,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               <Text style={styles.tagText}>{t('product.pesticideFree', 'Pesticide Free')}</Text>
             </View>
           </ScrollView>
-          {}
+          { }
           <Text style={styles.sectionTitle}>{t('product.farmerDetails', 'Farmer Details')}</Text>
           <View style={styles.card}>
             <View style={styles.farmerCardContent}>
@@ -457,9 +463,9 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                 <Ionicons name="person" size={32} color="#9E9E9E" />
               </View>
               <View style={styles.farmerInfo}>
-                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Text style={styles.farmerName}>{productData.farmerName || t('product.farmer', 'Farmer Name')}</Text>
-                  <Ionicons name="checkmark-circle" size={16} color="#4CAF50" style={{marginLeft: 4}} />
+                  <Ionicons name="checkmark-circle" size={16} color="#4CAF50" style={{ marginLeft: 4 }} />
                 </View>
                 <Text style={styles.farmerSubtitle}>{t('product.experiencedFarmer', 'Experienced Farmer')}</Text>
                 <View style={styles.iconRow}>
@@ -473,7 +479,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </View>
             </View>
           </View>
-          {}
+          { }
           <Text style={styles.sectionTitle}>{t('product.details', 'Product Details')}</Text>
           <View style={styles.card}>
             <View style={styles.detailRow}>
@@ -517,30 +523,30 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                 <Text style={styles.detailValue}>{formatAddedTime(productData.createdOn, productData.addedTime)}</Text>
               </View>
             )}
-            <View style={[styles.detailRow, {borderBottomWidth: 0, alignItems: 'flex-start', marginTop: 8}]}>
+            <View style={[styles.detailRow, { borderBottomWidth: 0, alignItems: 'flex-start', marginTop: 8 }]}>
               <View style={styles.detailLabelContainer}>
                 <Ionicons name="document-text-outline" size={16} color="#1E3A8A" />
                 <Text style={styles.detailLabel}>{t('product.description', 'Description')}</Text>
               </View>
-              <Text style={[styles.detailValue, {flex: 1, textAlign: 'right', lineHeight: 20}]}>
+              <Text style={[styles.detailValue, { flex: 1, textAlign: 'right', lineHeight: 20 }]}>
                 {productData.description || 'Fresh and naturally ripened. Rich in nutrients and great for health.'}
               </Text>
             </View>
           </View>
-          {}
+          { }
           <Text style={styles.sectionTitle}>{t('product.farmLocation', 'Location')}</Text>
           <View style={styles.locationCard}>
             <View style={styles.locationInfo}>
               <View style={styles.locationPinBox}>
                 <Ionicons name="location" size={20} color={THEME.colors.accentDeep} />
               </View>
-              <View style={{marginLeft: 12, flex: 1}}>
+              <View style={{ marginLeft: 12, flex: 1 }}>
                 <Text style={styles.locationCity}>{productData.farmerAddress?.split(',')[0] || 'Nashik'}, Nashik</Text>
                 <Text style={styles.locationSub}>{productData.farmerAddress?.split(',')[1]?.trim() || productData.farmerVillage || productData.farmerAddress || 'Nashik'}</Text>
               </View>
             </View>
           </View>
-          {}
+          { }
           <Text style={styles.sectionTitle}>{t('product.customerMedia', 'Customer Photos & Videos')}</Text>
           <View style={styles.reviewsSection}>
             {reviewsLoading ? (
@@ -590,11 +596,11 @@ const ProductDetailScreen = ({route, navigation}: any) => {
               </View>
             )}
           </View>
-          {}
+          { }
           {similarProducts.length > 0 && (
             <View style={styles.similarSection}>
               <Text style={styles.sectionTitle}>{t('product.exploreMore', 'Explore More Products')}</Text>
-              {}
+              { }
               <View style={styles.searchWrapper}>
                 <View style={[styles.searchContainer, searchFocused && styles.searchContainerFocused]}>
                   <View style={styles.searchIconCircle}>
@@ -624,10 +630,10 @@ const ProductDetailScreen = ({route, navigation}: any) => {
                   <Text style={styles.categoryFilterBtnText} numberOfLines={1}>
                     {selectedCategoryFilter === 'All' ? t('common.all', 'All') : formatCategory(selectedCategoryFilter, t)}
                   </Text>
-                  <Ionicons name="chevron-down" size={14} color={THEME.colors.accentDeep} style={{marginLeft: 2}} />
+                  <Ionicons name="chevron-down" size={14} color={THEME.colors.accentDeep} style={{ marginLeft: 2 }} />
                 </TouchableOpacity>
               </View>
-              {}
+              { }
               <View style={styles.priceFilterWrapper}>
                 <View style={styles.priceFilterHeader}>
                   <Ionicons name="pricetag" size={15} color={THEME.colors.accentDeep} />
@@ -677,7 +683,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           )}
         </View>
       </ScrollView>
-      {}
+      { }
       {isCustomer && (
         <View style={[styles.themedStickyBar, { paddingBottom: Math.max(insets.bottom + 10, 26) }]}>
           {isFarmerInactive ? (
@@ -740,13 +746,13 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           <View style={styles.farmerButtonsRow}>
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => navigation.navigate('AddProduct', {product: productData})}
+              onPress={() => navigation.navigate('AddProduct', { product: productData })}
             >
-              <Ionicons name="pencil" size={18} color="#2E7D32" style={{marginRight: 8}} />
+              <Ionicons name="pencil" size={18} color="#2E7D32" style={{ marginRight: 8 }} />
               <Text style={styles.editButtonText}>{t('farmer.editProduct', 'Edit Product')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.deactivateButton}>
-              <Ionicons name="power" size={18} color="#FFF" style={{marginRight: 8}} />
+              <Ionicons name="power" size={18} color="#FFF" style={{ marginRight: 8 }} />
               <Text style={styles.deactivateButtonText}>{t('farmer.deactivateAccount', 'Deactivate')}</Text>
             </TouchableOpacity>
           </View>
@@ -768,7 +774,7 @@ const ProductDetailScreen = ({route, navigation}: any) => {
           setSelectedReview(null);
         }}
       />
-      {}
+      { }
       <Modal
         visible={categoryDropdownVisible}
         transparent={true}
@@ -1021,7 +1027,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: THEME.colors.cardBorder,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,

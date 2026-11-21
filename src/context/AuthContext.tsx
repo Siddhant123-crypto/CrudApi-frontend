@@ -75,8 +75,12 @@ export const AuthProvider: React.FC<{
       );
       if (storedUser && storedToken) {
         setAuthToken(storedToken, false);
-        const parsedUser =
-          JSON.parse(storedUser);
+        const rawParsed = JSON.parse(storedUser);
+        const normalizedRole =
+          typeof rawParsed?.role === 'string' && rawParsed.role.toUpperCase() === 'CUSTOMER'
+            ? 'USER'
+            : rawParsed?.role;
+        const parsedUser = { ...rawParsed, role: normalizedRole };
         setUser(parsedUser);
         console.log(
           'Stored login restored successfully',
@@ -86,7 +90,8 @@ export const AuthProvider: React.FC<{
         getCurrentUserProfile().then(meData => {
           const profile = meData?.response || meData;
           if (profile && (profile.profilePhoto !== parsedUser.profilePhoto || profile.name !== parsedUser.name || profile.farmerId !== parsedUser.farmerId)) {
-            const merged = { ...parsedUser, ...profile };
+            const { role: _ignoredRole, ...safeProfile } = profile;
+            const merged = { ...parsedUser, ...safeProfile, role: parsedUser.role };
             setUser(merged);
             AsyncStorage.setItem('userData', JSON.stringify(merged)).catch(() => {});
           }
