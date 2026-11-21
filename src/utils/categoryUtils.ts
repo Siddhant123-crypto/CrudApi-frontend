@@ -14,6 +14,15 @@ export const formatCategory = (
   if (lower.includes('fruit')) {
     return t('categories.fruits', 'Fruits');
   }
+  if (lower.includes('wild') || lower.includes('forest')) {
+    return t('categories.wildForestVegetable', 'Wild Forest Vegetable');
+  }
+  if (lower.includes('root')) {
+    return t('categories.rootVegetable', 'Root Vegetable');
+  }
+  if (lower.includes('leafy')) {
+    return t('categories.leafyVegetable', 'Leafy Vegetable');
+  }
   if (lower.includes('veg')) {
     return t('categories.vegetables', 'Vegetables');
   }
