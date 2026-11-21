@@ -294,7 +294,77 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
             />
           </View>
 
-          {/* 5.5) MY PRODUCTS SECTION */}
+          {/* 5.5) FARMER SHORTS SECTION */}
+          {loadingShorts ? (
+            <>
+              <FarmerSectionHeader
+                title={t('farmer.farmerShorts', 'Farmer shorts')}
+                linkText={t('common.viewAll', 'Watch all')}
+                onLinkPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <FarmerShortsSkeleton />
+            </>
+          ) : farmShorts.length > 0 ? (
+            <>
+              <FarmerSectionHeader
+                title={t('farmer.farmerShorts', 'Farmer shorts')}
+                linkText={t('common.viewAll', 'Watch all')}
+                onLinkPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.bleedScroll}
+                contentContainerStyle={styles.shortsContent}
+              >
+                {farmShorts.map((shortItem, idx) => (
+                  <FarmerShortCard
+                    key={`farm-short-${shortItem.id || idx}`}
+                    id={shortItem.id}
+                    handle={shortItem.farmerName || 'Farmer'}
+                    farmName={shortItem.farmName}
+                    videoUrl={shortItem.playbackUrl}
+                    thumbnailUrl={shortItem.thumbnailUrl}
+                    index={idx}
+                    onPress={() =>
+                      navigation.navigate('FarmerShorts', {
+                        initialIndex: idx,
+                        initialShorts: farmShorts,
+                      })
+                    }
+                  />
+                ))}
+              </ScrollView>
+            </>
+          ) : (
+            <>
+              <FarmerSectionHeader
+                title={t('farmer.farmerShorts', 'Farmer shorts')}
+                linkText={t('common.viewAll', 'Watch all')}
+                onLinkPress={() => navigation.navigate('FarmerShorts')}
+              />
+              <TouchableOpacity
+                style={styles.emptyShortsTeaser}
+                onPress={() => navigation.navigate('FarmerShorts')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.emptyShortsIconBox}>
+                  <Ionicons name="videocam" size={22} color="#17663F" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.emptyShortsTitle}>
+                    {t('shorts.shareFarmShorts', 'Explore Farm Shorts')}
+                  </Text>
+                  <Text style={styles.emptyShortsDesc}>
+                    {t('shorts.shareFarmShortsDesc', 'Watch daily farm videos & stories')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#17663F" />
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* 6) MY PRODUCTS SECTION */}
           <FarmerSectionHeader
             title={t('farmer.myProducts', 'My products')}
             linkText={products.length > 0 ? t('common.viewAll', 'View all') : undefined}
@@ -386,76 +456,6 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
                 );
               })}
             </ScrollView>
-          )}
-
-          {/* 6) FARMER SHORTS SECTION */}
-          {loadingShorts ? (
-            <>
-              <FarmerSectionHeader
-                title={t('farmer.farmerShorts', 'Farmer shorts')}
-                linkText={t('common.viewAll', 'Watch all')}
-                onLinkPress={() => navigation.navigate('FarmerShorts')}
-              />
-              <FarmerShortsSkeleton />
-            </>
-          ) : farmShorts.length > 0 ? (
-            <>
-              <FarmerSectionHeader
-                title={t('farmer.farmerShorts', 'Farmer shorts')}
-                linkText={t('common.viewAll', 'Watch all')}
-                onLinkPress={() => navigation.navigate('FarmerShorts')}
-              />
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.bleedScroll}
-                contentContainerStyle={styles.shortsContent}
-              >
-                {farmShorts.map((shortItem, idx) => (
-                  <FarmerShortCard
-                    key={`farm-short-${shortItem.id || idx}`}
-                    id={shortItem.id}
-                    handle={shortItem.farmerName || 'Farmer'}
-                    farmName={shortItem.farmName}
-                    videoUrl={shortItem.playbackUrl}
-                    thumbnailUrl={shortItem.thumbnailUrl}
-                    index={idx}
-                    onPress={() =>
-                      navigation.navigate('FarmerShorts', {
-                        initialIndex: idx,
-                        initialShorts: farmShorts,
-                      })
-                    }
-                  />
-                ))}
-              </ScrollView>
-            </>
-          ) : (
-            <>
-              <FarmerSectionHeader
-                title={t('farmer.farmerShorts', 'Farmer shorts')}
-                linkText={t('common.viewAll', 'Watch all')}
-                onLinkPress={() => navigation.navigate('FarmerShorts')}
-              />
-              <TouchableOpacity
-                style={styles.emptyShortsTeaser}
-                onPress={() => navigation.navigate('FarmerShorts')}
-                activeOpacity={0.85}
-              >
-                <View style={styles.emptyShortsIconBox}>
-                  <Ionicons name="videocam" size={22} color="#17663F" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.emptyShortsTitle}>
-                    {t('shorts.shareFarmShorts', 'Explore Farm Shorts')}
-                  </Text>
-                  <Text style={styles.emptyShortsDesc}>
-                    {t('shorts.shareFarmShortsDesc', 'Watch daily farm videos & stories')}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#17663F" />
-              </TouchableOpacity>
-            </>
           )}
 
           {/* 7) RECENT ORDERS SECTION */}
