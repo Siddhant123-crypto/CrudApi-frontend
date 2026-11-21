@@ -89,39 +89,40 @@ const ProfileScreen = () => {
     try {
       const meData = await getCurrentUserProfile().catch(() => null);
       const currentProfile = meData?.response || meData;
-      if (currentProfile) {
-        setProfileData(currentProfile);
-        updateUserData({
-          profilePhoto: currentProfile.profilePhoto,
-          name: currentProfile.name,
-          farmerId: currentProfile.farmerId || user?.farmerId,
-          userId: currentProfile.userId || user?.userId,
-        });
-        return;
+
+      const resolvedFarmerId =
+        currentProfile?.farmerId || user?.farmerId || (user as any)?.id;
+      const resolvedUserId =
+        currentProfile?.userId || user?.userId || (user as any)?.id;
+
+      let fullProfile: any = null;
+      if (isFarmer && resolvedFarmerId) {
+        const data = await getFarmerById(resolvedFarmerId).catch(() => null);
+        fullProfile = data?.response || data;
+      } else if (resolvedUserId) {
+        const data = await getUserById(resolvedUserId).catch(() => null);
+        fullProfile = data?.response || data;
       }
 
-      if (user?.role === 'FARMER' && (user?.farmerId || (user as any)?.id)) {
-        const fId = user?.farmerId || (user as any)?.id;
-        const data = await getFarmerById(fId);
-        const profile = data?.response || data;
-        setProfileData(profile);
-        if (profile) {
-          updateUserData({
-            profilePhoto: profile.profilePhoto,
-            name: profile.name,
-          });
-        }
-      } else if (user?.userId || (user as any)?.id) {
-        const uId = user?.userId || (user as any)?.id;
-        const data = await getUserById(uId);
-        const profile = data?.response || data;
-        setProfileData(profile);
-        if (profile) {
-          updateUserData({
-            profilePhoto: profile.profilePhoto,
-            name: profile.name,
-          });
-        }
+      const mergedProfile = {
+        ...(currentProfile || {}),
+        ...(fullProfile || {}),
+        profilePhoto:
+          fullProfile?.profilePhoto || currentProfile?.profilePhoto || user?.profilePhoto,
+        name: fullProfile?.name || currentProfile?.name || user?.name,
+        email: fullProfile?.email || currentProfile?.email || user?.email,
+        farmerId: resolvedFarmerId,
+        userId: resolvedUserId,
+      };
+
+      if (fullProfile || currentProfile) {
+        setProfileData(mergedProfile);
+        updateUserData({
+          profilePhoto: mergedProfile.profilePhoto,
+          name: mergedProfile.name,
+          farmerId: mergedProfile.farmerId || user?.farmerId,
+          userId: mergedProfile.userId || user?.userId,
+        });
       }
     } catch (error) {
       console.log('Error fetching profile:', error);
@@ -243,28 +244,33 @@ const ProfileScreen = () => {
         address: address.trim(),
         postalCode: postalCode.trim(),
         state: stateVal.trim(),
-        email: profileData?.email,
+        email: profileData?.email || user?.email,
         status,
         inactiveReason: status === 'INACTIVE' ? inactiveReason : '',
         latitude: profileData?.latitude !== undefined ? profileData.latitude : null,
         longitude: profileData?.longitude !== undefined ? profileData.longitude : null,
       };
-      if (isFarmer && user?.farmerId) {
-        await updateFarmer(user.farmerId, updatedData);
+      const targetFarmerId = user?.farmerId || profileData?.farmerId || (user as any)?.id;
+      const targetUserId = user?.userId || profileData?.userId || (user as any)?.id;
+
+      if (isFarmer && targetFarmerId) {
+        await updateFarmer(targetFarmerId, updatedData);
         if (selectedPhotoUri) {
-          await uploadFarmerPhoto(user.farmerId, selectedPhotoUri);
+          await uploadFarmerPhoto(targetFarmerId, selectedPhotoUri);
         }
+        setProfileData((prev: any) => ({ ...(prev || {}), ...updatedData }));
         setSuccessModalConfig({
           title: t('profile.updatedTitle', 'Profile Updated!'),
           message: t('profile.farmSavedDesc', 'Your farm profile and details have been saved successfully.'),
           synchronizedOrdersCount: 0,
         });
         setSuccessModalVisible(true);
-      } else if (user?.userId) {
-        const updateRes: any = await updateUser(user.userId, updatedData);
+      } else if (targetUserId) {
+        const updateRes: any = await updateUser(targetUserId, updatedData);
         if (selectedPhotoUri) {
-          await uploadUserPhoto(user.userId, selectedPhotoUri);
+          await uploadUserPhoto(targetUserId, selectedPhotoUri);
         }
+        setProfileData((prev: any) => ({ ...(prev || {}), ...updatedData }));
         const syncCount = updateRes?.synchronizedOrdersCount || 0;
         setSuccessModalConfig({
           title: t('profile.updatedTitle', 'Profile Updated!'),
@@ -277,7 +283,7 @@ const ProfileScreen = () => {
       }
       setIsEditing(false);
       setSelectedPhotoUri(null);
-      fetchProfile();
+      await fetchProfile();
     } catch (error: any) {
       console.log('Error updating profile:', error);
       Alert.alert(t('common.error'), error.response?.data?.message || t('profile.failedToUpdate'));
