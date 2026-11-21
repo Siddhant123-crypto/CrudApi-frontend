@@ -72,8 +72,8 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
           {/* Order Summary Card */}
           <Card style={styles.detailsCard}>
             <View style={styles.detailRow}>
-              <Text style={styles.label}>{t('orders.orderNumber', 'Order Number')}</Text>
-              <Text style={styles.value}>
+              <Text style={styles.label}>{t('orders.orderId', 'Order Number')}</Text>
+              <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>
                 {orderNumber ? orderNumber.substring(0, 16) : 'N/A'}
               </Text>
             </View>
@@ -82,14 +82,16 @@ const OrderSuccessScreen = ({route, navigation}: any) => {
 
             <View style={styles.detailRow}>
               <Text style={styles.label}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
-              <Text style={styles.value}>{t('checkout.cashOnDelivery', 'Cash on Delivery')}</Text>
+              <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>
+                {t('checkout.cashOnDelivery', 'Cash on Delivery').replace(/\s*\(COD\)/i, '').trim()}
+              </Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.detailRow}>
               <Text style={styles.label}>{t('cart.totalAmount', 'Total Amount')}</Text>
-              <Text style={styles.amountValue}>
+              <Text style={styles.amountValue} numberOfLines={1}>
                 ₹{totalAmount?.toFixed(2) || '0.00'}
               </Text>
             </View>
@@ -169,6 +171,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
+    gap: 12,
   },
   divider: {
     height: 1,
@@ -178,16 +181,21 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontFamily: THEME.fonts.medium,
     color: THEME.colors.textSecondary,
+    flexShrink: 0,
   },
   value: {
+    flex: 1,
     fontSize: 14.5,
     fontFamily: THEME.fonts.bold,
     color: THEME.colors.textHeading,
+    textAlign: 'right',
   },
   amountValue: {
+    flex: 1,
     fontSize: 18,
     fontFamily: THEME.fonts.serif,
     color: THEME.colors.accentDeep,
+    textAlign: 'right',
   },
   bottomActions: {
     width: '100%',

@@ -49,29 +49,70 @@ const CustomerOrdersScreen = ({navigation}: any) => {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('Ongoing');
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const inFlightRef = React.useRef(false);
+  const lastFetchAtRef = React.useRef(0);
   const tabs = [
     { key: 'Ongoing', label: t('orders.tabOngoing', 'Ongoing') },
     { key: 'Delivered', label: t('orders.statusDelivered', 'Delivered') },
     { key: 'Cancelled', label: t('orders.statusCancelled', 'Cancelled') },
   ];
 
-  const fetchOrders = async (isRefresh = false) => {
+  const fetchOrders = async (isRefresh = false): Promise<any[]> => {
+    if (inFlightRef.current) return [];
+    const now = Date.now();
+    if (!isRefresh && now - lastFetchAtRef.current < 2500 && orders.length > 0) {
+      return [];
+    }
+    inFlightRef.current = true;
     if (!isRefresh) setLoading(true);
+    setFetchError(null);
     try {
-      const [activeResponse, historyResponse] = await Promise.all([
-        api.get('/order/customer/my-orders'),
-        api.get('/order/customer/order-history')
-      ]);
-      const combined = [...activeResponse.data, ...historyResponse.data];
+      // Fetch sequentially with independent fallback so active orders still load even if history hits a transient limit
+      let activeData: any[] | null = null;
+      let historyData: any[] | null = null;
+      let lastErr: any = null;
+
+      try {
+        const activeResponse = await api.get('/order/customer/my-orders');
+        activeData = Array.isArray(activeResponse.data) ? activeResponse.data : [];
+      } catch (err) {
+        lastErr = err;
+        console.log('Error fetching active orders:', err);
+      }
+
+      try {
+        const historyResponse = await api.get('/order/customer/order-history');
+        historyData = Array.isArray(historyResponse.data) ? historyResponse.data : [];
+      } catch (err) {
+        lastErr = lastErr || err;
+        console.log('Error fetching order history:', err);
+      }
+
+      if (activeData === null && historyData === null) {
+        const status = lastErr?.response?.status;
+        setFetchError(
+          status === 429
+            ? t('errors.tooManyRequests', 'Server is busy right now. Please tap Retry in a moment.')
+            : t('errors.networkError', 'Unable to load orders. Please pull down or tap Retry.')
+        );
+        return [];
+      }
+
+      const combined = [...(activeData || []), ...(historyData || [])];
       combined.sort((a, b) => {
         const dateA = new Date(a.createdOn || 0).getTime();
         const dateB = new Date(b.createdOn || 0).getTime();
         return dateB - dateA;
       });
       setOrders(combined);
+      lastFetchAtRef.current = Date.now();
+      return activeData || [];
     } catch (error) {
       console.log('Error fetching orders:', error);
+      return [];
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
@@ -82,14 +123,10 @@ const CustomerOrdersScreen = ({navigation}: any) => {
       let isMounted = true;
 
       const fetchAndSync = async () => {
-        await fetchOrders();
-        // After loading, silently sync any unpaid online non-cancelled orders
-        if (!isMounted) return;
+        const allActive = await fetchOrders();
+        // Reuse the already-fetched active orders (no duplicate /my-orders request!)
+        if (!isMounted || allActive.length === 0) return;
         try {
-          const [activeRes] = await Promise.all([
-            api.get('/order/customer/my-orders'),
-          ]);
-          const allActive: any[] = activeRes.data || [];
           const eligible = allActive.filter(
             (o: any) =>
               o.paymentMethod === 'ONLINE' &&
@@ -98,12 +135,15 @@ const CustomerOrdersScreen = ({navigation}: any) => {
           );
           if (eligible.length > 0) {
             let anyChanged = false;
-            await Promise.all(
-              eligible.map(async (o: any) => {
+            for (const o of eligible) {
+              if (!isMounted) break;
+              try {
                 const res = await syncPayment(o.orderId);
                 if (res?.paid) anyChanged = true;
-              })
-            );
+              } catch {
+                // ignore individual sync failure
+              }
+            }
             if (anyChanged && isMounted) {
               fetchOrders(true);
             }
@@ -315,13 +355,23 @@ const CustomerOrdersScreen = ({navigation}: any) => {
             />
           }
           ListEmptyComponent={
-            <OrderEmptyState
-              variant="customer"
-              title={t('orders.noOrdersTitle', 'No orders yet')}
-              subtitle={t('orders.noOrdersSubtitle', "Looks like you don't have any orders here yet.")}
-              buttonTitle={t('cart.startShopping', 'Start Shopping')}
-              onButtonPress={() => navigation.navigate('Home')}
-            />
+            fetchError ? (
+              <OrderEmptyState
+                variant="customer"
+                title={t('common.error', 'Unable to Load Orders')}
+                subtitle={fetchError}
+                buttonTitle={t('common.retry', 'Retry')}
+                onButtonPress={() => fetchOrders(false)}
+              />
+            ) : (
+              <OrderEmptyState
+                variant="customer"
+                title={t('orders.noOrdersTitle', 'No orders yet')}
+                subtitle={t('orders.noOrdersSubtitle', "Looks like you don't have any orders here yet.")}
+                buttonTitle={t('cart.startShopping', 'Start Shopping')}
+                onButtonPress={() => navigation.navigate('Home')}
+              />
+            )
           }
         />
       )}

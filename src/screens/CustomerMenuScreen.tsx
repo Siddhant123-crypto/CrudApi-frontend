@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../services/api';
 import { getUserProfileImageUrl, getCurrentUserProfile } from '../services/userService';
@@ -33,9 +34,14 @@ const CustomerMenuScreen: React.FC = () => {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (!user) return;
+      let isMounted = true;
       const refreshProfile = async () => {
         try {
+          const token = await AsyncStorage.getItem('userToken');
+          if (!token || !isMounted) return;
           const meData = await getCurrentUserProfile().catch(() => null);
+          if (!isMounted) return;
           const profile = meData?.response || meData;
           if (profile && (profile.profilePhoto !== user?.profilePhoto || profile.name !== user?.name)) {
             updateUserData({
@@ -49,7 +55,10 @@ const CustomerMenuScreen: React.FC = () => {
         }
       };
       refreshProfile();
-    }, [user?.profilePhoto, user?.name])
+      return () => {
+        isMounted = false;
+      };
+    }, [user, user?.profilePhoto, user?.name])
   );
 
   const state = navigation.getState();

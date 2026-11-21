@@ -40,6 +40,8 @@ const FarmerMenuScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
+      if (!user) return;
+      let isMounted = true;
       if (user?.profilePhoto) {
         setProfilePhoto(user.profilePhoto);
       }
@@ -49,8 +51,13 @@ const FarmerMenuScreen: React.FC = () => {
 
       const loadLatestProfile = async () => {
         try {
+          const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+          const token = await AsyncStorage.getItem('userToken');
+          if (!token || !isMounted) return;
+
           // 1. Fetch current profile from /user/me
           const meData = await getCurrentUserProfile().catch(() => null);
+          if (!isMounted) return;
           const currentProfile = meData?.response || meData;
           if (currentProfile) {
             if (currentProfile.profilePhoto) {
@@ -68,10 +75,13 @@ const FarmerMenuScreen: React.FC = () => {
             return;
           }
 
-          // 2. Fallback to getFarmerById
+          // 2. Fallback to getFarmerById only if still authenticated
+          const stillHasToken = await AsyncStorage.getItem('userToken');
+          if (!stillHasToken || !isMounted) return;
           const fId = user?.farmerId || (user as any)?.id;
           if (fId) {
             const data = await getFarmerById(fId);
+            if (!isMounted) return;
             const profile = data?.response || data;
             if (profile) {
               if (profile.profilePhoto) {
@@ -91,12 +101,17 @@ const FarmerMenuScreen: React.FC = () => {
               }
             }
           }
-        } catch (e) {
-          console.log('Error refreshing menu profile photo:', e);
+        } catch (e: any) {
+          if (e?.response?.status !== 401) {
+            console.log('Error refreshing menu profile photo:', e);
+          }
         }
       };
 
       loadLatestProfile();
+      return () => {
+        isMounted = false;
+      };
     }, [user?.farmerId, user?.profilePhoto, user?.name])
   );
 

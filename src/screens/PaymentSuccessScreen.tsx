@@ -160,8 +160,8 @@ const PaymentSuccessScreen = ({ route, navigation }: any) => {
               <View style={styles.divider} />
 
               <View style={styles.detailRow}>
-                <Text style={styles.label}>{t('orders.orderNumber', 'Order Number')}</Text>
-                <Text style={styles.value}>
+                <Text style={styles.label}>{t('orders.orderId', 'Order Number')}</Text>
+                <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>
                   {resolvedOrderNumber ? resolvedOrderNumber.substring(0, 16) : 'N/A'}
                 </Text>
               </View>
@@ -170,14 +170,16 @@ const PaymentSuccessScreen = ({ route, navigation }: any) => {
 
               <View style={styles.detailRow}>
                 <Text style={styles.label}>{t('payments.paymentId', 'Payment ID')}</Text>
-                <Text style={styles.valueMonospace}>{shortenId(resolvedPaymentId)}</Text>
+                <Text style={styles.valueMonospace} numberOfLines={1}>{shortenId(resolvedPaymentId)}</Text>
               </View>
 
               <View style={styles.divider} />
 
               <View style={styles.detailRow}>
                 <Text style={styles.label}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
-                <Text style={styles.value}>{t('checkout.onlinePayment', 'Online Payment')}</Text>
+                <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>
+                  {t('checkout.onlinePayment', 'Online Payment').replace(/\s*\([^)]*\)/g, '').trim()}
+                </Text>
               </View>
 
               <View style={styles.divider} />
@@ -291,6 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 9,
+    gap: 12,
   },
   divider: {
     height: 1,
@@ -300,27 +303,36 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontFamily: THEME.fonts.medium,
     color: THEME.colors.textSecondary,
+    flexShrink: 0,
   },
   value: {
+    flex: 1,
     fontSize: 14,
     fontFamily: THEME.fonts.bold,
     color: THEME.colors.textHeading,
+    textAlign: 'right',
   },
   valueSmall: {
+    flex: 1,
     fontSize: 13,
     fontFamily: THEME.fonts.medium,
     color: THEME.colors.textSecondary,
+    textAlign: 'right',
   },
   valueMonospace: {
+    flex: 1,
     fontSize: 13,
     fontFamily: THEME.fonts.bold,
     color: THEME.colors.textHeading,
     letterSpacing: 0.4,
+    textAlign: 'right',
   },
   amountValue: {
+    flex: 1,
     fontSize: 18,
     fontFamily: THEME.fonts.serif,
     color: THEME.colors.accentDeep,
+    textAlign: 'right',
   },
   statusBadge: {
     flexDirection: 'row',

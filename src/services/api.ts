@@ -134,6 +134,9 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 90000,
+  headers: {
+    Accept: 'application/json',
+  },
 });
 
 // In-memory auth token cache to avoid AsyncStorage read races right after login
@@ -209,15 +212,26 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 1. Network retry handling: Retry before logging fatal error banners
+    // 1. Network / transient rate-limit (429 / 503) / transient login 500-502 retry handling
     const isNetworkError = error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED';
+    const isLoginEndpoint = Boolean(
+      config?.url?.includes('/newuser/login') ||
+      config?.url?.includes('/farmer/login') ||
+      config?.url?.includes('/user/login') ||
+      config?.url?.includes('/auth/google')
+    );
+    const isRateLimitOrUnavailable = status === 429 || status === 502 || status === 503 || (isLoginEndpoint && status === 500);
     const retryCount = config?._retryCount ?? 0;
-    if (isNetworkError && retryCount < MAX_RETRIES && config) {
+    if ((isNetworkError || isRateLimitOrUnavailable) && retryCount < MAX_RETRIES && config) {
       config._retryCount = retryCount + 1;
+      const retryAfterHeader = Number(error?.response?.headers?.['retry-after']);
+      const delayMs = isRateLimitOrUnavailable
+        ? Math.min(Math.max((Number.isFinite(retryAfterHeader) && retryAfterHeader > 0 ? retryAfterHeader * 1000 : 2000 * config._retryCount), 1500), 6000)
+        : RETRY_DELAY_MS * config._retryCount;
       if (__DEV__) {
-        console.log(`[API] Transient connection drop on ${config.url} — auto-retrying (${config._retryCount}/${MAX_RETRIES})...`);
+        console.log(`[API] Transient ${status || error.code} on ${config.url} — auto-retrying (${config._retryCount}/${MAX_RETRIES}) in ${delayMs}ms...`);
       }
-      await sleep(RETRY_DELAY_MS * config._retryCount);
+      await sleep(delayMs);
       return api(config);
     }
 
