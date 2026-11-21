@@ -228,22 +228,25 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
     }
 
     const updateTimer = () => {
-      let createdStr = order.createdOn;
-      
+      const createdStr = String(order.createdOn).trim();
+      const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(createdStr);
+
       let createdTime: number;
-      if (createdStr.includes('T')) {
-        // e.g., "2026-10-08T10:00:00"
-        const [datePart, timePart] = createdStr.split('T');
+      if (hasTimezone) {
+        createdTime = new Date(createdStr).getTime();
+      } else if (createdStr.includes('T') || createdStr.includes(' ')) {
+        // Backend on Render stores naive LocalDateTime in UTC (e.g., "2026-11-21T09:11:00")
+        const [datePart, timePart] = createdStr.split(/[T ]/);
         const [year, month, day] = datePart.split('-').map(Number);
-        const [hours, minutes, seconds] = timePart.split(':').map(Number);
-        createdTime = new Date(year, month - 1, day, hours, minutes, Math.floor(seconds || 0)).getTime();
+        const [hours, minutes, seconds] = (timePart || '0:0:0').split(':').map(Number);
+        createdTime = Date.UTC(year, month - 1, day, hours, minutes, Math.floor(seconds || 0));
       } else {
         createdTime = new Date(createdStr).getTime();
       }
-      const now = new Date().getTime();
-      const tenHoursInMillis = 10 * 60 * 60 * 1000;
-      const deadline = createdTime + tenHoursInMillis;
-      const remaining = deadline - now;
+      const now = Date.now();
+      const sixHoursInMillis = 6 * 60 * 60 * 1000;
+      const deadline = createdTime + sixHoursInMillis;
+      const remaining = Math.min(deadline - now, sixHoursInMillis);
 
       if (remaining <= 0) {
         setIsCancellableTime(false);
