@@ -173,7 +173,7 @@ const CustomerMenuScreen: React.FC = () => {
                   onPress={() => {
                     if (item.route === 'LanguageSelection') {
                       navigation.navigate('LanguageSelection', { fromSettings: true });
-                    } else if (item.route === 'CustomerMessageFarmer') {
+                    } else if (item.route === 'CustomerMessageFarmer' || item.route === 'Categories') {
                       navigation.navigate(item.route);
                     } else if (item.route === 'Home') {
                       navigation.navigate('CustomerMain', { screen: 'Home' });
