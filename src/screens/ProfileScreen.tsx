@@ -61,6 +61,7 @@ const ProfileScreen = () => {
   const [status, setStatus] = useState('');
   const [inactiveReason, setInactiveReason] = useState('');
   const [selectedPhotoUri, setSelectedPhotoUri] = useState<string | null>(null);
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -149,14 +150,85 @@ const ProfileScreen = () => {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 0.85,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setSelectedPhotoUri(result.assets[0].uri);
+      setPendingPhotoUri(result.assets[0].uri);
     }
   };
+
+  const renderPhotoPreviewModal = () => (
+    <Modal
+      visible={!!pendingPhotoUri}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setPendingPhotoUri(null)}
+    >
+      <View style={styles.photoPreviewOverlay}>
+        <View style={styles.photoPreviewCard}>
+          <Text style={styles.photoPreviewTitle}>
+            {t('profile.previewPhoto', 'Profile Photo Preview')}
+          </Text>
+          <Text style={styles.photoPreviewSubtitle}>
+            {t('profile.confirmPhotoSubtitle', 'Tap Done to use this photo as your profile picture')}
+          </Text>
+
+          <View style={styles.photoPreviewFrame}>
+            {pendingPhotoUri && (
+              <Image
+                source={{ uri: pendingPhotoUri }}
+                style={styles.photoPreviewImage}
+                resizeMode="cover"
+              />
+            )}
+          </View>
+
+          <View style={styles.photoPreviewActions}>
+            <TouchableOpacity
+              style={styles.photoPreviewCancelBtn}
+              onPress={() => setPendingPhotoUri(null)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.photoPreviewCancelText}>
+                {t('common.cancel', 'Cancel')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.photoPreviewDoneBtn}
+              onPress={() => {
+                if (pendingPhotoUri) {
+                  setSelectedPhotoUri(pendingPhotoUri);
+                }
+                setPendingPhotoUri(null);
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.photoPreviewDoneText}>
+                {t('common.done', 'Done')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={styles.photoPreviewRepickBtn}
+            onPress={() => {
+              setPendingPhotoUri(null);
+              setTimeout(() => handlePickImage(), 150);
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="images-outline" size={16} color="#15803D" style={{ marginRight: 6 }} />
+            <Text style={styles.photoPreviewRepickText}>
+              {t('profile.chooseAnotherPhoto', 'Choose Another Photo')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert(t('common.error'), t('profile.nameRequired'));
@@ -680,6 +752,7 @@ const ProfileScreen = () => {
           synchronizedOrdersCount={successModalConfig.synchronizedOrdersCount}
           isFarmer={true}
         />
+        {renderPhotoPreviewModal()}
       </FarmerPageBackground>
     );
   }
@@ -899,6 +972,7 @@ const ProfileScreen = () => {
         synchronizedOrdersCount={successModalConfig.synchronizedOrdersCount}
         isFarmer={false}
       />
+      {renderPhotoPreviewModal()}
     </PageBackground>
   );
 };
@@ -1536,6 +1610,111 @@ const styles = StyleSheet.create({
   farmerConfirmButtonText: {
     fontSize: 13,
     letterSpacing: -0.2,
+  },
+  photoPreviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  photoPreviewCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 22,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  photoPreviewTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  photoPreviewSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  photoPreviewFrame: {
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    borderWidth: 4,
+    borderColor: '#16A34A',
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    marginBottom: 24,
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  photoPreviewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPreviewActions: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  photoPreviewCancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoPreviewCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  photoPreviewDoneBtn: {
+    flex: 1.35,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#16A34A',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  photoPreviewDoneText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  photoPreviewRepickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  photoPreviewRepickText: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#15803D',
   },
 });
 export default ProfileScreen;
