@@ -212,29 +212,44 @@ const MyProductsScreen = ({ navigation, route }: any) => {
     const isActive = product.status === 'ACTIVE';
 
     return (
-      <FarmerCard style={styles.productCard}>
+      <FarmerCard
+        style={
+          !isActive
+            ? { ...styles.productCard, ...styles.inactiveProductCard }
+            : styles.productCard
+        }
+      >
+        {/* Subtle red tint backdrop overlay when inactive */}
+        {!isActive && <View pointerEvents="none" style={styles.inactiveRedTintOverlay} />}
+
         <View style={styles.cardTopRow}>
           {/* Sage Radial/Linear Image Tile */}
           <TouchableOpacity
-            style={styles.imageTileWrapper}
+            style={[styles.imageTileWrapper, !isActive && styles.inactiveImageTileWrapper]}
             activeOpacity={hasVideo ? 0.8 : 0.95}
             onPress={() => hasVideo && handlePlayVideo(product.productVideo!)}
           >
             <LinearGradient
-              colors={['#FFFFFF', '#EEF4E2', '#D6E6C9']}
+              colors={!isActive ? ['#FEE2E2', '#FECACA', '#FCA5A5'] : ['#FFFFFF', '#EEF4E2', '#D6E6C9']}
               style={styles.imageGradient}
             >
               {imgUri ? (
                 <Image
                   source={{ uri: imgUri }}
                   style={[styles.productImage, !isActive && styles.inactiveImage]}
+                  blurRadius={!isActive ? 4 : 0}
                   resizeMode="cover"
                 />
               ) : (
                 <View style={styles.placeholderBox}>
-                  <Ionicons name="leaf-outline" size={26} color={FARMER_THEME.colors.primaryGreen} />
+                  <Ionicons
+                    name="leaf-outline"
+                    size={26}
+                    color={!isActive ? '#DC2626' : FARMER_THEME.colors.primaryGreen}
+                  />
                 </View>
               )}
+              {!isActive && <View pointerEvents="none" style={styles.inactiveImageRedOverlay} />}
             </LinearGradient>
 
             {hasVideo && (
@@ -249,17 +264,28 @@ const MyProductsScreen = ({ navigation, route }: any) => {
           <View style={styles.productDetails}>
             <View style={styles.nameBadgeRow}>
               <Text
-                style={styles.productName}
+                style={[styles.productName, !isActive && styles.inactiveProductText]}
                 numberOfLines={2}
                 maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
               >
                 {product.productName}
               </Text>
-              <FarmerBadge
-                label={isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
-                variant={isActive ? 'success' : 'error'}
-                size="sm"
-              />
+              {isActive ? (
+                <FarmerBadge
+                  label={t('common.active', 'Active')}
+                  variant="success"
+                  size="sm"
+                />
+              ) : (
+                <View style={styles.inactiveRedBadge}>
+                  <Text
+                    style={styles.inactiveRedBadgeText}
+                    maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
+                  >
+                    {t('common.inactive', 'Inactive')}
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.categoryRatingRow}>
@@ -341,23 +367,27 @@ const MyProductsScreen = ({ navigation, route }: any) => {
         {/* Action Buttons Row */}
         <View style={styles.actionsRow}>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.toggleBtn]}
+            style={[
+              styles.actionBtn,
+              styles.toggleBtn,
+              isActive ? styles.inactiveActionBtn : styles.activateActionBtn,
+            ]}
             onPress={() => handleToggleStatus(product)}
             activeOpacity={0.75}
           >
             <Ionicons
-              name={isActive ? 'pause-outline' : 'play-outline'}
+              name={isActive ? 'ban-outline' : 'play-outline'}
               size={13}
-              color={isActive ? FARMER_THEME.colors.warning : FARMER_THEME.colors.primaryGreen}
+              color={isActive ? '#DC2626' : FARMER_THEME.colors.primaryGreen}
             />
             <Text
               style={[
                 styles.actionBtnText,
-                { color: isActive ? FARMER_THEME.colors.warning : FARMER_THEME.colors.primaryGreen },
+                { color: isActive ? '#DC2626' : FARMER_THEME.colors.primaryGreen },
               ]}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              {isActive ? t('farmer.pause', 'Pause') : t('farmer.activate', 'Activate')}
+              {isActive ? t('common.inactive', 'Inactive') : t('farmer.activate', 'Activate')}
             </Text>
           </TouchableOpacity>
 
@@ -724,6 +754,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
+    flexWrap: 'wrap',
+    gap: 4,
     marginTop: 3,
   },
   priceText: {
@@ -787,6 +819,48 @@ const styles = StyleSheet.create({
     fontFamily: FARMER_THEME.fonts.bold,
     fontSize: 10.5,
     color: FARMER_THEME.colors.headings,
+  },
+  inactiveProductCard: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1.5,
+    overflow: 'hidden',
+  },
+  inactiveRedTintOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+  },
+  inactiveImageTileWrapper: {
+    borderColor: '#FCA5A5',
+  },
+  inactiveImageRedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(220, 38, 38, 0.22)',
+  },
+  inactiveProductText: {
+    color: '#991B1B',
+    opacity: 0.8,
+  },
+  inactiveRedBadge: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#F87171',
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  inactiveRedBadgeText: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 10.5,
+    color: '#DC2626',
+  },
+  inactiveActionBtn: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FFF5F5',
+  },
+  activateActionBtn: {
+    borderColor: '#A7F3D0',
+    backgroundColor: '#ECFDF5',
   },
 });
 
