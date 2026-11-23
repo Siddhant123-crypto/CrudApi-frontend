@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,15 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Dimensions,
+  Modal,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import api, { BASE_URL } from '../services/api';
+import api, { resolveMediaUrl } from '../services/api';
 import { THEME } from '../constants/theme';
 import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
@@ -52,10 +54,26 @@ interface FarmGalleryResponse {
 
 export default function CustomerFarmDetailScreen({ route, navigation }: any) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { farm }: { farm: FarmDetailsResponse } = route.params;
   const [gallery, setGallery] = useState<FarmGalleryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+  const [photoModalLoading, setPhotoModalLoading] = useState(false);
+
+  const galleryPhotos = gallery
+    .filter((item) => item.fileType !== 'VIDEO')
+    .map((item) => ({
+      id: item.id,
+      uri: resolveMediaUrl(item.filePath) || '',
+    }))
+    .filter((p) => !!p.uri);
+
+  const activePhotoUri =
+    activePhotoIndex !== null && galleryPhotos[activePhotoIndex]
+      ? galleryPhotos[activePhotoIndex].uri
+      : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -183,7 +201,9 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
                   </View>
                 </TouchableOpacity>
               )}
-              {gallery.map(file => (
+              {gallery.map(file => {
+                const mediaUrl = resolveMediaUrl(file.filePath) || '';
+                return (
                 <View key={file.id} style={styles.galleryItem}>
                   {file.fileType === 'VIDEO' ? (
                     <TouchableOpacity
@@ -197,17 +217,98 @@ export default function CustomerFarmDetailScreen({ route, navigation }: any) {
                       </View>
                     </TouchableOpacity>
                   ) : (
-                    <Image
-                      source={{ uri: `${BASE_URL}/${file.filePath}` }}
-                      style={styles.galleryMedia}
-                    />
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      style={{ flex: 1 }}
+                      onPress={() => {
+                        const idx = galleryPhotos.findIndex((p) => p.id === file.id);
+                        if (idx >= 0) {
+                          setPhotoModalLoading(true);
+                          setActivePhotoIndex(idx);
+                        }
+                      }}
+                    >
+                      <Image
+                        source={{ uri: mediaUrl }}
+                        style={styles.galleryMedia}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.photoExpandBadge}>
+                        <Ionicons name="expand" size={14} color="#FFFFFF" />
+                      </View>
+                    </TouchableOpacity>
                   )}
                 </View>
-              ))}
+                );
+              })}
             </ScrollView>
           )}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={!!activePhotoUri}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setActivePhotoIndex(null)}
+      >
+        <View style={styles.photoModalContainer}>
+          <StatusBar barStyle="light-content" backgroundColor="#000000" />
+          <View style={[styles.photoModalTopBar, { paddingTop: insets.top + 10 }]}>
+            <View style={styles.photoCounterPill}>
+              <Text style={styles.photoCounterText}>
+                {activePhotoIndex !== null ? `${activePhotoIndex + 1} / ${galleryPhotos.length}` : ''}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.photoCloseBtn}
+              onPress={() => setActivePhotoIndex(null)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="close" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.photoModalBody}>
+            {photoModalLoading && (
+              <View style={styles.photoModalSpinner} pointerEvents="none">
+                <ActivityIndicator size="large" color="#FFFFFF" />
+              </View>
+            )}
+            {activePhotoUri ? (
+              <Image
+                source={{ uri: activePhotoUri }}
+                style={styles.photoModalImage}
+                resizeMode="contain"
+                onLoadEnd={() => setPhotoModalLoading(false)}
+                onError={() => setPhotoModalLoading(false)}
+              />
+            ) : null}
+            {galleryPhotos.length > 1 && activePhotoIndex !== null && (
+              <>
+                <TouchableOpacity
+                  style={[styles.photoNavBtn, styles.photoNavLeft]}
+                  onPress={() => {
+                    setPhotoModalLoading(true);
+                    setActivePhotoIndex((activePhotoIndex - 1 + galleryPhotos.length) % galleryPhotos.length);
+                  }}
+                >
+                  <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.photoNavBtn, styles.photoNavRight]}
+                  onPress={() => {
+                    setPhotoModalLoading(true);
+                    setActivePhotoIndex((activePhotoIndex + 1) % galleryPhotos.length);
+                  }}
+                >
+                  <Ionicons name="chevron-forward" size={26} color="#FFFFFF" />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </PageBackground>
   );
 }
@@ -405,5 +506,81 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#8A6F5C',
     fontSize: 14,
+  },
+  photoExpandBadge: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.96)',
+  },
+  photoModalTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    zIndex: 10,
+  },
+  photoCounterPill: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  photoCounterText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  photoCloseBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  photoModalBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalSpinner: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalImage: {
+    width,
+    height: '100%',
+  },
+  photoNavBtn: {
+    position: 'absolute',
+    top: '46%',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoNavLeft: {
+    left: 14,
+  },
+  photoNavRight: {
+    right: 14,
   },
 });

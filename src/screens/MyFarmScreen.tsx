@@ -100,6 +100,9 @@ const MyFarmScreen = ({ navigation }: any) => {
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isVideoPaused, setIsVideoPaused] = useState(false);
   const [isVideoBuffering, setIsVideoBuffering] = useState(true);
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+  const [photoModalLoading, setPhotoModalLoading] = useState(false);
+  const [failedImageIds, setFailedImageIds] = useState<Record<string, boolean>>({});
   const videoRef = useRef<Video>(null);
   const insets = useSafeAreaInsets();
 
@@ -132,6 +135,7 @@ const MyFarmScreen = ({ navigation }: any) => {
       }
       if (galleryResponse && galleryResponse.data) {
         setGallery(galleryResponse.data);
+        setFailedImageIds({});
       }
     } catch (error) {
       console.log('Error fetching farm data:', error);
@@ -182,6 +186,7 @@ const MyFarmScreen = ({ navigation }: any) => {
       const galleryResponse = await getMyGallery().catch(() => ({ data: [] }));
       if (galleryResponse && galleryResponse.data) {
         setGallery(galleryResponse.data);
+        setFailedImageIds({});
       }
     } catch (error) {
       console.log('Upload error:', error);
@@ -254,6 +259,31 @@ const MyFarmScreen = ({ navigation }: any) => {
 
   const fd = farmDetails || {};
   const isVerified = true;
+
+  const galleryPhotos = gallery
+    .filter((item) => item.fileType !== 'VIDEO')
+    .map((item) => ({
+      id: item.id,
+      uri: resolveMediaUrl(item.filePath || item.playbackUrl || item.imageUrl) || '',
+    }))
+    .filter((p) => !!p.uri);
+
+  const activePhotoUri =
+    activePhotoIndex !== null && galleryPhotos[activePhotoIndex]
+      ? galleryPhotos[activePhotoIndex].uri
+      : null;
+
+  const showPrevPhoto = () => {
+    if (activePhotoIndex === null || galleryPhotos.length <= 1) return;
+    setPhotoModalLoading(true);
+    setActivePhotoIndex((activePhotoIndex - 1 + galleryPhotos.length) % galleryPhotos.length);
+  };
+
+  const showNextPhoto = () => {
+    if (activePhotoIndex === null || galleryPhotos.length <= 1) return;
+    setPhotoModalLoading(true);
+    setActivePhotoIndex((activePhotoIndex + 1) % galleryPhotos.length);
+  };
 
   return (
     <FarmerPageBackground>
@@ -614,9 +644,9 @@ const MyFarmScreen = ({ navigation }: any) => {
                 >
                   {gallery.map((item) => {
                     const isSelected = selectedGalleryIds.includes(item.id);
-                    const sanitizedPath = item.filePath ? item.filePath.replace(/\\/g, '/') : '';
-                    const mediaUrl = `${BASE_URL}/${sanitizedPath}`;
                     const isVideo = item.fileType === 'VIDEO';
+                    const mediaUrl = resolveMediaUrl(item.filePath || item.playbackUrl || item.imageUrl) || '';
+                    const imageFailed = !!failedImageIds[item.id];
 
                     return (
                       <TouchableOpacity
@@ -636,17 +666,23 @@ const MyFarmScreen = ({ navigation }: any) => {
                             toggleSelection(item.id);
                           } else if (isVideo) {
                             handlePlayVideo(item);
+                          } else if (mediaUrl) {
+                            const photoIdx = galleryPhotos.findIndex((p) => p.id === item.id);
+                            if (photoIdx >= 0) {
+                              setPhotoModalLoading(true);
+                              setActivePhotoIndex(photoIdx);
+                            }
                           }
                         }}
                         delayLongPress={300}
-                        activeOpacity={isSelectionMode ? 0.8 : 0.6}
+                        activeOpacity={isSelectionMode ? 0.8 : 0.7}
                       >
                         {isVideo ? (
                           <VideoCard
                             style={styles.galleryImage}
                             blurred={isSelectionMode}
                           />
-                        ) : (
+                        ) : mediaUrl && !imageFailed ? (
                           <Image
                             source={{ uri: mediaUrl }}
                             style={[
@@ -654,12 +690,25 @@ const MyFarmScreen = ({ navigation }: any) => {
                               isSelectionMode && styles.galleryImageBlurred,
                             ]}
                             resizeMode="cover"
+                            onError={() =>
+                              setFailedImageIds((prev) => ({ ...prev, [item.id]: true }))
+                            }
                           />
+                        ) : (
+                          <View style={styles.galleryImageFallback}>
+                            <Ionicons name="image-outline" size={28} color={FARMER_THEME.colors.placeholder} />
+                          </View>
                         )}
 
                         {!isSelectionMode && isVideo && (
                           <View style={styles.videoOverlay}>
                             <Ionicons name="play-circle" size={32} color="#FFFFFF" />
+                          </View>
+                        )}
+
+                        {!isSelectionMode && !isVideo && mediaUrl && !imageFailed && (
+                          <View style={styles.photoExpandBadge}>
+                            <Ionicons name="expand" size={13} color="#FFFFFF" />
                           </View>
                         )}
 
@@ -800,6 +849,69 @@ const MyFarmScreen = ({ navigation }: any) => {
               </View>
             )}
           </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* ── Full-Screen Photo Viewer Modal ── */}
+      <Modal
+        visible={!!activePhotoUri}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setActivePhotoIndex(null)}
+      >
+        <View style={styles.photoModalContainer}>
+          <StatusBar barStyle="light-content" backgroundColor="#000000" />
+          <View style={[styles.photoModalTopBar, { paddingTop: insets.top + 10 }]}>
+            <View style={styles.photoCounterPill}>
+              <Text style={styles.photoCounterText}>
+                {activePhotoIndex !== null ? `${activePhotoIndex + 1} / ${galleryPhotos.length}` : ''}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.videoModalCircleBtn}
+              onPress={() => setActivePhotoIndex(null)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="close" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.photoModalBody}>
+            {photoModalLoading && (
+              <View style={styles.videoModalSpinner} pointerEvents="none">
+                <ActivityIndicator size="large" color="#2FA66B" />
+              </View>
+            )}
+            {activePhotoUri ? (
+              <Image
+                source={{ uri: activePhotoUri }}
+                style={styles.photoModalImage}
+                resizeMode="contain"
+                onLoadEnd={() => setPhotoModalLoading(false)}
+                onError={() => setPhotoModalLoading(false)}
+              />
+            ) : null}
+
+            {galleryPhotos.length > 1 && (
+              <>
+                <TouchableOpacity
+                  style={[styles.photoNavBtn, styles.photoNavLeft]}
+                  onPress={showPrevPhoto}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.photoNavBtn, styles.photoNavRight]}
+                  onPress={showNextPhoto}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="chevron-forward" size={26} color="#FFFFFF" />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </View>
       </Modal>
     </FarmerPageBackground>
@@ -1267,6 +1379,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.9,
+  },
+  galleryImageFallback: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoExpandBadge: {
+    position: 'absolute',
+    right: 6,
+    bottom: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.96)',
+  },
+  photoModalTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    zIndex: 10,
+  },
+  photoCounterPill: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  photoCounterText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  photoModalBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalImage: {
+    width: SCREEN_WIDTH,
+    height: '100%',
+  },
+  photoNavBtn: {
+    position: 'absolute',
+    top: '46%',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoNavLeft: {
+    left: 14,
+  },
+  photoNavRight: {
+    right: 14,
   },
 });
 
