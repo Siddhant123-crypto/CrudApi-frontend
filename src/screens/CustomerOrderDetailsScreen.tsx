@@ -235,11 +235,11 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
       if (hasTimezone) {
         createdTime = new Date(createdStr).getTime();
       } else if (createdStr.includes('T') || createdStr.includes(' ')) {
-        // Backend on Render stores naive LocalDateTime in UTC (e.g., "2026-11-21T09:11:00")
+        // Backend stores naive LocalDateTime in Asia/Kolkata (IST) (e.g., "2026-11-23T16:35:00")
         const [datePart, timePart] = createdStr.split(/[T ]/);
         const [year, month, day] = datePart.split('-').map(Number);
         const [hours, minutes, seconds] = (timePart || '0:0:0').split(':').map(Number);
-        createdTime = Date.UTC(year, month - 1, day, hours, minutes, Math.floor(seconds || 0));
+        createdTime = new Date(year, month - 1, day, hours, minutes, Math.floor(seconds || 0)).getTime();
       } else {
         createdTime = new Date(createdStr).getTime();
       }
