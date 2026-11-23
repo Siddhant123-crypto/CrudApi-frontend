@@ -81,7 +81,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
     try {
       const res = await api.get('/categories');
       if (res.data && res.data.data) {
-        setCategories(res.data.data.filter((c: any) => c.isActive));
+        setCategories(res.data.data.filter((c: any) => c.isActive !== false));
       }
     } catch (error) {
       console.log('Error fetching categories:', error);
@@ -247,7 +247,11 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
           />
 
           {/* 4) FARM CATEGORIES SECTION */}
-          <FarmerSectionHeader title={t('home.categories', 'Farm categories')} />
+          <FarmerSectionHeader
+            title={t('home.categories', 'Farm categories')}
+            linkText={t('common.viewAll', 'View all')}
+            onLinkPress={() => navigation.navigate('FarmerCategories')}
+          />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

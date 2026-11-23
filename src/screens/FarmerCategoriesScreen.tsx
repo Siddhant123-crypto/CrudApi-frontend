@@ -38,7 +38,7 @@ const FarmerCategoriesScreen = ({ navigation }: any) => {
       setLoading(true);
       const res = await api.get('/categories');
       if (res.data && res.data.data) {
-        setCategories(res.data.data.filter((c: any) => c.isActive));
+        setCategories(res.data.data.filter((c: any) => c.isActive !== false));
       }
     } catch (error) {
       console.log('Error fetching categories:', error);

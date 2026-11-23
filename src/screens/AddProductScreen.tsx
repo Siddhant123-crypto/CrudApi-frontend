@@ -273,6 +273,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
 
   const openCategoryModal = useCallback(() => {
     Keyboard.dismiss();
+    fetchCategories();
     setShowCategoryModal(true);
   }, []);
   const closeCategoryModal = useCallback(() => setShowCategoryModal(false), []);
@@ -833,7 +834,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
         onClose={closeUnitModal}
         data={UNITS}
         onSelect={onUnitSelect}
-        title={t('farmer.selectCategory', 'Select Unit')}
+        title={t('farmer.selectUnit', 'Select Unit')}
         onInactiveSelect={onInactiveCategoryAlert}
       />
       <CalendarModal

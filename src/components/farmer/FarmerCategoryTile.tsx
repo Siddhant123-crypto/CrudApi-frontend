@@ -26,6 +26,7 @@ const PASTEL_COLORS = [
 
 const getCategoryEmoji = (name: string): string => {
   const n = (name || '').toLowerCase();
+  if (n.includes('exotic')) return '🥭';
   if (n.includes('fruit')) return '🍎';
   if (n.includes('dairy') || n.includes('milk')) return '🥛';
   if (n.includes('forest') || n.includes('wild')) return '🌿';
@@ -67,7 +68,7 @@ export const FarmerCategoryTile: React.FC<FarmerCategoryTileProps> = ({
           <Text style={styles.emojiText}>{emoji}</Text>
         )}
       </View>
-      <Text style={styles.label} numberOfLines={1}>
+      <Text style={styles.label} numberOfLines={2}>
         {name}
       </Text>
     </TouchableOpacity>
@@ -76,7 +77,7 @@ export const FarmerCategoryTile: React.FC<FarmerCategoryTileProps> = ({
 
 const styles = StyleSheet.create({
   tile: {
-    width: 76,
+    width: 82,
     paddingTop: 8,
     paddingBottom: 8,
     paddingHorizontal: 5,

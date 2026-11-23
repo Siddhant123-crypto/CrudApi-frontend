@@ -16,6 +16,7 @@ import { THEME } from '../constants/theme';
 import { PageBackground } from '../components/ui/PageBackground';
 import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { Card } from '../components/ui/Card';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { formatCategory } from '../utils/categoryUtils';
 
@@ -28,16 +29,18 @@ const CategoriesScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const { cartCount } = useCart();
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchCategories();
+    }, [])
+  );
 
   const fetchCategories = async () => {
     try {
       setLoading(true);
       const res = await api.get('/categories');
       if (res.data && res.data.data) {
-        setCategories(res.data.data.filter((c: any) => c.isActive));
+        setCategories(res.data.data.filter((c: any) => c.isActive !== false));
       }
     } catch (error) {
       console.log('Error fetching categories:', error);
