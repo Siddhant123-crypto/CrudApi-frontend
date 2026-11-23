@@ -332,7 +332,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                 </LinearGradient>
               </TouchableOpacity>
             ) : isSelfDeactivated ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={styles.selfDeactivatedActionsRow}>
                 <TouchableOpacity
                   activeOpacity={0.8}
                   style={[styles.actionButtonWrapper, styles.unblockShadow]}
@@ -789,11 +789,22 @@ const styles = StyleSheet.create({
   profileBadgeAndActionRow: {
     marginTop: 16,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    rowGap: 10,
+    columnGap: 10,
     width: '100%',
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
+  },
+  selfDeactivatedActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    rowGap: 8,
+    columnGap: 10,
+    width: '100%',
   },
   statusWrapper: {
     borderRadius: 18,
