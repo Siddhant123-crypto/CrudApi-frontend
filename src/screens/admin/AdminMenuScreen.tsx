@@ -12,6 +12,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
@@ -22,6 +23,7 @@ import { useFarmVerificationPendingCount } from '../../hooks/useFarmVerification
 export const AdminMenuScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { pendingCount, refresh } = useFarmVerificationPendingCount();
   const [messagesExpanded, setMessagesExpanded] = useState(false);
@@ -93,7 +95,10 @@ export const AdminMenuScreen: React.FC = () => {
 
         {/* Menu Body */}
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: Math.max(insets.bottom, 16) + 32 },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {menuItems.map((item, index) => (
@@ -213,8 +218,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 44 : 20,
-    paddingBottom: 22,
+    paddingTop: Platform.OS === 'android' ? 42 : 20,
+    paddingBottom: 18,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     ...ADMIN_THEME.shadows.stickyBar,
@@ -263,17 +268,17 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
-    paddingTop: 20,
+    paddingTop: 14,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 16,
-    marginBottom: 10,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E3E7F2',
     ...ADMIN_THEME.shadows.card,
@@ -334,8 +339,8 @@ const styles = StyleSheet.create({
     color: ADMIN_THEME.colors.ink,
   },
   logoutWrapper: {
-    marginTop: 14,
-    marginBottom: 20,
+    marginTop: 6,
+    marginBottom: 28,
   },
   logoutBtn: {
     borderColor: '#FAC4C4',
