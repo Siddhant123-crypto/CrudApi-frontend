@@ -7,8 +7,9 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import api, { BASE_URL } from '../../services/api';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
@@ -16,6 +17,7 @@ import {
   AdminHeader,
   AdminCard,
   AdminBadge,
+  ChatIcon,
   UserIcon,
   MailIcon,
   PhoneIcon,
@@ -25,6 +27,7 @@ import {
 export const AdminCustomerDetailsScreen: React.FC = () => {
   const { t } = useTranslation();
   const route = useRoute<any>();
+  const navigation = useNavigation<any>();
   const { customerId } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState<any>(null);
@@ -127,7 +130,25 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
 
   return (
     <AdminPageBackground>
-      <AdminHeader variant="inner" title={t('admin.customerDetails', 'Customer Details')} />
+      <AdminHeader
+        variant="inner"
+        title={t('admin.customerDetails', 'Customer Details')}
+        rightAction={
+          <TouchableOpacity
+            style={styles.headerChatBtn}
+            onPress={() =>
+              navigation.navigate('AdminMessage', {
+                preSelectedUserId: customer.customerId || customer.userId || customerId,
+                preSelectedUserName: customer.name,
+                preSelectedUserEmail: customer.email,
+                preSelectedRole: 'CUSTOMER',
+              })
+            }
+          >
+            <ChatIcon size={20} color={ADMIN_THEME.colors.gold} strokeWidth={2} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* 1) PROFILE ADMIN CARD (72px avatar, 3px white ring, shadow, Fraunces 22 name) */}
@@ -256,6 +277,14 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
 export default AdminCustomerDetailsScreen;
 
 const styles = StyleSheet.create({
+  headerChatBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',

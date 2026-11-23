@@ -71,7 +71,7 @@ export const AdminMessageScreen: React.FC = () => {
   }, []);
 
   const [recipient, setRecipient] = useState<'ALL' | 'SPECIFIC'>(
-    preSelectedId ? 'SPECIFIC' : 'ALL'
+    preSelectedId || preSelectedEmail ? 'SPECIFIC' : 'ALL'
   );
   const [specificUserId, setSpecificUserId] = useState<string>(preSelectedId || '');
 
@@ -193,12 +193,18 @@ export const AdminMessageScreen: React.FC = () => {
     try {
       const senderName = user?.name || user?.email || 'Admin Support';
       const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
-      const payload: NotificationSendRequest = {
-        receiverType: specificUserId
+      const rawReceiverType =
+        recipient === 'SPECIFIC' && specificUserId
           ? customersList.find((u) => (u.userId || u.id) === specificUserId)?.role ||
             preSelectedRole ||
             'CUSTOMER'
-          : preSelectedRole || 'CUSTOMER',
+          : preSelectedRole || 'CUSTOMER';
+      const normalizedReceiverType =
+        String(rawReceiverType).toUpperCase() === 'USER'
+          ? 'CUSTOMER'
+          : String(rawReceiverType).toUpperCase();
+      const payload: NotificationSendRequest = {
+        receiverType: normalizedReceiverType as 'CUSTOMER' | 'FARMER',
         receiverId: recipient === 'ALL' ? undefined : specificUserId,
         title: currentTitle.trim(),
         message: formattedMessage,
@@ -209,10 +215,14 @@ export const AdminMessageScreen: React.FC = () => {
       Alert.alert(t('common.success'), t('admin.messageSentSuccess'), [
         { text: t('common.ok'), onPress: () => navigation.goBack() },
       ]);
-    } catch (error) {
-      console.error('Send message error:', error);
+    } catch (error: any) {
+      console.error('Send message error:', error?.response?.data || error);
+      const errMsg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        t('admin.failedSendMessage');
       setTimeout(() => {
-        Alert.alert(t('common.error'), t('admin.failedSendMessage'));
+        Alert.alert(t('common.error'), errMsg);
       }, 100);
     } finally {
       setLoading(false);
