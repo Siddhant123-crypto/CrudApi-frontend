@@ -90,16 +90,24 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
   const fetchFarmerData = async () => {
     try {
       setLoading(true);
-      const [farmerRes, salesRes, productsRes, ordersRes] = await Promise.all([
+      const [farmerRes, salesRes, productsRes, ordersRes] = await Promise.allSettled([
         api.get(`/admin/farmers/${farmerId}`),
         api.get(`/admin/farmers/${farmerId}/sales`),
         api.get(`/admin/products/farmer/${farmerId}`),
         api.get(`/admin/orders/farmer/${farmerId}`),
       ]);
-      if (farmerRes.data?.data) setFarmer(farmerRes.data.data);
-      if (salesRes.data?.data) setSales(salesRes.data.data);
-      if (productsRes.data?.data) setProducts(productsRes.data.data);
-      if (ordersRes.data?.data) setOrders(ordersRes.data.data);
+      if (farmerRes.status === 'fulfilled' && farmerRes.value.data?.data) {
+        setFarmer(farmerRes.value.data.data);
+      }
+      if (salesRes.status === 'fulfilled' && salesRes.value.data?.data) {
+        setSales(salesRes.value.data.data);
+      }
+      if (productsRes.status === 'fulfilled' && productsRes.value.data?.data) {
+        setProducts(productsRes.value.data.data);
+      }
+      if (ordersRes.status === 'fulfilled' && ordersRes.value.data?.data) {
+        setOrders(ordersRes.value.data.data);
+      }
     } catch (error) {
       console.error('Failed to fetch farmer details:', error);
     } finally {

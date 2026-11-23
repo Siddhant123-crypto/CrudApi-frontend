@@ -42,14 +42,20 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
   const fetchCustomerData = async () => {
     try {
       setLoading(true);
-      const [customerRes, statsRes, ordersRes] = await Promise.all([
+      const [customerRes, statsRes, ordersRes] = await Promise.allSettled([
         api.get(`/admin/customers/${customerId}`),
         api.get(`/admin/customers/${customerId}/statistics`),
         api.get(`/admin/customers/${customerId}/orders`),
       ]);
-      if (customerRes.data?.data) setCustomer(customerRes.data.data);
-      if (statsRes.data?.data) setStatistics(statsRes.data.data);
-      if (ordersRes.data?.data) setOrders(ordersRes.data.data);
+      if (customerRes.status === 'fulfilled' && customerRes.value.data?.data) {
+        setCustomer(customerRes.value.data.data);
+      }
+      if (statsRes.status === 'fulfilled' && statsRes.value.data?.data) {
+        setStatistics(statsRes.value.data.data);
+      }
+      if (ordersRes.status === 'fulfilled' && ordersRes.value.data?.data) {
+        setOrders(ordersRes.value.data.data);
+      }
     } catch (error) {
       console.error('Failed to fetch customer details:', error);
     } finally {

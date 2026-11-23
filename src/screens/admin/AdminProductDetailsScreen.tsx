@@ -50,15 +50,15 @@ export const AdminProductDetailsScreen: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [productRes, ordersRes] = await Promise.all([
+      const [productRes, ordersRes] = await Promise.allSettled([
         api.get(`/admin/products/${productId}`),
         api.get('/admin/orders'),
       ]);
-      if (productRes.data?.data) {
-        setProduct(productRes.data.data);
+      if (productRes.status === 'fulfilled' && productRes.value.data?.data) {
+        setProduct(productRes.value.data.data);
       }
-      if (ordersRes.data?.data) {
-        const allOrders = ordersRes.data.data;
+      if (ordersRes.status === 'fulfilled' && ordersRes.value.data?.data) {
+        const allOrders = ordersRes.value.data.data;
         let productOrders = 0;
         const uniqueCustomers = new Set<string>();
         allOrders.forEach((order: any) => {
