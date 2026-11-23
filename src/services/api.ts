@@ -218,6 +218,7 @@ api.interceptors.response.use(
       config?.url?.includes('/newuser/login') ||
       config?.url?.includes('/farmer/login') ||
       config?.url?.includes('/user/login') ||
+      config?.url?.includes('/admin/auth/login') ||
       config?.url?.includes('/auth/google')
     );
     const isRateLimitOrUnavailable = status === 429 || status === 502 || status === 503 || (isLoginEndpoint && status === 500);
@@ -278,11 +279,12 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      // During the post-login grace window or on non-critical background polls, retry once with the active token instead of immediately logging out
+      // Retry once with the latest active token before logging out, to protect against transient
+      // container-swap / token-race 401s (e.g., right after a Render redeploy or session switch).
       const authRetry = (config as any)?._authRetry;
-      if (!authRetry && config && (msSinceLogin < POST_LOGIN_401_GRACE_MS || isBackgroundPoll)) {
+      if (!authRetry && config && currentToken) {
         (config as any)._authRetry = true;
-        if (currentToken && config.headers) {
+        if (config.headers) {
           config.headers['Authorization'] = `Bearer ${currentToken}`;
         }
         if (__DEV__) {

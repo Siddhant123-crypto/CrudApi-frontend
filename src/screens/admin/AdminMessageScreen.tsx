@@ -110,7 +110,10 @@ export const AdminMessageScreen: React.FC = () => {
           setRecipient('SPECIFIC');
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        return;
+      }
       console.log('Failed to fetch customers:', error);
       Alert.alert(t('common.error'), t('support.failedLoadCustomers'));
     } finally {
