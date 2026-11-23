@@ -51,8 +51,26 @@ export const AdminGroupChatScreen = () => {
   const [sending, setSending] = useState(false);
   const isSendingRef = useRef(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const isNearBottomRef = useRef(true);
+  const hasInitialScrolledRef = useRef(false);
+  const prevMessageCountRef = useRef(0);
   const flatListRef = useRef<FlatList>(null);
   const { user } = useAuth();
+
+  const handleScroll = (event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    const isFarFromBottom = distanceFromBottom > 120;
+    isNearBottomRef.current = !isFarFromBottom;
+    setShowScrollToBottom(isFarFromBottom);
+  };
+
+  const scrollToBottom = () => {
+    flatListRef.current?.scrollToEnd({ animated: true });
+    isNearBottomRef.current = true;
+    setShowScrollToBottom(false);
+  };
   const { markAdminGroupAsRead } = useNotification();
 
   useEffect(() => {
@@ -306,33 +324,50 @@ export const AdminGroupChatScreen = () => {
             <ActivityIndicator size="large" color="#4F5BD5" />
           </View>
         ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessage}
-            contentContainerStyle={styles.messageList}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            onContentSizeChange={() => {
-              if (messages.length > 0) {
-                flatListRef.current?.scrollToEnd({ animated: true });
+          <View style={styles.chatAreaContainer}>
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderMessage}
+              contentContainerStyle={styles.messageList}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              onContentSizeChange={() => {
+                if (messages.length > 0) {
+                  if (!hasInitialScrolledRef.current) {
+                    flatListRef.current?.scrollToEnd({ animated: false });
+                    hasInitialScrolledRef.current = true;
+                  } else if (
+                    messages.length > prevMessageCountRef.current &&
+                    isNearBottomRef.current
+                  ) {
+                    flatListRef.current?.scrollToEnd({ animated: true });
+                  }
+                  prevMessageCountRef.current = messages.length;
+                }
+              }}
+              ListEmptyComponent={
+                <View style={styles.centerContainer}>
+                  <Ionicons name="chatbubbles-outline" size={48} color="#C9CEF5" />
+                  <Text style={styles.emptyText}>{t('admin.noMessagesYet', 'No messages yet.')}</Text>
+                  <Text style={styles.emptySubText}>{t('admin.startConversationAdmins', 'Start the conversation with other admins.')}</Text>
+                </View>
               }
-            }}
-            onLayout={() => {
-              if (messages.length > 0) {
-                flatListRef.current?.scrollToEnd({ animated: false });
-              }
-            }}
-            ListEmptyComponent={
-              <View style={styles.centerContainer}>
-                <Ionicons name="chatbubbles-outline" size={48} color="#C9CEF5" />
-                <Text style={styles.emptyText}>{t('admin.noMessagesYet', 'No messages yet.')}</Text>
-                <Text style={styles.emptySubText}>{t('admin.startConversationAdmins', 'Start the conversation with other admins.')}</Text>
-              </View>
-            }
-          />
+            />
+            {showScrollToBottom && messages.length > 0 && (
+              <TouchableOpacity
+                style={styles.scrollToBottomButton}
+                onPress={scrollToBottom}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="chevron-down" size={22} color="#1F2F6B" />
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         {/* Input Bar above Keyboard */}
@@ -389,6 +424,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  chatAreaContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  scrollToBottomButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#D8DEF2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0B1326',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 6,
   },
   messageList: {
     padding: 16,

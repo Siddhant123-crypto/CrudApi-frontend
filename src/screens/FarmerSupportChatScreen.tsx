@@ -68,7 +68,25 @@ export const FarmerSupportChatScreen = () => {
   const [supportRequestId, setSupportRequestId] = useState<string | null>(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const isNearBottomRef = useRef(true);
+  const hasInitialScrolledRef = useRef(false);
+  const prevMessageCountRef = useRef(0);
   const flatListRef = useRef<FlatList>(null);
+
+  const handleScroll = (event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    const isFarFromBottom = distanceFromBottom > 120;
+    isNearBottomRef.current = !isFarFromBottom;
+    setShowScrollToBottom(isFarFromBottom);
+  };
+
+  const scrollToBottom = () => {
+    flatListRef.current?.scrollToEnd({ animated: true });
+    isNearBottomRef.current = true;
+    setShowScrollToBottom(false);
+  };
 
   const toggleSelection = (id: string) => {
     setSelectedMessageIds(prev => 
@@ -375,25 +393,52 @@ export const FarmerSupportChatScreen = () => {
           <ActivityIndicator size="large" color="#1F7A4D" />
         </View>
       ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.supportMessageId}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.messageList}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.centerContainer}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="chatbubbles-outline" size={38} color="#17663F" />
+        <View style={styles.chatAreaContainer}>
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.supportMessageId}
+            renderItem={renderMessage}
+            contentContainerStyle={styles.messageList}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            onContentSizeChange={() => {
+              if (messages.length > 0) {
+                if (!hasInitialScrolledRef.current) {
+                  flatListRef.current?.scrollToEnd({ animated: false });
+                  hasInitialScrolledRef.current = true;
+                } else if (
+                  messages.length > prevMessageCountRef.current &&
+                  isNearBottomRef.current
+                ) {
+                  flatListRef.current?.scrollToEnd({ animated: true });
+                }
+                prevMessageCountRef.current = messages.length;
+              }
+            }}
+            ListEmptyComponent={
+              <View style={styles.centerContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="chatbubbles-outline" size={38} color="#17663F" />
+                </View>
+                <Text style={styles.emptyText}>No previous conversation.</Text>
+                <Text style={styles.emptySubText}>Send a message to start chatting with Admin Support.</Text>
               </View>
-              <Text style={styles.emptyText}>No previous conversation.</Text>
-              <Text style={styles.emptySubText}>Send a message to start chatting with Admin Support.</Text>
-            </View>
-          }
-        />
+            }
+          />
+          {showScrollToBottom && messages.length > 0 && (
+            <TouchableOpacity
+              style={styles.scrollToBottomButton}
+              onPress={scrollToBottom}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="chevron-down" size={22} color="#17663F" />
+            </TouchableOpacity>
+          )}
+        </View>
       )}
 
       <View
@@ -525,6 +570,28 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 20,
     flexGrow: 1,
+  },
+  chatAreaContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  scrollToBottomButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#CBE4D4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0E3B29',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 6,
   },
   dateChip: {
     alignSelf: 'center',
