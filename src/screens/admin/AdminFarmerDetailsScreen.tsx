@@ -250,7 +250,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                     t('admin.selfDeactivatedTitle'),
                     t('admin.selfDeactivatedDesc', {
                       reason: farmer.inactiveReason || t('admin.noReasonSpecified'),
-                      since: farmer.inactiveSince ? new Date(farmer.inactiveSince).toLocaleString() : 'N/A',
+                      since: farmer.inactiveSince ? new Date(farmer.inactiveSince).toLocaleDateString() : 'N/A',
                     }),
                     [{ text: t('common.ok'), style: 'default' }]
                   );
@@ -267,8 +267,8 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                 farmer.status === 'ACTIVE'
                   ? styles.activeShadow
                   : isBlocked
-                  ? styles.blockShadow
-                  : styles.pendingShadow,
+                    ? styles.blockShadow
+                    : styles.pendingShadow,
               ]}
             >
               <LinearGradient
@@ -276,10 +276,10 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                   farmer.status === 'ACTIVE'
                     ? ['#10B981', '#059669']
                     : isBlocked
-                    ? ['#EF4444', '#DC2626']
-                    : isSelfDeactivated
-                    ? ['#F59E0B', '#D97706']
-                    : ['#6B7280', '#4B5563']
+                      ? ['#EF4444', '#DC2626']
+                      : isSelfDeactivated
+                        ? ['#F59E0B', '#D97706']
+                        : ['#6B7280', '#4B5563']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -290,10 +290,10 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                   {farmer.status === 'ACTIVE'
                     ? t('status.active')
                     : isBlocked
-                    ? t('status.blocked')
-                    : isSelfDeactivated
-                    ? t('status.selfDeactivated')
-                    : farmer.status || t('status.inactive')}
+                      ? t('status.blocked')
+                      : isSelfDeactivated
+                        ? t('status.selfDeactivated')
+                        : farmer.status || t('status.inactive')}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -432,7 +432,7 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                 <View style={styles.deactivationMetaRow}>
                   <Text style={styles.deactivationMetaLabel}>{t('admin.deactivatedAt')}</Text>
                   <Text style={styles.deactivationMetaValue}>
-                    {new Date(farmer.inactiveSince).toLocaleString()}
+                    {new Date(farmer.inactiveSince).toLocaleDateString()}
                   </Text>
                 </View>
               )}
@@ -1228,17 +1228,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 2,
+    paddingVertical: 4,
+    gap: 12,
   },
   deactivationMetaLabel: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontFamily: AdminFonts.medium,
     color: '#78350F',
   },
   deactivationMetaValue: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontFamily: AdminFonts.semiBold,
     color: '#92400E',
+    textAlign: 'right',
+    flexShrink: 1,
   },
   deactivationNoticeBanner: {
     flexDirection: 'row',
