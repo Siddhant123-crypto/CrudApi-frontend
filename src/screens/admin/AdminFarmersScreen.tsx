@@ -61,11 +61,14 @@ export const AdminFarmersScreen: React.FC = () => {
   const route = useRoute<any>();
   const initialTab = route.params?.initialTab;
 
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
+  useFocusEffect(
+    useCallback(() => {
+      if (initialTab) {
+        setUserType('Farmers');
+        setActiveTab(initialTab);
+      }
+    }, [initialTab])
+  );
 
   const tabs = ['All', 'Active', 'Blocked', 'Inactive'];
   const [isBlockModalVisible, setIsBlockModalVisible] = useState(false);

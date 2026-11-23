@@ -15,6 +15,7 @@ import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground'
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
 import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerEmptyState } from '../components/farmer/FarmerUI';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { formatCategory } from '../utils/categoryUtils';
 
@@ -26,9 +27,11 @@ const FarmerCategoriesScreen = ({ navigation }: any) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchCategories();
+    }, [])
+  );
 
   const fetchCategories = async () => {
     try {

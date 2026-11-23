@@ -47,15 +47,17 @@ export const AdminDashboardScreen: React.FC = () => {
     completedOrders?: number;
     cancelledOrders?: number;
     totalRevenue?: string | number;
+    recentOrders?: any[];
   }>({
-    totalFarmers: 172,
-    totalCustomers: 89,
-    totalProducts: 108,
-    totalOrders: 48,
-    pendingOrders: 7,
-    completedOrders: 16,
-    cancelledOrders: 2,
-    totalRevenue: '₹17,081',
+    totalFarmers: 0,
+    totalCustomers: 0,
+    totalProducts: 0,
+    totalOrders: 0,
+    pendingOrders: 0,
+    completedOrders: 0,
+    cancelledOrders: 0,
+    totalRevenue: 0,
+    recentOrders: [],
   });
 
   const fetchData = async () => {
@@ -98,30 +100,16 @@ export const AdminDashboardScreen: React.FC = () => {
   // Calculate card width for 2-column main stat cards: (screenWidth - 32 padding - 10 gap) / 2
   const statCardWidth = (screenWidth - 32 - 10) / 2;
 
-  // Recent orders list (matches mockup sample and real fallback)
-  const recentOrders: OrderItemData[] = [
-    {
-      id: '1',
-      orderNumber: '#ORD-1048',
-      customerName: 'Ravi Patil',
-      amount: '₹850',
-      status: 'DELIVERED',
-    },
-    {
-      id: '2',
-      orderNumber: '#ORD-1047',
-      customerName: 'Sneha Kale',
-      amount: '₹650',
-      status: 'PROCESSING',
-    },
-    {
-      id: '3',
-      orderNumber: '#ORD-1046',
-      customerName: 'Amit Shinde',
-      amount: '₹1,250',
-      status: 'PENDING',
-    },
-  ];
+  // Real recent orders from backend GET /admin/dashboard (never hardcoded mock data)
+  const recentOrders: OrderItemData[] = (dashboardData.recentOrders || []).map((o: any, idx: number) => ({
+    id: String(o.orderId || o.id || idx),
+    orderNumber: o.orderNumber
+      ? (String(o.orderNumber).startsWith('#') ? String(o.orderNumber) : `#${o.orderNumber}`)
+      : `#${String(o.orderId || '').substring(0, 8)}`,
+    customerName: o.customerName || 'Customer',
+    amount: `₹${Number(o.totalAmount || 0).toLocaleString('en-IN')}`,
+    status: String(o.status || 'PENDING').toUpperCase() as any,
+  }));
 
   const adminName = user?.name ? user.name : 'Admin';
 
@@ -194,11 +182,11 @@ export const AdminDashboardScreen: React.FC = () => {
             revenue={
               typeof dashboardData.totalRevenue === 'number'
                 ? `₹${dashboardData.totalRevenue.toLocaleString('en-IN')}`
-                : dashboardData.totalRevenue || '₹17,081'
+                : dashboardData.totalRevenue || '₹0'
             }
             period={periods[periodIndex]}
             onPeriodPress={handlePeriodPress}
-            growthText="↑ 18% from last month"
+            growthText={`${dashboardData.completedOrders ?? 0} ${t('orders.statusDelivered', 'Delivered')}`}
             isGrowthPositive={true}
           />
 
@@ -206,28 +194,28 @@ export const AdminDashboardScreen: React.FC = () => {
           <View style={styles.mainStatsGrid}>
             <StatCard
               title={t('admin.farmers', 'Farmers')}
-              value={dashboardData.totalFarmers || 172}
+              value={dashboardData.totalFarmers ?? 0}
               type="farmers"
               cardWidth={statCardWidth}
               onPress={() => navigation.navigate('AdminFarmers')}
             />
             <StatCard
               title={t('admin.customers', 'Customers')}
-              value={dashboardData.totalCustomers || 89}
+              value={dashboardData.totalCustomers ?? 0}
               type="customers"
               cardWidth={statCardWidth}
               onPress={() => navigation.navigate('AdminCustomers')}
             />
             <StatCard
               title={t('admin.allProducts', 'Products')}
-              value={dashboardData.totalProducts || 108}
+              value={dashboardData.totalProducts ?? 0}
               type="products"
               cardWidth={statCardWidth}
               onPress={() => navigation.navigate('AdminProducts')}
             />
             <StatCard
               title={t('admin.allOrders', 'Orders')}
-              value={dashboardData.totalOrders || 25}
+              value={dashboardData.totalOrders ?? 0}
               type="orders"
               cardWidth={statCardWidth}
               onPress={() => navigation.navigate('AdminOrders')}
@@ -238,19 +226,19 @@ export const AdminDashboardScreen: React.FC = () => {
           <View style={styles.orderStatusRow}>
             <OrderStatusCard
               type="pending"
-              count={dashboardData.pendingOrders ?? 7}
+              count={dashboardData.pendingOrders ?? 0}
               label={t('orders.statusPending', 'Pending')}
               onPress={() => navigation.navigate('AdminOrders', { status: 'Pending' })}
             />
             <OrderStatusCard
               type="completed"
-              count={dashboardData.completedOrders ?? 16}
+              count={dashboardData.completedOrders ?? 0}
               label={t('orders.statusDelivered', 'Completed')}
               onPress={() => navigation.navigate('AdminOrders', { status: 'Completed' })}
             />
             <OrderStatusCard
               type="cancelled"
-              count={dashboardData.cancelledOrders ?? 2}
+              count={dashboardData.cancelledOrders ?? 0}
               label={t('orders.statusCancelled', 'Cancelled')}
               onPress={() => navigation.navigate('AdminOrders', { status: 'Cancelled' })}
             />
@@ -265,14 +253,24 @@ export const AdminDashboardScreen: React.FC = () => {
 
           {/* 8) RECENT ORDERS CARD */}
           <View style={styles.recentOrdersCard}>
-            {recentOrders.map((order, index) => (
-              <RecentOrderRow
-                key={order.id}
-                order={order}
-                isLast={index === recentOrders.length - 1}
-                onPress={() => navigation.navigate('AdminOrders')}
-              />
-            ))}
+            {recentOrders.length === 0 ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <Text style={{ color: ADMIN_THEME.colors.textSecondary, fontSize: 13 }}>
+                  {t('orders.noOrdersTitle', 'No recent orders yet')}
+                </Text>
+              </View>
+            ) : (
+              recentOrders.map((order, index) => (
+                <RecentOrderRow
+                  key={order.id}
+                  order={order}
+                  isLast={index === recentOrders.length - 1}
+                  onPress={() =>
+                    navigation.navigate('AdminOrderDetails', { orderId: order.id })
+                  }
+                />
+              ))
+            )}
           </View>
 
           {/* 9) SECTION HEADER: Quick actions */}

@@ -27,7 +27,7 @@
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
-      "usesCleartextTraffic": true,
+      "usesCleartextTraffic": false,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyD13KSxPnYEtZ88mV6F1CMq-5fLepvbuzQ"

@@ -12,6 +12,7 @@ import {
   Platform,
   Keyboard,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -344,21 +345,29 @@ const AddProductScreen = ({ navigation, route }: any) => {
     [openCalendarModal]
   );
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCategories();
+    }, [isEditMode, editProduct?.category])
+  );
 
   const fetchCategories = async () => {
     try {
       const { default: api } = await import('../services/api');
       const res = await api.get('/categories');
       if (res.data && res.data.data) {
-        const catNames = res.data.data.map((c: any) =>
-          c.isActive ? c.name : `${c.name} (Inactive)`
-        );
-        setCategoriesList(catNames);
-        if (!isEditMode && !route?.params?.category && catNames.length > 0) {
-          handleFieldChange('category', catNames[0]);
+        const activeNames: string[] = res.data.data
+          .filter((c: any) => c.isActive !== false)
+          .map((c: any) => c.name);
+        const currentCat = editProduct?.category;
+        if (isEditMode && currentCat && !activeNames.includes(currentCat)) {
+          activeNames.push(`${currentCat} (Inactive)`);
+        }
+        if (activeNames.length > 0) {
+          setCategoriesList(activeNames);
+          if (!isEditMode && !route?.params?.category && !form.category) {
+            handleFieldChange('category', activeNames[0]);
+          }
         }
       }
     } catch (e) {

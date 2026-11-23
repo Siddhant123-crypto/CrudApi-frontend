@@ -28,6 +28,11 @@ local.properties
 *.apk
 *.aab
 android/app/build
+*.jks
+*.keystore
+!android/app/debug.keystore
+keystore.properties
+android/keystore.properties
 
 # Bundle artifacts
 *.jsbundle
