@@ -35,7 +35,12 @@ export const AdminChip: React.FC<AdminChipProps> = React.memo(({
           end={{ x: 0.9, y: 1 }}
           style={styles.chipBase}
         >
-          <Text style={[styles.activeText, textStyle]} numberOfLines={1}>
+          <Text
+            style={[styles.activeText, textStyle]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+          >
             {displayText}
           </Text>
         </LinearGradient>
@@ -49,7 +54,12 @@ export const AdminChip: React.FC<AdminChipProps> = React.memo(({
       onPress={onPress}
       style={[styles.inactiveChip, style]}
     >
-      <Text style={[styles.inactiveText, textStyle]} numberOfLines={1}>
+      <Text
+        style={[styles.inactiveText, textStyle]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.82}
+      >
         {displayText}
       </Text>
     </TouchableOpacity>

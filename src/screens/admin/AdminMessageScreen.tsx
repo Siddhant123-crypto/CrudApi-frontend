@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TextInput,
+  ScrollView,
   ActivityIndicator,
   Alert,
   Platform,
@@ -253,21 +254,22 @@ export const AdminMessageScreen: React.FC = () => {
 
   return (
     <AdminPageBackground>
+      <AdminHeader
+        variant="inner"
+        title={screenTitle}
+        titleAlign="left"
+        titleSize={22}
+        onBack={() => navigation.goBack()}
+      />
+
       <KeyboardAwareScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         bottomOffset={40}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
         showsVerticalScrollIndicator={false}
       >
-        <AdminHeader
-          variant="inner"
-          title={screenTitle}
-          titleAlign="left"
-          titleSize={25}
-          onBack={() => navigation.goBack()}
-        />
-
         <View style={styles.formBody}>
           {/* Receiver Section */}
           <View style={styles.sectionHeaderWrapper}>
@@ -294,12 +296,14 @@ export const AdminMessageScreen: React.FC = () => {
                     active={recipient === 'ALL'}
                     onPress={handleRecipientAll}
                     style={styles.flex1}
+                    textStyle={styles.chipText}
                   />
                   <AdminChip
                     label={audienceSpecificLabel}
                     active={recipient === 'SPECIFIC'}
                     onPress={handleRecipientSpecific}
                     style={styles.flex1}
+                    textStyle={styles.chipText}
                   />
                 </View>
 
@@ -318,8 +322,14 @@ export const AdminMessageScreen: React.FC = () => {
                     ) : filteredCustomers.length === 0 ? (
                       <Text style={styles.noUsersText}>{t('admin.noMatchingRecipients')}</Text>
                     ) : (
-                      <View style={styles.usersList}>
-                        {filteredCustomers.slice(0, 10).map((cust) => {
+                      <ScrollView
+                        style={styles.usersList}
+                        contentContainerStyle={styles.usersListContent}
+                        nestedScrollEnabled={true}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={true}
+                      >
+                        {filteredCustomers.map((cust) => {
                           const uId = cust.userId || cust.id;
                           const isSelected = specificUserId === uId;
                           return (
@@ -347,7 +357,7 @@ export const AdminMessageScreen: React.FC = () => {
                             />
                           );
                         })}
-                      </View>
+                      </ScrollView>
                     )}
                   </View>
                 )}
@@ -470,6 +480,9 @@ const styles = StyleSheet.create({
   flex1: {
     flex: 1,
   },
+  chipText: {
+    fontSize: 12,
+  },
   userSelectionContainer: {
     marginTop: 12,
   },
@@ -487,7 +500,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   usersList: {
-    maxHeight: 280,
+    maxHeight: 240,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  usersListContent: {
+    paddingBottom: 4,
   },
   userRow: {
     paddingVertical: 10,
