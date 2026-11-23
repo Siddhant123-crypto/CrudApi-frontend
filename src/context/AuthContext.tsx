@@ -86,8 +86,10 @@ export const AuthProvider: React.FC<{
           'Stored login restored successfully',
         );
 
-        // Seamless background refresh from /user/me to sync profilePhoto and latest details
-        getCurrentUserProfile().then(meData => {
+        // Seamless background refresh from /user/me to sync profilePhoto and latest details.
+        // Admins live in a separate `admin` table, so /user/me would always 404 for them — skip it.
+        const isAdminSession = String(parsedUser?.role || '').toUpperCase() === 'ADMIN';
+        if (!isAdminSession) getCurrentUserProfile().then(meData => {
           const profile = meData?.response || meData;
           if (profile && (profile.profilePhoto !== parsedUser.profilePhoto || profile.name !== parsedUser.name || profile.farmerId !== parsedUser.farmerId)) {
             const { role: _ignoredRole, ...safeProfile } = profile;
