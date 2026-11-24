@@ -11,6 +11,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -26,6 +27,7 @@ import { CheckIcon } from '../../components/admin/AdminIcons';
 
 export const AdminAddEditMarketScreen: React.FC = () => {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const market = route.params?.market;
@@ -559,7 +561,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
         </ScrollView>
 
         {keyboardHeight === 0 && (
-          <AdminStickyBar style={styles.stickyBarLower}>
+          <AdminStickyBar style={{ paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12) + 8 }}>
             <AdminPrimaryButton
               title={isEdit ? t('admin.updateMarket') : t('admin.saveMarket')}
               onPress={handleSave}
@@ -575,10 +577,6 @@ export const AdminAddEditMarketScreen: React.FC = () => {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-  },
-  stickyBarLower: {
-    paddingTop: 12,
-    paddingBottom: 10,
   },
   scrollContent: {
     paddingHorizontal: 16,
