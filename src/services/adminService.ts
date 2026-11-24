@@ -81,6 +81,20 @@ export const getVerificationFarmers = async () => {
   }
 };
 
+export const getAdminMarkets = async () => {
+  try {
+    const response = await api.get('/admin/markets');
+    return response.data;
+  } catch (error: any) {
+    // Graceful fallback if older backend does not expose GET /admin/markets yet
+    if (error?.response?.status === 404 || error?.response?.status === 405) {
+      const fallback = await api.get('/markets');
+      return fallback.data;
+    }
+    throw error;
+  }
+};
+
 export const createAdminMarket = async (marketData: any) => {
   try {
     const response = await api.post('/admin/markets', marketData);

@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import * as Location from 'expo-location';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { createAdminMarket, updateAdminMarket } from '../../services/adminService';
 import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
 import { AdminHeader } from '../../components/admin/AdminHeader';
@@ -29,6 +31,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
   const isEdit = !!market;
 
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [formData, setFormData] = useState({
     marketName: market?.marketName || '',
     description: market?.description || '',
@@ -38,14 +41,77 @@ export const AdminAddEditMarketScreen: React.FC = () => {
     district: market?.district || '',
     state: market?.state || '',
     pincode: market?.pincode || '',
-    latitude: market?.latitude ? market.latitude.toString() : '',
-    longitude: market?.longitude ? market.longitude.toString() : '',
-    openingTime: market?.openingTime || '',
-    closingTime: market?.closingTime || '',
+    latitude:
+      market?.latitude !== undefined && market?.latitude !== null
+        ? String(market.latitude)
+        : '',
+    longitude:
+      market?.longitude !== undefined && market?.longitude !== null
+        ? String(market.longitude)
+        : '',
+    openingTime: market?.openingTime ? String(market.openingTime).slice(0, 5) : '',
+    closingTime: market?.closingTime ? String(market.closingTime).slice(0, 5) : '',
     marketContactName: market?.marketContactName || '',
     contactNumber: market?.contactNumber || '',
     isActive: market?.isActive !== undefined ? market.isActive : true,
   });
+
+  const handleUseCurrentLocation = async () => {
+    try {
+      setLocating(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('common.error', 'Error'), 'Location permission is required to detect coordinates.');
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setFormData((prev) => ({
+        ...prev,
+        latitude: pos.coords.latitude.toFixed(6),
+        longitude: pos.coords.longitude.toFixed(6),
+      }));
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), 'Unable to fetch current GPS coordinates.');
+    } finally {
+      setLocating(false);
+    }
+  };
+
+  const handleGeocodeAddress = async () => {
+    const query = [
+      formData.marketName,
+      formData.address,
+      formData.village,
+      formData.taluka,
+      formData.district,
+      formData.state,
+      formData.pincode,
+    ]
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(', ');
+    if (!query) {
+      Alert.alert(t('common.validationError', 'Validation Error'), 'Enter market name or address first to detect coordinates.');
+      return;
+    }
+    try {
+      setLocating(true);
+      const results = await Location.geocodeAsync(query);
+      if (results && results.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: results[0].latitude.toFixed(6),
+          longitude: results[0].longitude.toFixed(6),
+        }));
+      } else {
+        Alert.alert(t('common.error', 'Error'), 'Could not find coordinates for this address. Try using Current Location or enter manually.');
+      }
+    } catch (err) {
+      Alert.alert(t('common.error', 'Error'), 'Failed to look up coordinates for this address.');
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleChange = (key: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -76,6 +142,22 @@ export const AdminAddEditMarketScreen: React.FC = () => {
       }
     } else {
       Alert.alert(t('common.validationError'), t('admin.lngRequired'));
+      return false;
+    }
+
+    if (formData.openingTime.trim() && !formatTimeTo24Hr(formData.openingTime)) {
+      Alert.alert(
+        t('common.validationError', 'Validation Error'),
+        'Invalid opening time format. Use e.g. 06:00 or 6:00 AM.'
+      );
+      return false;
+    }
+
+    if (formData.closingTime.trim() && !formatTimeTo24Hr(formData.closingTime)) {
+      Alert.alert(
+        t('common.validationError', 'Validation Error'),
+        'Invalid closing time format. Use e.g. 20:00 or 8:00 PM.'
+      );
       return false;
     }
 
@@ -280,6 +362,28 @@ export const AdminAddEditMarketScreen: React.FC = () => {
           {/* Map Coordinates */}
           {renderSectionHeader(t('admin.mapCoordinates'))}
           <AdminCard style={styles.card}>
+            <View style={styles.coordQuickRow}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.coordHelperBtn}
+                onPress={handleUseCurrentLocation}
+                disabled={locating}
+              >
+                <Ionicons name="locate-outline" size={14} color="#4F5BD5" />
+                <Text style={styles.coordHelperBtnText}>
+                  {locating ? 'Locating...' : 'Use Current GPS'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.coordHelperBtn}
+                onPress={handleGeocodeAddress}
+                disabled={locating}
+              >
+                <Ionicons name="search-outline" size={14} color="#4F5BD5" />
+                <Text style={styles.coordHelperBtnText}>From Address</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.row}>
               <View style={styles.flex1}>
                 <AdminInput
@@ -421,6 +525,29 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 14,
     padding: 16,
+  },
+  coordQuickRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  coordHelperBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: '#EEF0FB',
+    borderWidth: 1,
+    borderColor: '#DCE1F8',
+  },
+  coordHelperBtnText: {
+    fontFamily: AdminFonts.semiBold,
+    fontSize: 12,
+    color: '#4F5BD5',
   },
   row: {
     flexDirection: 'row',

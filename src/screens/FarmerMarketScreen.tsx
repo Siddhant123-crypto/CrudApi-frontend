@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,13 @@ import {
   Alert,
   ScrollView,
   Animated,
+  RefreshControl,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { getNearbyMarkets, searchMarkets, Market } from '../services/marketService';
+import { getAllMarkets, getNearbyMarkets, searchMarkets, Market } from '../services/marketService';
 
 import { FARMER_THEME } from '../constants/farmerTheme';
 import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
@@ -36,10 +37,12 @@ export const FarmerMarketScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationErrorMsg, setLocationErrorMsg] = useState<string | null>(null);
+  const locationRef = useRef<Location.LocationObject | null>(null);
 
   // Animation states for bottom sheet
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -67,27 +70,87 @@ export const FarmerMarketScreen: React.FC = () => {
     outputRange: [0, LIST_HEIGHT - COLLAPSED_HEIGHT],
   });
 
-  const fetchNearbyMarkets = async (lat: number, lon: number) => {
+  const extractMarketsArray = (res: any): Market[] => {
+    const raw = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+    return raw.filter((m: any) => m && m.isActive !== false);
+  };
+
+  const fetchAllActiveMarkets = async (silent = false) => {
     try {
-      setLoading(true);
-      const res = await getNearbyMarkets(lat, lon);
-      const marketsArray = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-      setMarkets(marketsArray);
+      if (!silent) setLoading(true);
+      const res = await getAllMarkets();
+      setMarkets(extractMarketsArray(res));
     } catch (error) {
-      console.log('Error fetching nearby markets:', error);
-      Alert.alert(t('common.error'), t('market.failedFetchNearby'));
+      console.log('Error fetching all markets:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const fetchNearbyMarkets = async (lat: number, lon: number, silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      const res = await getNearbyMarkets(lat, lon);
+      setMarkets(extractMarketsArray(res));
+    } catch (error) {
+      console.log('Error fetching nearby markets:', error);
+      await fetchAllActiveMarkets(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const loadMarketsWithLocation = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    }
+    // If we already have GPS coords, fetch nearby directly for instant distance-enriched list
+    if (locationRef.current) {
+      await fetchNearbyMarkets(
+        locationRef.current.coords.latitude,
+        locationRef.current.coords.longitude,
+        isRefresh
+      );
+      return;
+    }
+
+    // Always load active markets immediately so farmers see markets even without GPS
+    await fetchAllActiveMarkets(isRefresh);
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationErrorMsg('Location permission denied — showing all active markets');
+        return;
+      }
+      const lastKnown = await Location.getLastKnownPositionAsync({});
+      if (lastKnown) {
+        locationRef.current = lastKnown;
+        setLocation(lastKnown);
+        setLocationErrorMsg(null);
+        await fetchNearbyMarkets(lastKnown.coords.latitude, lastKnown.coords.longitude, true);
+      }
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      locationRef.current = loc;
+      setLocation(loc);
+      setLocationErrorMsg(null);
+      await fetchNearbyMarkets(loc.coords.latitude, loc.coords.longitude, true);
+    } catch (e) {
+      setLocationErrorMsg('Showing all active markets');
+    }
+  }, []);
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) {
       setIsSearching(false);
-      if (location) {
-        fetchNearbyMarkets(location.coords.latitude, location.coords.longitude);
+      if (locationRef.current) {
+        fetchNearbyMarkets(locationRef.current.coords.latitude, locationRef.current.coords.longitude);
       } else {
-        setMarkets([]);
+        fetchAllActiveMarkets();
       }
       return;
     }
@@ -95,9 +158,8 @@ export const FarmerMarketScreen: React.FC = () => {
     setIsSearching(true);
     try {
       setLoading(true);
-      const res = await searchMarkets(query);
-      const marketsArray = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-      setMarkets(marketsArray);
+      const res = await searchMarkets(query.trim());
+      setMarkets(extractMarketsArray(res));
     } catch (error) {
       console.log('Error searching markets:', error);
       Alert.alert(t('common.error'), t('market.failedSearch'));
@@ -111,28 +173,20 @@ export const FarmerMarketScreen: React.FC = () => {
       if (isSearching || searchQuery.trim().length > 0) {
         handleSearch(searchQuery);
       }
-    }, 500);
+    }, 450);
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setLocationErrorMsg('Permission to access location was denied');
-          setLoading(false);
-          return;
-        }
-        let loc = await Location.getCurrentPositionAsync({});
-        setLocation(loc);
-        fetchNearbyMarkets(loc.coords.latitude, loc.coords.longitude);
-      } catch (e) {
-        setLocationErrorMsg('Location is unavailable');
-        setLoading(false);
+  // Refresh every time farmer opens or returns to Markets screen so new/edited/deactivated admin markets sync live
+  useFocusEffect(
+    useCallback(() => {
+      if (searchQuery.trim().length > 0) {
+        handleSearch(searchQuery);
+      } else {
+        loadMarketsWithLocation(false);
       }
-    })();
-  }, []);
+    }, [loadMarketsWithLocation])
+  );
 
   const renderMarketItem = (item: Market, idx: number) => (
     <FarmerCard
@@ -156,14 +210,16 @@ export const FarmerMarketScreen: React.FC = () => {
               numberOfLines={1}
               maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
             >
-              {item.district}, {item.state}
+              {[item.village, item.district, item.state].filter(Boolean).join(', ') ||
+                item.address ||
+                t('common.notSpecified', 'Location available')}
             </Text>
           </View>
 
-          {item.distance !== undefined && (
+          {item.distance !== undefined && item.distance !== null && (
             <View style={styles.distanceBadgeRow}>
               <FarmerBadge
-                label={`${item.distance.toFixed(1)} ${item.distanceUnit || 'km'} away`}
+                label={`${Number(item.distance).toFixed(1)} ${item.distanceUnit || 'km'} away`}
                 variant="success"
               />
             </View>
@@ -210,49 +266,53 @@ export const FarmerMarketScreen: React.FC = () => {
 
       {/* Map (Full Background Area) */}
       <View style={styles.mapContainer}>
-        {location ? (
-          <MapView
-            provider={PROVIDER_GOOGLE}
-            style={styles.map}
-            initialRegion={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: 0.1,
-              longitudeDelta: 0.1,
-            }}
-            showsUserLocation={true}
-            paddingAdjustmentBehavior="always"
-          >
-            {(Array.isArray(markets) ? markets : []).map((market) => {
-              const lat = Number(market.latitude);
-              const lon = Number(market.longitude);
-              const isValidCoord = !isNaN(lat) && !isNaN(lon);
-              return isValidCoord ? (
+        {(() => {
+          const validMarkets = (Array.isArray(markets) ? markets : []).filter(
+            (m) => m.latitude != null && m.longitude != null && !isNaN(Number(m.latitude)) && !isNaN(Number(m.longitude))
+          );
+          const mapLat = location
+            ? location.coords.latitude
+            : validMarkets.length > 0
+            ? Number(validMarkets[0].latitude)
+            : 19.9975;
+          const mapLon = location
+            ? location.coords.longitude
+            : validMarkets.length > 0
+            ? Number(validMarkets[0].longitude)
+            : 73.7898;
+
+          return (
+            <MapView
+              provider={PROVIDER_GOOGLE}
+              style={styles.map}
+              initialRegion={{
+                latitude: mapLat,
+                longitude: mapLon,
+                latitudeDelta: 0.25,
+                longitudeDelta: 0.25,
+              }}
+              showsUserLocation={!!location}
+              paddingAdjustmentBehavior="always"
+            >
+              {validMarkets.map((market) => (
                 <Marker
                   key={market.id}
-                  coordinate={{ latitude: lat, longitude: lon }}
+                  coordinate={{
+                    latitude: Number(market.latitude),
+                    longitude: Number(market.longitude),
+                  }}
                   title={market.marketName}
-                  description={`${market.district}, ${market.state}`}
+                  description={[market.district, market.state].filter(Boolean).join(', ')}
                   onCalloutPress={() => navigation.navigate('MarketDetails', { market })}
                 >
                   <View style={styles.markerPin}>
                     <Ionicons name="storefront" size={16} color="#FFFFFF" />
                   </View>
                 </Marker>
-              ) : null;
-            })}
-          </MapView>
-        ) : (
-          <View style={styles.mapPlaceholder}>
-            <Ionicons name="map-outline" size={40} color={FARMER_THEME.colors.placeholder} />
-            <Text
-              style={styles.mapPlaceholderText}
-              maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
-            >
-              {locationErrorMsg || 'Loading map...'}
-            </Text>
-          </View>
-        )}
+              ))}
+            </MapView>
+          );
+        })()}
       </View>
 
       {/* Bottom Sheet */}
@@ -281,6 +341,14 @@ export const FarmerMarketScreen: React.FC = () => {
         <ScrollView
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadMarketsWithLocation(true)}
+              colors={[FARMER_THEME.colors.primaryGreen]}
+              tintColor={FARMER_THEME.colors.primaryGreen}
+            />
+          }
         >
           {loading ? (
             <View style={styles.centerContainer}>

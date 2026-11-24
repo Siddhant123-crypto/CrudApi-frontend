@@ -7,11 +7,15 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import api from '../../services/api';
-import { deleteAdminMarket, updateAdminMarketStatus } from '../../services/adminService';
+import {
+  getAdminMarkets,
+  deleteAdminMarket,
+  updateAdminMarketStatus,
+} from '../../services/adminService';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
   AdminPageBackground,
@@ -31,21 +35,31 @@ export const AdminMarketsScreen: React.FC = () => {
   const { t } = useTranslation();
   const [markets, setMarkets] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<any>();
 
-  const fetchMarkets = async () => {
+  const fetchMarkets = async (isRefresh = false) => {
     try {
-      setLoading(true);
-      const response = await api.get('/markets');
-      if (response.data && response.data.data) {
-        setMarkets(response.data.data);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
       }
+      const response = await getAdminMarkets();
+      const list = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+        ? response.data
+        : [];
+      setMarkets(list);
     } catch (error) {
       console.error('Failed to fetch markets:', error);
       Alert.alert(t('common.error', 'Error'), t('admin.failedFetchMarkets', 'Failed to fetch markets.'));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -68,10 +82,16 @@ export const AdminMarketsScreen: React.FC = () => {
               setLoading(true);
               await updateAdminMarketStatus(id, !currentStatus);
               await fetchMarkets();
-              Alert.alert(t('common.success', 'Success'), currentStatus ? t('admin.marketDeactivatedSuccess', 'Market deactivated successfully.') : t('admin.marketActivatedSuccess', 'Market activated successfully.'));
-            } catch (e) {
+              Alert.alert(
+                t('common.success', 'Success'),
+                currentStatus
+                  ? t('admin.marketDeactivatedSuccess', 'Market deactivated successfully.')
+                  : t('admin.marketActivatedSuccess', 'Market activated successfully.')
+              );
+            } catch (e: any) {
               console.log(e);
-              Alert.alert(t('common.error', 'Error'), t('admin.failedUpdateStatus', 'Failed to update status.'));
+              const msg = e?.response?.data?.message || t('admin.failedUpdateStatus', 'Failed to update status.');
+              Alert.alert(t('common.error', 'Error'), msg);
               setLoading(false);
             }
           },
@@ -95,9 +115,10 @@ export const AdminMarketsScreen: React.FC = () => {
               await deleteAdminMarket(id);
               await fetchMarkets();
               Alert.alert(t('common.success', 'Success'), t('admin.marketDeletedSuccess', 'Market deleted successfully.'));
-            } catch (e) {
+            } catch (e: any) {
               console.log(e);
-              Alert.alert(t('common.error', 'Error'), t('admin.failedDeleteMarket', 'Failed to delete market.'));
+              const msg = e?.response?.data?.message || t('admin.failedDeleteMarket', 'Failed to delete market.');
+              Alert.alert(t('common.error', 'Error'), msg);
               setLoading(false);
             }
           },
@@ -106,14 +127,23 @@ export const AdminMarketsScreen: React.FC = () => {
     );
   };
 
-  const filteredMarkets = markets.filter(m => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    const nameMatch = m.marketName?.toLowerCase().includes(q);
-    const distMatch = m.district?.toLowerCase().includes(q);
-    const stateMatch = m.state?.toLowerCase().includes(q);
-    return nameMatch || distMatch || stateMatch;
+  const filteredMarkets = markets.filter((m) => {
+    if (statusFilter === 'ACTIVE' && !m.isActive) return false;
+    if (statusFilter === 'INACTIVE' && m.isActive) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.trim().toLowerCase();
+    return (
+      m.marketName?.toLowerCase().includes(q) ||
+      m.district?.toLowerCase().includes(q) ||
+      m.village?.toLowerCase().includes(q) ||
+      m.taluka?.toLowerCase().includes(q) ||
+      m.state?.toLowerCase().includes(q) ||
+      m.address?.toLowerCase().includes(q)
+    );
   });
+
+  const activeCount = markets.filter((m) => m.isActive).length;
+  const inactiveCount = markets.length - activeCount;
 
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity
@@ -220,7 +250,30 @@ export const AdminMarketsScreen: React.FC = () => {
         }
       />
 
-      {/* 2) MARKETS LIST */}
+      {/* 2) STATUS FILTER PILLS */}
+      <View style={styles.filterRow}>
+        {([
+          { key: 'ALL', label: `${t('common.all', 'All')} (${markets.length})` },
+          { key: 'ACTIVE', label: `${t('common.active', 'Active')} (${activeCount})` },
+          { key: 'INACTIVE', label: `${t('common.inactive', 'Inactive')} (${inactiveCount})` },
+        ] as const).map((tab) => {
+          const selected = statusFilter === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              activeOpacity={0.8}
+              onPress={() => setStatusFilter(tab.key)}
+              style={[styles.filterPill, selected && styles.filterPillActive]}
+            >
+              <Text style={[styles.filterPillText, selected && styles.filterPillTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* 3) MARKETS LIST */}
       {loading ? (
         <AdminListSkeleton rows={5} />
       ) : filteredMarkets.length === 0 ? (
@@ -236,6 +289,14 @@ export const AdminMarketsScreen: React.FC = () => {
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => fetchMarkets(true)}
+              colors={[ADMIN_THEME.colors.indigo]}
+              tintColor={ADMIN_THEME.colors.indigo}
+            />
+          }
         />
       )}
     </AdminPageBackground>
@@ -253,6 +314,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 6,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E3E7F2',
+  },
+  filterPillActive: {
+    backgroundColor: '#1F2F6B',
+    borderColor: '#1F2F6B',
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontFamily: AdminFonts.semiBold,
+    color: '#5B6580',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
   },
   listContainer: {
     paddingHorizontal: 16,

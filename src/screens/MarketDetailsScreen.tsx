@@ -136,6 +136,17 @@ export const MarketDetailsScreen: React.FC = () => {
     }
   };
 
+  const formatTimeDisplay = (timeStr?: string | null) => {
+    if (!timeStr) return 'N/A';
+    const match = String(timeStr).match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return String(timeStr);
+    let hours = parseInt(match[1], 10);
+    const mins = match[2];
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    return `${hours.toString().padStart(2, '0')}:${mins} ${period}`;
+  };
+
   const getFullAddress = () => {
     const parts = [
       market.address,
@@ -252,8 +263,9 @@ export const MarketDetailsScreen: React.FC = () => {
                 <View style={styles.infoTextWrapper}>
                   <Text style={styles.adminInfoLabel}>{t('farmer.operatingHours', 'Operating Hours')}</Text>
                   <Text style={styles.adminInfoValue}>
-                    {market.openingTime ? market.openingTime : 'N/A'} -{' '}
-                    {market.closingTime ? market.closingTime : 'N/A'}
+                    {market.openingTime || market.closingTime
+                      ? `${formatTimeDisplay(market.openingTime)} - ${formatTimeDisplay(market.closingTime)}`
+                      : 'N/A'}
                   </Text>
                 </View>
               </View>
@@ -425,8 +437,9 @@ export const MarketDetailsScreen: React.FC = () => {
                   style={styles.infoValue}
                   maxFontSizeMultiplier={FARMER_THEME.typography.maxFontSizeMultiplier}
                 >
-                  {market.openingTime ? market.openingTime : 'N/A'} -{' '}
-                  {market.closingTime ? market.closingTime : 'N/A'}
+                  {market.openingTime || market.closingTime
+                    ? `${formatTimeDisplay(market.openingTime)} - ${formatTimeDisplay(market.closingTime)}`
+                    : 'N/A'}
                 </Text>
               </View>
             </View>
