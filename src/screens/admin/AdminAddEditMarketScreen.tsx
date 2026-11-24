@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Keyboard,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +33,35 @@ export const AdminAddEditMarketScreen: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const sectionPositions = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const scrollToField = (sectionKey: string, extraOffset = 0) => {
+    const baseY = sectionPositions.current[sectionKey];
+    if (baseY === undefined) return;
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(0, baseY + extraOffset - 24),
+        animated: true,
+      });
+    }, 120);
+  };
   const [formData, setFormData] = useState({
     marketName: market?.marketName || '',
     description: market?.description || '',
@@ -268,7 +298,8 @@ export const AdminAddEditMarketScreen: React.FC = () => {
     <AdminPageBackground>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 12}
       >
         <AdminHeader
           variant="inner"
@@ -278,176 +309,219 @@ export const AdminAddEditMarketScreen: React.FC = () => {
         />
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          ref={scrollViewRef}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 60 : 32 },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
           {/* Basic Information */}
-          {renderSectionHeader(t('admin.basicInfo'))}
-          <AdminCard style={styles.card}>
-            <AdminInput
-              label={t('admin.marketName')}
-              required
-              placeholder={t('admin.egApmcVashi')}
-              value={formData.marketName}
-              onChangeText={(text) => handleChange('marketName', text)}
-            />
-            <AdminInput
-              label={t('common.description')}
-              placeholder={t('admin.descPlaceholder')}
-              value={formData.description}
-              onChangeText={(text) => handleChange('description', text)}
-              multiline
-              containerStyle={{ marginBottom: 0 }}
-            />
-          </AdminCard>
+          <View
+            onLayout={(e) => {
+              sectionPositions.current.basic = e.nativeEvent.layout.y;
+            }}
+          >
+            {renderSectionHeader(t('admin.basicInfo'))}
+            <AdminCard style={styles.card}>
+              <AdminInput
+                label={t('admin.marketName')}
+                required
+                placeholder={t('admin.egApmcVashi')}
+                value={formData.marketName}
+                onChangeText={(text) => handleChange('marketName', text)}
+                onFocus={() => scrollToField('basic', 0)}
+              />
+              <AdminInput
+                label={t('common.description')}
+                placeholder={t('admin.descPlaceholder')}
+                value={formData.description}
+                onChangeText={(text) => handleChange('description', text)}
+                onFocus={() => scrollToField('basic', 70)}
+                multiline
+                containerStyle={{ marginBottom: 0 }}
+              />
+            </AdminCard>
+          </View>
 
           {/* Location Details */}
-          {renderSectionHeader(t('admin.locationDetails'))}
-          <AdminCard style={styles.card}>
-            <AdminInput
-              label={t('common.address')}
-              placeholder={t('admin.streetAreaPlaceholder')}
-              value={formData.address}
-              onChangeText={(text) => handleChange('address', text)}
-            />
-            <View style={styles.row}>
-              <View style={styles.flex1}>
-                <AdminInput
-                  label={t('admin.village')}
-                  placeholder={t('admin.village')}
-                  value={formData.village}
-                  onChangeText={(text) => handleChange('village', text)}
-                />
+          <View
+            onLayout={(e) => {
+              sectionPositions.current.location = e.nativeEvent.layout.y;
+            }}
+          >
+            {renderSectionHeader(t('admin.locationDetails'))}
+            <AdminCard style={styles.card}>
+              <AdminInput
+                label={t('common.address')}
+                placeholder={t('admin.streetAreaPlaceholder')}
+                value={formData.address}
+                onChangeText={(text) => handleChange('address', text)}
+                onFocus={() => scrollToField('location', 0)}
+              />
+              <View style={styles.row}>
+                <View style={styles.flex1}>
+                  <AdminInput
+                    label={t('admin.village')}
+                    placeholder={t('admin.village')}
+                    value={formData.village}
+                    onChangeText={(text) => handleChange('village', text)}
+                    onFocus={() => scrollToField('location', 70)}
+                  />
+                </View>
+                <View style={styles.spacing} />
+                <View style={styles.flex1}>
+                  <AdminInput
+                    label={t('admin.taluka')}
+                    placeholder={t('admin.taluka')}
+                    value={formData.taluka}
+                    onChangeText={(text) => handleChange('taluka', text)}
+                    onFocus={() => scrollToField('location', 70)}
+                  />
+                </View>
               </View>
-              <View style={styles.spacing} />
-              <View style={styles.flex1}>
-                <AdminInput
-                  label={t('admin.taluka')}
-                  placeholder={t('admin.taluka')}
-                  value={formData.taluka}
-                  onChangeText={(text) => handleChange('taluka', text)}
-                />
+              <View style={styles.row}>
+                <View style={styles.flex1}>
+                  <AdminInput
+                    label={t('admin.district')}
+                    placeholder={t('admin.district')}
+                    value={formData.district}
+                    onChangeText={(text) => handleChange('district', text)}
+                    onFocus={() => scrollToField('location', 145)}
+                  />
+                </View>
+                <View style={styles.spacing} />
+                <View style={styles.flex1}>
+                  <AdminInput
+                    label={t('admin.state')}
+                    placeholder={t('admin.state')}
+                    value={formData.state}
+                    onChangeText={(text) => handleChange('state', text)}
+                    onFocus={() => scrollToField('location', 145)}
+                  />
+                </View>
               </View>
-            </View>
-            <View style={styles.row}>
-              <View style={styles.flex1}>
-                <AdminInput
-                  label={t('admin.district')}
-                  placeholder={t('admin.district')}
-                  value={formData.district}
-                  onChangeText={(text) => handleChange('district', text)}
-                />
-              </View>
-              <View style={styles.spacing} />
-              <View style={styles.flex1}>
-                <AdminInput
-                  label={t('admin.state')}
-                  placeholder={t('admin.state')}
-                  value={formData.state}
-                  onChangeText={(text) => handleChange('state', text)}
-                />
-              </View>
-            </View>
-            <AdminInput
-              label={t('admin.pincode')}
-              placeholder={t('admin.egPincode')}
-              value={formData.pincode}
-              onChangeText={(text) => handleChange('pincode', text)}
-              keyboardType="numeric"
-              containerStyle={{ marginBottom: 0 }}
-            />
-          </AdminCard>
+              <AdminInput
+                label={t('admin.pincode')}
+                placeholder={t('admin.egPincode')}
+                value={formData.pincode}
+                onChangeText={(text) => handleChange('pincode', text)}
+                onFocus={() => scrollToField('location', 220)}
+                keyboardType="numeric"
+                containerStyle={{ marginBottom: 0 }}
+              />
+            </AdminCard>
+          </View>
 
           {/* Map Coordinates */}
-          {renderSectionHeader(t('admin.mapCoordinates'))}
-          <AdminCard style={styles.card}>
-            <View style={styles.coordQuickRow}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={styles.coordHelperBtn}
-                onPress={handleUseCurrentLocation}
-                disabled={locating}
-              >
-                <Ionicons name="locate-outline" size={14} color="#4F5BD5" />
-                <Text style={styles.coordHelperBtnText}>
-                  {locating ? 'Locating...' : 'Use Current GPS'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={styles.coordHelperBtn}
-                onPress={handleGeocodeAddress}
-                disabled={locating}
-              >
-                <Ionicons name="search-outline" size={14} color="#4F5BD5" />
-                <Text style={styles.coordHelperBtnText}>From Address</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.row}>
-              <View style={styles.flex1}>
-                <AdminInput
-                  label={t('admin.lat')}
-                  required
-                  placeholder={t('admin.egLat')}
-                  value={formData.latitude}
-                  onChangeText={(text) => handleChange('latitude', text)}
-                  keyboardType="numeric"
-                  containerStyle={{ marginBottom: 0 }}
-                />
+          <View
+            onLayout={(e) => {
+              sectionPositions.current.coords = e.nativeEvent.layout.y;
+            }}
+          >
+            {renderSectionHeader(t('admin.mapCoordinates'))}
+            <AdminCard style={styles.card}>
+              <View style={styles.coordQuickRow}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.coordHelperBtn}
+                  onPress={handleUseCurrentLocation}
+                  disabled={locating}
+                >
+                  <Ionicons name="locate-outline" size={14} color="#4F5BD5" />
+                  <Text style={styles.coordHelperBtnText}>
+                    {locating ? 'Locating...' : 'Use Current GPS'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.coordHelperBtn}
+                  onPress={handleGeocodeAddress}
+                  disabled={locating}
+                >
+                  <Ionicons name="search-outline" size={14} color="#4F5BD5" />
+                  <Text style={styles.coordHelperBtnText}>From Address</Text>
+                </TouchableOpacity>
               </View>
-              <View style={styles.spacing} />
-              <View style={styles.flex1}>
-                <AdminInput
-                  label={t('admin.lng')}
-                  required
-                  placeholder={t('admin.egLng')}
-                  value={formData.longitude}
-                  onChangeText={(text) => handleChange('longitude', text)}
-                  keyboardType="numeric"
-                  containerStyle={{ marginBottom: 0 }}
-                />
+              <View style={styles.row}>
+                <View style={styles.flex1}>
+                  <AdminInput
+                    label={t('admin.lat')}
+                    required
+                    placeholder={t('admin.egLat')}
+                    value={formData.latitude}
+                    onChangeText={(text) => handleChange('latitude', text)}
+                    onFocus={() => scrollToField('coords', 30)}
+                    keyboardType="numeric"
+                    containerStyle={{ marginBottom: 0 }}
+                  />
+                </View>
+                <View style={styles.spacing} />
+                <View style={styles.flex1}>
+                  <AdminInput
+                    label={t('admin.lng')}
+                    required
+                    placeholder={t('admin.egLng')}
+                    value={formData.longitude}
+                    onChangeText={(text) => handleChange('longitude', text)}
+                    onFocus={() => scrollToField('coords', 30)}
+                    keyboardType="numeric"
+                    containerStyle={{ marginBottom: 0 }}
+                  />
+                </View>
               </View>
-            </View>
-          </AdminCard>
+            </AdminCard>
+          </View>
 
           {/* Operations & Contact */}
-          {renderSectionHeader(t('admin.operationsContact'))}
-          <AdminCard style={styles.card}>
-            <View style={styles.row}>
-              <View style={styles.flex1}>
-                <AdminInput
-                  label={t('admin.openingTime')}
-                  placeholder={t('admin.egTimeAm')}
-                  value={formData.openingTime}
-                  onChangeText={(text) => handleChange('openingTime', text)}
-                />
+          <View
+            onLayout={(e) => {
+              sectionPositions.current.operations = e.nativeEvent.layout.y;
+            }}
+          >
+            {renderSectionHeader(t('admin.operationsContact'))}
+            <AdminCard style={styles.card}>
+              <View style={styles.row}>
+                <View style={styles.flex1}>
+                  <AdminInput
+                    label={t('admin.openingTime')}
+                    placeholder={t('admin.egTimeAm')}
+                    value={formData.openingTime}
+                    onChangeText={(text) => handleChange('openingTime', text)}
+                    onFocus={() => scrollToField('operations', 0)}
+                  />
+                </View>
+                <View style={styles.spacing} />
+                <View style={styles.flex1}>
+                  <AdminInput
+                    label={t('admin.closingTime')}
+                    placeholder={t('admin.egTimePm')}
+                    value={formData.closingTime}
+                    onChangeText={(text) => handleChange('closingTime', text)}
+                    onFocus={() => scrollToField('operations', 0)}
+                  />
+                </View>
               </View>
-              <View style={styles.spacing} />
-              <View style={styles.flex1}>
-                <AdminInput
-                  label={t('admin.closingTime')}
-                  placeholder={t('admin.egTimePm')}
-                  value={formData.closingTime}
-                  onChangeText={(text) => handleChange('closingTime', text)}
-                />
-              </View>
-            </View>
-            <AdminInput
-              label={t('admin.contactPerson')}
-              placeholder={t('admin.marketManagerName')}
-              value={formData.marketContactName}
-              onChangeText={(text) => handleChange('marketContactName', text)}
-            />
-            <AdminInput
-              label={t('admin.contactNumber')}
-              placeholder={t('admin.phoneNumber')}
-              value={formData.contactNumber}
-              onChangeText={(text) => handleChange('contactNumber', text)}
-              keyboardType="phone-pad"
-              containerStyle={{ marginBottom: 0 }}
-            />
-          </AdminCard>
+              <AdminInput
+                label={t('admin.contactPerson')}
+                placeholder={t('admin.marketManagerName')}
+                value={formData.marketContactName}
+                onChangeText={(text) => handleChange('marketContactName', text)}
+                onFocus={() => scrollToField('operations', 75)}
+              />
+              <AdminInput
+                label={t('admin.contactNumber')}
+                placeholder={t('admin.phoneNumber')}
+                value={formData.contactNumber}
+                onChangeText={(text) => handleChange('contactNumber', text)}
+                onFocus={() => scrollToField('operations', 150)}
+                keyboardType="phone-pad"
+                containerStyle={{ marginBottom: 0 }}
+              />
+            </AdminCard>
+          </View>
 
           {/* Status */}
           {renderSectionHeader(t('admin.marketStatus'))}
@@ -485,13 +559,15 @@ export const AdminAddEditMarketScreen: React.FC = () => {
           </AdminCard>
         </ScrollView>
 
-        <AdminStickyBar>
-          <AdminPrimaryButton
-            title={isEdit ? t('admin.updateMarket') : t('admin.saveMarket')}
-            onPress={handleSave}
-            loading={loading}
-          />
-        </AdminStickyBar>
+        {keyboardHeight === 0 && (
+          <AdminStickyBar>
+            <AdminPrimaryButton
+              title={isEdit ? t('admin.updateMarket') : t('admin.saveMarket')}
+              onPress={handleSave}
+              loading={loading}
+            />
+          </AdminStickyBar>
+        )}
       </KeyboardAvoidingView>
     </AdminPageBackground>
   );
