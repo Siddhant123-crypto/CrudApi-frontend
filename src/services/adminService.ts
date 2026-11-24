@@ -87,7 +87,7 @@ export const getAdminMarkets = async () => {
     return response.data;
   } catch (error: any) {
     // Graceful fallback if older backend does not expose GET /admin/markets yet
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
+    if (error?.response?.status === 404 || error?.response?.status === 405 || error?.response?.status === 500) {
       const fallback = await api.get('/markets');
       return fallback.data;
     }
