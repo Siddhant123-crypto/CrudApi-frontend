@@ -65,7 +65,8 @@
     "phone": "Phone",
     "description": "Description",
     "validationError": "Validation Error",
-    "serverWaking": "Connecting to server, please wait a moment..."
+    "serverWaking": "Connecting to server, please wait a moment...",
+    "selected": "selected"
   },
   "language": {
     "selectLanguage": "Select language",
@@ -182,7 +183,8 @@
     "linkingError": "Linking Error",
     "failedLinkGoogle": "Failed to link Google account.",
     "unableLinkAccount": "Unable to link account.",
-    "pasteResetTokenPlaceholder": "Paste reset token from email"
+    "pasteResetTokenPlaceholder": "Paste reset token from email",
+    "enterPasswordShort": "Enter password"
   },
   "nav": {
     "home": "Home",
@@ -308,7 +310,9 @@
     "activatedSuccess": "Product has been activated successfully.",
     "deactivatedSuccess": "Product has been deactivated successfully.",
     "failedToggleStatus": "Failed to update product status.",
-    "toggleStatusConfirm": "Are you sure you want to change status of \"{{name}}\"?"
+    "toggleStatusConfirm": "Are you sure you want to change status of \"{{name}}\"?",
+    "stock": "Stock",
+    "unavailable": "Unavailable"
   },
   "cart": {
     "myCart": "My Cart",
@@ -426,7 +430,9 @@
     "timelineCancelled": "Order Cancelled",
     "customerOrder": "Customer order",
     "viewOrderDetails": "View Order Details",
-    "noOrders": "No orders found."
+    "noOrders": "No orders found.",
+    "orderCancelled": "Order Cancelled",
+    "orderId": "Order ID"
   },
   "farmer": {
     "dashboard": "Farmer Dashboard",
@@ -649,7 +655,10 @@
     "khetiSalahkar": "Farm Advisory",
     "stock": "Stock",
     "toggleStatusConfirmTitle": "Confirm Status Change",
-    "toggleStatusConfirmDesc": "Are you sure you want to change the status?"
+    "toggleStatusConfirmDesc": "Are you sure you want to change the status?",
+    "addFirstProductDesc": "Add your first fresh farm product to start receiving orders.",
+    "noProductsYet": "No products added yet",
+    "selectUnit": "Select unit"
   },
   "notifications": {
     "title": "Notifications",
@@ -679,7 +688,8 @@
     "noMessages": "No messages",
     "notFound": "Notification details not found.",
     "noMessagesThread": "No messages in this thread yet.",
-    "notificationConversation": "Notification Conversation"
+    "notificationConversation": "Notification Conversation",
+    "deleteSelectedConfirm": "Delete selected notifications?"
   },
   "profile": {
     "myProfile": "My Profile",
@@ -729,7 +739,10 @@
     "failedToUpdate": "Failed to update profile",
     "updatedTitle": "Profile Updated!",
     "farmSavedDesc": "Your farm profile and details have been saved successfully.",
-    "savedWithSync": "Your profile details have been saved successfully and your delivery address is in sync."
+    "savedWithSync": "Your profile details have been saved successfully and your delivery address is in sync.",
+    "chooseAnotherPhoto": "Choose Another Photo",
+    "confirmPhotoSubtitle": "Confirm your new profile photo before saving.",
+    "previewPhoto": "Preview Photo"
   },
   "validation": {
     "nameRequired": "Full name is required",
@@ -767,7 +780,10 @@
     "noProductsFound": "No products found",
     "subtitle": "Explore fresh farm produce",
     "noCategoriesAvailable": "No Categories Available",
-    "noCategoriesAvailableDesc": "Categories configured on the marketplace will appear here."
+    "noCategoriesAvailableDesc": "Categories configured on the marketplace will appear here.",
+    "leafyVegetable": "Leafy Vegetable",
+    "rootVegetable": "Root Vegetable",
+    "wildForestVegetable": "Wild Forest Vegetable"
   },
   "status": {
     "pending": "Pending",
@@ -827,7 +843,8 @@
     "unauthorized": "Your session has expired. Please sign in again.",
     "forbidden": "You do not have permission to perform this action.",
     "notFound": "The requested item was not found.",
-    "timeout": "Request timed out. Please try again."
+    "timeout": "Request timed out. Please try again.",
+    "tooManyRequests": "Too many requests. Please try again shortly."
   },
   "aiChat": {
     "customerTitle": "Farm2Home AI Assistant",
@@ -1215,7 +1232,8 @@
     "policyViolation": "Policy violation",
     "sinceDate": "Since: {{since}}",
     "noVideoUploadedSub": "The farmer has not uploaded a video for this farm yet.",
-    "rejectVerificationDesc": "Please provide a clear reason for rejecting the farm verification request."
+    "rejectVerificationDesc": "Please provide a clear reason for rejecting the farm verification request.",
+    "fromAddress": "From Address"
   },
   "wishlist": {
     "title": "Wishlist",
@@ -1240,7 +1258,11 @@
     "shorts": "Shorts",
     "videoCannotBePlayed": "This video cannot be played",
     "videoCannotBePlayedDesc": "Unable to load the video stream. Please check your connection or retry.",
-    "farmerShort": "Farmer Short"
+    "farmerShort": "Farmer Short",
+    "discoverStories": "Discover Farm Stories",
+    "shareFarmShorts": "Share Farm Shorts",
+    "shareFarmShortsDesc": "Upload short videos showcasing your verified farm.",
+    "watchFarmVideos": "Watch Farm Videos"
   },
   "weather": {
     "currentLocation": "Current Location",

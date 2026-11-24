@@ -65,7 +65,8 @@
     "phone": "दूरभाषः",
     "description": "विवरणम्",
     "validationError": "प्रमाणीकरणदोषः",
-    "serverWaking": "सेवकेन सह सम्पर्कः स्थाप्यते, कृपया क्षणमेकं प्रतीक्षताम्..."
+    "serverWaking": "सेवकेन सह सम्पर्कः स्थाप्यते, कृपया क्षणमेकं प्रतीक्षताम्...",
+    "selected": "चयनितम्"
   },
   "language": {
     "selectLanguage": "भाषां चिनुत",
@@ -182,7 +183,8 @@
     "linkingError": "संयोजनदोषः",
     "failedLinkGoogle": "गूगल-लेखायाः संयोजने विफलता।",
     "unableLinkAccount": "लेखां संयोजयितुं न शक्यते।",
-    "pasteResetTokenPlaceholder": "वि-पत्रात् पुनर्व्यवस्थापन-टोकनं लेपयन्तु"
+    "pasteResetTokenPlaceholder": "वि-पत्रात् पुनर्व्यवस्थापन-टोकनं लेपयन्तु",
+    "enterPasswordShort": "गोप्यशब्दं लिखत"
   },
   "nav": {
     "home": "मुख्यपृष्ठम्",
@@ -308,7 +310,9 @@
     "activatedSuccess": "उत्पादः साफल्येन सक्रियीकृतः।",
     "deactivatedSuccess": "उत्पादः साफल्येन निष्क्रिये कृतः।",
     "failedToggleStatus": "उत्पादस्थितेः नवीकरणे विफलता।",
-    "toggleStatusConfirm": "किं भवान् निश्चितरूपेण \"{{name}}\" इत्यस्य स्थितिं परिवर्तयितुम् इच्छति?"
+    "toggleStatusConfirm": "किं भवान् निश्चितरूपेण \"{{name}}\" इत्यस्य स्थितिं परिवर्तयितुम् इच्छति?",
+    "stock": "सङ्ग्रहः",
+    "unavailable": "अनुपलब्धम्"
   },
   "cart": {
     "myCart": "मम पेटिका",
@@ -426,7 +430,9 @@
     "timelineCancelled": "आदेशः निरस्तः",
     "customerOrder": "ग्राहकस्य आदेशः",
     "viewOrderDetails": "आदेशविवरणं पश्यन्तु",
-    "noOrders": "कोऽपि आदेशः न प्राप्तः।"
+    "noOrders": "कोऽपि आदेशः न प्राप्तः।",
+    "orderCancelled": "आदेशः निरस्तः",
+    "orderId": "आदेश-सङ्ख्या"
   },
   "farmer": {
     "dashboard": "कृषक-फलकम्",
@@ -649,7 +655,10 @@
     "khetiSalahkar": "कृषिउपदेशकः",
     "stock": "सञ्चयः",
     "toggleStatusConfirmTitle": "स्थितिपरिवर्तनं पुष्टयतु",
-    "toggleStatusConfirmDesc": "किं भवान् स्थितिं परिवर्तयितुम् इच्छति?"
+    "toggleStatusConfirmDesc": "किं भवान् स्थितिं परिवर्तयितुम् इच्छति?",
+    "addFirstProductDesc": "आदेशान् प्राप्तुं स्वस्य प्रथमं नूतनं कृष्युत्पादं योजयत।",
+    "noProductsYet": "अद्यावधि किमपि उत्पादं न योजितम्",
+    "selectUnit": "मानकं चिनुत"
   },
   "notifications": {
     "title": "सूचनाः",
@@ -679,7 +688,8 @@
     "noMessages": "सन्देशाः न सन्ति",
     "notFound": "सूचनाविवरणं न प्राप्तम्।",
     "noMessagesThread": "अस्मिन् सूत्रे अद्यापि कोऽपि सन्देशः नास्ति।",
-    "notificationConversation": "सूचनासंवादः"
+    "notificationConversation": "सूचनासंवादः",
+    "deleteSelectedConfirm": "चयनिताः सूचनाः विलोपयतु किम्?"
   },
   "profile": {
     "myProfile": "मम विवरणिका",
@@ -729,7 +739,10 @@
     "failedToUpdate": "प्रोफाईल-नवीनीकरणे विफलता",
     "updatedTitle": "विवरणं नवीकृतम्!",
     "farmSavedDesc": "भवतः क्षेत्रविवरणं विवरणानि च साफल्येन रक्षितानि।",
-    "savedWithSync": "भवतः विवरणं साफल्येन रक्षितं वितरणसङ्केतः च समन्वितः।"
+    "savedWithSync": "भवतः विवरणं साफल्येन रक्षितं वितरणसङ्केतः च समन्वितः।",
+    "chooseAnotherPhoto": "अन्यत् चित्रं चिनुत",
+    "confirmPhotoSubtitle": "रक्षणात् पूर्वं स्वस्य नूतनं परिचयचित्रं निश्चितं कुरुत।",
+    "previewPhoto": "चित्रपूर्वदर्शनम्"
   },
   "validation": {
     "nameRequired": "पूर्णनाम आवश्यकम्",
@@ -767,7 +780,10 @@
     "noProductsFound": "उत्पादाः न लब्धाः",
     "subtitle": "नूतन-कृषि-उत्पादान् पश्यन्तु",
     "noCategoriesAvailable": "वर्गाः न उपलब्धाः",
-    "noCategoriesAvailableDesc": "विपणौ विन्यस्ताः वर्गाः अत्र दृश्यन्ते।"
+    "noCategoriesAvailableDesc": "विपणौ विन्यस्ताः वर्गाः अत्र दृश्यन्ते।",
+    "leafyVegetable": "पत्रशाकम्",
+    "rootVegetable": "मूलशाकम्",
+    "wildForestVegetable": "वन्यशाकम्"
   },
   "status": {
     "pending": "लम्बितम्",
@@ -827,7 +843,8 @@
     "unauthorized": "भवतः सत्रं समाप्तम्। कृपया पुनः प्रविशतु।",
     "forbidden": "भवतः समीपे एतत् कार्यं कर्तुम् अनुमतिः नास्ति।",
     "notFound": "प्रार्थिता वस्तु न प्राप्ता।",
-    "timeout": "अनुरोधस्य कालः समाप्तः। कृपया पुनः प्रयतताम्।"
+    "timeout": "अनुरोधस्य कालः समाप्तः। कृपया पुनः प्रयतताम्।",
+    "tooManyRequests": "अतिबहूनि निवेदनानि। कृपया किञ्चित् कालानन्तरं पुनः प्रयतताम्।"
   },
   "aiChat": {
     "customerTitle": "फार्म2होम एआई-सहायकः",
@@ -1215,7 +1232,8 @@
     "policyViolation": "नीति-उल्लङ्घनम्",
     "sinceDate": "आरभ्य: {{since}}",
     "noVideoUploadedSub": "कृषकेण अद्यापि अस्य क्षेत्रस्य चलच्चित्रं न अपलोडितम्।",
-    "rejectVerificationDesc": "क्षेत्र-सत्यापन-अनुरोधं निरसितुं कृपया स्पष्टं कारणं वदतु।"
+    "rejectVerificationDesc": "क्षेत्र-सत्यापन-अनुरोधं निरसितुं कृपया स्पष्टं कारणं वदतु।",
+    "fromAddress": "सङ्केतात्"
   },
   "wishlist": {
     "title": "इच्छासूची",
@@ -1240,7 +1258,11 @@
     "shorts": "लघुदृश्यानि",
     "videoCannotBePlayed": "इदं दृश्यश्रव्यं चालयितुं न शक्यते",
     "videoCannotBePlayedDesc": "दृश्यश्रव्यप्रवाहं लोड् कर्तुं न शक्तम्। सम्पर्कं परीक्ष्य पुनः प्रयतताम्।",
-    "farmerShort": "कृषक-लघुदृश्यम्"
+    "farmerShort": "कृषक-लघुदृश्यम्",
+    "discoverStories": "क्षेत्रकथाः पश्यत",
+    "shareFarmShorts": "क्षेत्रलघुचित्राणि वितरत",
+    "shareFarmShortsDesc": "स्वस्य सत्यापितक्षेत्रस्य लघुचित्रपटान् आरोपयत।",
+    "watchFarmVideos": "क्षेत्रचित्रपटान् पश्यत"
   },
   "weather": {
     "currentLocation": "वर्तमानस्थानम्",

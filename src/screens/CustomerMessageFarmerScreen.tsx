@@ -21,6 +21,12 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { NotificationService } from '../services/NotificationService';
 import { NotificationSendRequest } from '../types';
 import api from '../services/api';
+import {
+  MESSAGING_RECIPIENTS_ENDPOINT,
+  MessagingRecipient,
+  parseMessagingRecipients,
+  filterMessagingRecipients,
+} from '../utils/messagingRecipientsUtils';
 import { useAuth } from '../context/AuthContext';
 import { THEME } from '../constants/theme';
 import { PageBackground } from '../components/ui/PageBackground';
@@ -38,7 +44,7 @@ export const CustomerMessageFarmerScreen = () => {
   const route = useRoute<any>();
   const preSelectedId = route.params?.preSelectedFarmerId;
   const preSelectedName = route.params?.preSelectedFarmerName;
-  const [recipient, setRecipient] = useState<'ALL' | 'SPECIFIC'>(preSelectedId ? 'SPECIFIC' : 'ALL');
+  const [recipient, setRecipient] = useState<'SPECIFIC'>('SPECIFIC');
   const [specificUserId, setSpecificUserId] = useState<string>(preSelectedId || '');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -46,7 +52,7 @@ export const CustomerMessageFarmerScreen = () => {
   const titleInputRef = useRef<TextInput>(null);
   const messageInputRef = useRef<TextInput>(null);
   
-  const [farmersList, setFarmersList] = useState<any[]>([]);
+  const [farmersList, setFarmersList] = useState<MessagingRecipient[]>([]);
   const [searchQuery, setSearchQuery] = useState(route.params?.preSelectedFarmerName || '');
   useEffect(() => {
     if (recipient === 'SPECIFIC') {
@@ -56,9 +62,8 @@ export const CustomerMessageFarmerScreen = () => {
   const fetchFarmers = async () => {
     setFetchingUsers(true);
     try {
-      const response = await api.get('/user/getAll');
-      const allUsers = Array.isArray(response.data) ? response.data : (response.data?.data || []);
-      const farmers = allUsers.filter((u: any) => u.role === 'FARMER');
+      const response = await api.get(MESSAGING_RECIPIENTS_ENDPOINT);
+      const farmers = parseMessagingRecipients(response.data, 'FARMER');
       setFarmersList(farmers);
     } catch (error) {
       console.log('Failed to fetch farmers:', error);
@@ -123,7 +128,7 @@ export const CustomerMessageFarmerScreen = () => {
       const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
       const payload: NotificationSendRequest = {
         receiverType: 'FARMER',
-        receiverId: recipient === 'ALL' ? undefined : specificUserId,
+        receiverId: specificUserId,
         title: currentTitle.trim(),
         message: formattedMessage,
         notificationType: 'CUSTOMER',
@@ -159,25 +164,7 @@ export const CustomerMessageFarmerScreen = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <Text style={styles.label}>{t('support.receiver')}</Text>
-        <View style={styles.rowSelector}>
-          <TouchableOpacity
-            style={[styles.selectorBtn, recipient === 'ALL' && styles.selectorBtnActive]}
-            onPress={() => setRecipient('ALL')}
-          >
-            <Text style={[styles.selectorText, recipient === 'ALL' && styles.selectorTextActive]}>
-              {t('support.allFarmers')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.selectorBtn, recipient === 'SPECIFIC' && styles.selectorBtnActive]}
-            onPress={() => setRecipient('SPECIFIC')}
-          >
-            <Text style={[styles.selectorText, recipient === 'SPECIFIC' && styles.selectorTextActive]}>
-              {t('support.selectFarmer')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.label}>{t('support.selectFarmer')}</Text>
         {recipient === 'SPECIFIC' && (
           <View style={styles.specificUserContainer}>
             {fetchingUsers ? (
@@ -202,12 +189,8 @@ export const CustomerMessageFarmerScreen = () => {
                   )}
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll}>
-                  {farmersList
-                    .filter(userItem =>
-                      (userItem.name || userItem.email || 'Unknown').toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((userItem) => {
-                      const uId = userItem.userId || userItem.farmerId || userItem.id;
+                  {filterMessagingRecipients(farmersList, searchQuery).map((userItem) => {
+                      const uId = userItem.userId;
                       const isSelected = specificUserId === uId;
                       return (
                         <TouchableOpacity
@@ -217,7 +200,7 @@ export const CustomerMessageFarmerScreen = () => {
                         >
                           <Ionicons name="person-circle-outline" size={32} color={isSelected ? "#FFF" : "#6B7280"} />
                           <Text style={[styles.userName, isSelected && { color: '#FFF' }]} numberOfLines={1}>
-                            {userItem.name || userItem.email || 'Unknown'}
+                            {userItem.name}
                           </Text>
                         </TouchableOpacity>
                       );

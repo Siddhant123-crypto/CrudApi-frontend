@@ -65,7 +65,8 @@
     "phone": "ফোন",
     "description": "বিবরণ",
     "validationError": "যাচাইকরণ ত্রুটি",
-    "serverWaking": "সার্ভারের সাথে সংযোগ হচ্ছে, অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন..."
+    "serverWaking": "সার্ভারের সাথে সংযোগ হচ্ছে, অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন...",
+    "selected": "নির্বাচিত"
   },
   "language": {
     "selectLanguage": "ভাষা নির্বাচন করুন",
@@ -182,7 +183,8 @@
     "linkingError": "লিঙ্ক করার ত্রুটি",
     "failedLinkGoogle": "গুগল অ্যাকাউন্ট লিঙ্ক করতে ব্যর্থ হয়েছে।",
     "unableLinkAccount": "অ্যাকাউন্ট লিঙ্ক করতে অক্ষম।",
-    "pasteResetTokenPlaceholder": "ইমেল থেকে রিসেট টোকেন পেস্ট করুন"
+    "pasteResetTokenPlaceholder": "ইমেল থেকে রিসেট টোকেন পেস্ট করুন",
+    "enterPasswordShort": "পাসওয়ার্ড লিখুন"
   },
   "nav": {
     "home": "হোম",
@@ -308,7 +310,9 @@
     "activatedSuccess": "পণ্য সফলভাবে সক্রিয় করা হয়েছে।",
     "deactivatedSuccess": "পণ্য সফলভাবে নিষ্ক্রিয় করা হয়েছে।",
     "failedToggleStatus": "পণ্যের স্থিতি আপডেট করতে ব্যর্থ হয়েছে।",
-    "toggleStatusConfirm": "আপনি কি নিশ্চিত যে আপনি \"{{name}}\"-এর স্থিতি পরিবর্তন করতে চান?"
+    "toggleStatusConfirm": "আপনি কি নিশ্চিত যে আপনি \"{{name}}\"-এর স্থিতি পরিবর্তন করতে চান?",
+    "stock": "স্টক",
+    "unavailable": "উপলব্ধ নয়"
   },
   "cart": {
     "myCart": "আমার কার্ট",
@@ -426,7 +430,9 @@
     "timelineCancelled": "অর্ডার বাতিল করা হয়েছে",
     "customerOrder": "গ্রাহকের অর্ডার",
     "viewOrderDetails": "অর্ডারের বিবরণ দেখুন",
-    "noOrders": "কোনো অর্ডার পাওয়া যায়নি।"
+    "noOrders": "কোনো অর্ডার পাওয়া যায়নি।",
+    "orderCancelled": "অর্ডার বাতিল করা হয়েছে",
+    "orderId": "অর্ডার আইডি"
   },
   "farmer": {
     "dashboard": "কৃষক ড্যাশবোর্ড",
@@ -649,7 +655,10 @@
     "khetiSalahkar": "কৃষি উপদেষ্টা",
     "stock": "মজুদ",
     "toggleStatusConfirmTitle": "অবস্থা পরিবর্তন নিশ্চিত করুন",
-    "toggleStatusConfirmDesc": "আপনি কি নিশ্চিত যে আপনি অবস্থা পরিবর্তন করতে চান?"
+    "toggleStatusConfirmDesc": "আপনি কি নিশ্চিত যে আপনি অবস্থা পরিবর্তন করতে চান?",
+    "addFirstProductDesc": "অর্ডার পেতে আপনার প্রথম তাজা খামার পণ্য যোগ করুন।",
+    "noProductsYet": "এখনও কোনো পণ্য যোগ করা হয়নি",
+    "selectUnit": "একক নির্বাচন করুন"
   },
   "notifications": {
     "title": "বিজ্ঞপ্তি",
@@ -679,7 +688,8 @@
     "noMessages": "কোনো বার্তা নেই",
     "notFound": "বিজ্ঞপ্তির বিবরণ পাওয়া যায়নি।",
     "noMessagesThread": "এই থ্রেডে এখনও কোনো বার্তা নেই।",
-    "notificationConversation": "বিজ্ঞপ্তি কথোপকথন"
+    "notificationConversation": "বিজ্ঞপ্তি কথোপকথন",
+    "deleteSelectedConfirm": "নির্বাচিত বিজ্ঞপ্তিগুলি মুছবেন?"
   },
   "profile": {
     "myProfile": "আমার প্রোফাইল",
@@ -729,7 +739,10 @@
     "failedToUpdate": "প্রোফাইল আপডেট করতে ব্যর্থ হয়েছে",
     "updatedTitle": "প্রোফাইল আপডেট হয়েছে!",
     "farmSavedDesc": "আপনার খামার প্রোফাইল এবং বিবরণ সফলভাবে সংরক্ষিত হয়েছে।",
-    "savedWithSync": "আপনার প্রোফাইল বিবরণ সফলভাবে সংরক্ষিত হয়েছে এবং আপনার ডেলিভারি ঠিকানা সিঙ্ক করা হয়েছে।"
+    "savedWithSync": "আপনার প্রোফাইল বিবরণ সফলভাবে সংরক্ষিত হয়েছে এবং আপনার ডেলিভারি ঠিকানা সিঙ্ক করা হয়েছে।",
+    "chooseAnotherPhoto": "অন্য ছবি নির্বাচন করুন",
+    "confirmPhotoSubtitle": "সংরক্ষণ করার আগে আপনার নতুন প্রোফাইল ছবি নিশ্চিত করুন।",
+    "previewPhoto": "ছবির পূর্বরূপ"
   },
   "validation": {
     "nameRequired": "পুরো নাম প্রয়োজন",
@@ -767,7 +780,10 @@
     "noProductsFound": "কোনো পণ্য পাওয়া যায়নি",
     "subtitle": "তাজা খামারের পণ্য অন্বেষণ করুন",
     "noCategoriesAvailable": "কোনো বিভাগ উপলব্ধ নেই",
-    "noCategoriesAvailableDesc": "বাজারে কনফিগার করা বিভাগগুলি এখানে উপস্থিত হবে।"
+    "noCategoriesAvailableDesc": "বাজারে কনফিগার করা বিভাগগুলি এখানে উপস্থিত হবে।",
+    "leafyVegetable": "শাকসবজি",
+    "rootVegetable": "মূল সবজি",
+    "wildForestVegetable": "বন্য সবজি"
   },
   "status": {
     "pending": "মুলতুবি",
@@ -827,7 +843,8 @@
     "unauthorized": "আপনার সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার সাইন ইন করুন।",
     "forbidden": "আপনার এই কাজটি করার অনুমতি নেই।",
     "notFound": "অনুরোধ করা আইটেমটি পাওয়া যায়নি।",
-    "timeout": "অনুরোধের সময় শেষ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+    "timeout": "অনুরোধের সময় শেষ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+    "tooManyRequests": "অত্যধিক অনুরোধ। অনুগ্রহ করে কিছুক্ষণ পরে আবার চেষ্টা করুন।"
   },
   "aiChat": {
     "customerTitle": "Farm2Home এআই সহকারী",
@@ -1215,7 +1232,8 @@
     "policyViolation": "নীতি লঙ্ঘন",
     "sinceDate": "থেকে: {{since}}",
     "noVideoUploadedSub": "কৃষক এখনো এই খামারের জন্য কোনো ভিডিও আপলোড করেননি।",
-    "rejectVerificationDesc": "খামার যাচাইকরণ অনুরোধ প্রত্যাখ্যান করার একটি স্পষ্ট কারণ প্রদান করুন।"
+    "rejectVerificationDesc": "খামার যাচাইকরণ অনুরোধ প্রত্যাখ্যান করার একটি স্পষ্ট কারণ প্রদান করুন।",
+    "fromAddress": "ঠিকানা থেকে"
   },
   "wishlist": {
     "title": "ইচ্ছেতালিকা",
@@ -1240,7 +1258,11 @@
     "shorts": "শর্টস",
     "videoCannotBePlayed": "এই ভিডিওটি প্লে করা যাচ্ছে না",
     "videoCannotBePlayedDesc": "ভিডিও স্ট্রিম লোড করতে অক্ষম। সংযোগ পরীক্ষা করুন অথবা পুনরায় চেষ্টা করুন।",
-    "farmerShort": "কৃষক শর্ট"
+    "farmerShort": "কৃষক শর্ট",
+    "discoverStories": "খামারের গল্প দেখুন",
+    "shareFarmShorts": "ফার্ম শর্টস শেয়ার করুন",
+    "shareFarmShortsDesc": "আপনার যাচাইকৃত খামারের ছোট ভিডিও আপলোড করুন।",
+    "watchFarmVideos": "খামারের ভিডিও দেখুন"
   },
   "weather": {
     "currentLocation": "বর্তমান অবস্থান",

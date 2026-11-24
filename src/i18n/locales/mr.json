@@ -65,7 +65,8 @@
     "phone": "फोन",
     "description": "वर्णन",
     "validationError": "प्रमाणीकरण त्रुटी",
-    "serverWaking": "सर्व्हरशी कनेक्ट होत आहे, कृपया थोडा वेळ प्रतीक्षा करा..."
+    "serverWaking": "सर्व्हरशी कनेक्ट होत आहे, कृपया थोडा वेळ प्रतीक्षा करा...",
+    "selected": "निवडलेले"
   },
   "language": {
     "selectLanguage": "भाषा निवडा",
@@ -182,7 +183,8 @@
     "linkingError": "लिंक करताना त्रुटी",
     "failedLinkGoogle": "गूगल खाते लिंक करण्यात अयशस्वी.",
     "unableLinkAccount": "खाते लिंक करण्यात अक्षम.",
-    "pasteResetTokenPlaceholder": "ईमेलमधील रीसेट टोकन पेस्ट करा"
+    "pasteResetTokenPlaceholder": "ईमेलमधील रीसेट टोकन पेस्ट करा",
+    "enterPasswordShort": "पासवर्ड प्रविष्ट करा"
   },
   "nav": {
     "home": "मुख्यपृष्ठ",
@@ -308,7 +310,9 @@
     "activatedSuccess": "उत्पादन यशस्वीरित्या सक्रिय केले गेले आहे.",
     "deactivatedSuccess": "उत्पादन यशस्वीरित्या निष्क्रिय केले गेले आहे.",
     "failedToggleStatus": "उत्पादनाची स्थिती अपडेट करण्यात अयशस्वी.",
-    "toggleStatusConfirm": "तुम्हाला खात्री आहे की तुम्ही \"{{name}}\" ची स्थिती बदलू इच्छिता?"
+    "toggleStatusConfirm": "तुम्हाला खात्री आहे की तुम्ही \"{{name}}\" ची स्थिती बदलू इच्छिता?",
+    "stock": "साठा",
+    "unavailable": "उपलब्ध नाही"
   },
   "cart": {
     "myCart": "माझी कार्ट",
@@ -426,7 +430,9 @@
     "timelineCancelled": "ऑर्डर रद्द केली",
     "customerOrder": "ग्राहकाची ऑर्डर",
     "viewOrderDetails": "ऑर्डर तपशील पहा",
-    "noOrders": "कोणत्याही ऑर्डर्स आढळल्या नाहीत."
+    "noOrders": "कोणत्याही ऑर्डर्स आढळल्या नाहीत.",
+    "orderCancelled": "ऑर्डर रद्द झाली",
+    "orderId": "ऑर्डर आयडी"
   },
   "farmer": {
     "dashboard": "शेतकरी डॅशबोर्ड",
@@ -649,7 +655,10 @@
     "khetiSalahkar": "शेती सल्लागार",
     "stock": "साठा (स्टॉक)",
     "toggleStatusConfirmTitle": "स्थिती बदलाची पुष्टी करा",
-    "toggleStatusConfirmDesc": "तुम्हाला खात्री आहे की तुम्ही स्थिती बदलू इच्छिता?"
+    "toggleStatusConfirmDesc": "तुम्हाला खात्री आहे की तुम्ही स्थिती बदलू इच्छिता?",
+    "addFirstProductDesc": "ऑर्डर मिळवणे सुरू करण्यासाठी तुमचे पहिले ताजे शेतमाल उत्पादन जोडा.",
+    "noProductsYet": "अद्याप कोणतेही उत्पादन जोडलेले नाही",
+    "selectUnit": "एकक निवडा"
   },
   "notifications": {
     "title": "सूचना",
@@ -679,7 +688,8 @@
     "noMessages": "कोणतेही संदेश नाहीत",
     "notFound": "सूचना तपशील सापडला नाही.",
     "noMessagesThread": "या थ्रेडमध्ये अद्याप कोणतेही संदेश नाहीत.",
-    "notificationConversation": "सूचना संभाषण"
+    "notificationConversation": "सूचना संभाषण",
+    "deleteSelectedConfirm": "निवडलेल्या सूचना हटवायच्या का?"
   },
   "profile": {
     "myProfile": "माझी प्रोफाइल",
@@ -729,7 +739,10 @@
     "failedToUpdate": "प्रोफाइल अपडेट करण्यात अयशस्वी",
     "updatedTitle": "प्रोफाइल अपडेट झाली!",
     "farmSavedDesc": "तुमची शेत प्रोफाइल आणि तपशील यशस्वीरित्या जतन केले गेले आहेत.",
-    "savedWithSync": "तुमचे प्रोफाइल तपशील यशस्वीरित्या सेव्ह केले गेले आहेत आणि तुमचा वितरण पत्ता सिंक झाला आहे।"
+    "savedWithSync": "तुमचे प्रोफाइल तपशील यशस्वीरित्या सेव्ह केले गेले आहेत आणि तुमचा वितरण पत्ता सिंक झाला आहे।",
+    "chooseAnotherPhoto": "दुसरा फोटो निवडा",
+    "confirmPhotoSubtitle": "जतन करण्यापूर्वी तुमच्या नवीन प्रोफाइल फोटोची खात्री करा.",
+    "previewPhoto": "फोटो पूर्वावलोकन"
   },
   "validation": {
     "nameRequired": "पूर्ण नाव आवश्यक आहे",
@@ -767,7 +780,10 @@
     "noProductsFound": "कोणतीही उत्पादने आढळली नाहीत",
     "subtitle": "ताजी शेती उत्पादने पहा",
     "noCategoriesAvailable": "कोणतीही वर्गवारी उपलब्ध नाही",
-    "noCategoriesAvailableDesc": "बाजारपेठेत कॉन्फिगर केलेल्या वर्गवाऱ्या येथे दिसतील."
+    "noCategoriesAvailableDesc": "बाजारपेठेत कॉन्फिगर केलेल्या वर्गवाऱ्या येथे दिसतील.",
+    "leafyVegetable": "पालेभाजी",
+    "rootVegetable": "कंदभाजी",
+    "wildForestVegetable": "रानभाजी"
   },
   "status": {
     "pending": "प्रलंबित",
@@ -827,7 +843,8 @@
     "unauthorized": "आपले सत्र संपले आहे. कृपया पुन्हा साइन इन करा.",
     "forbidden": "आपल्याला ही कृती करण्याची परवानगी नाही.",
     "notFound": "विनंती केलेली वस्तू आढळली नाही.",
-    "timeout": "विनंतीची वेळ संपली. कृपया पुन्हा प्रयत्न करा."
+    "timeout": "विनंतीची वेळ संपली. कृपया पुन्हा प्रयत्न करा.",
+    "tooManyRequests": "खूप जास्त विनंत्या. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा."
   },
   "aiChat": {
     "customerTitle": "फार्म2होम एआय सहाय्यक",
@@ -1215,7 +1232,8 @@
     "policyViolation": "धोरण उल्लंघन",
     "sinceDate": "दिनांकापासून: {{since}}",
     "noVideoUploadedSub": "शेतकऱ्याने अद्याप या शेताचा कोणताही व्हिडिओ अपलोड केलेला नाही.",
-    "rejectVerificationDesc": "कृपया शेत पडताळणी विनंती नाकारण्याचे स्पष्ट कारण द्या."
+    "rejectVerificationDesc": "कृपया शेत पडताळणी विनंती नाकारण्याचे स्पष्ट कारण द्या.",
+    "fromAddress": "पत्त्यावरून"
   },
   "wishlist": {
     "title": "इच्छासूची",
@@ -1240,7 +1258,11 @@
     "shorts": "शॉर्ट्स",
     "videoCannotBePlayed": "हा व्हिडिओ प्ले करता येत नाही",
     "videoCannotBePlayedDesc": "व्हिडिओ स्ट्रीम लोड करण्यात अक्षम. कृपया कनेक्शन तपासा किंवा पुन्हा प्रयत्न करा.",
-    "farmerShort": "शेतकरी शॉर्ट"
+    "farmerShort": "शेतकरी शॉर्ट",
+    "discoverStories": "शेतातील गोष्टी पहा",
+    "shareFarmShorts": "फार्म शॉर्ट्स शेअर करा",
+    "shareFarmShortsDesc": "तुमच्या सत्यापित शेताचे छोटे व्हिडिओ अपलोड करा.",
+    "watchFarmVideos": "शेताचे व्हिडिओ पहा"
   },
   "weather": {
     "currentLocation": "सध्याचे स्थान",

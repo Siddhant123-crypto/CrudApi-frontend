@@ -443,7 +443,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
                   disabled={locating}
                 >
                   <Ionicons name="search-outline" size={14} color="#4F5BD5" />
-                  <Text style={styles.coordHelperBtnText}>From Address</Text>
+                  <Text style={styles.coordHelperBtnText}>{t('admin.fromAddress', 'From Address')}</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.row}>

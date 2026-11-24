@@ -65,7 +65,8 @@
     "phone": "फ़ोन",
     "description": "विवरण",
     "validationError": "सत्यापन त्रुटि",
-    "serverWaking": "सर्वर से कनेक्ट हो रहा है, कृपया कुछ क्षण प्रतीक्षा करें..."
+    "serverWaking": "सर्वर से कनेक्ट हो रहा है, कृपया कुछ क्षण प्रतीक्षा करें...",
+    "selected": "चयनित"
   },
   "language": {
     "selectLanguage": "भाषा चुनें",
@@ -182,7 +183,8 @@
     "linkingError": "लिंक करने में त्रुटि",
     "failedLinkGoogle": "गूगल खाता लिंक करने में विफल।",
     "unableLinkAccount": "खाता लिंक करने में असमर्थ।",
-    "pasteResetTokenPlaceholder": "ईमेल से रीसेट टोकन पेस्ट करें"
+    "pasteResetTokenPlaceholder": "ईमेल से रीसेट टोकन पेस्ट करें",
+    "enterPasswordShort": "पासवर्ड दर्ज करें"
   },
   "nav": {
     "home": "होम",
@@ -308,7 +310,9 @@
     "activatedSuccess": "उत्पाद सफलतापूर्वक सक्रिय कर दिया गया है।",
     "deactivatedSuccess": "उत्पाद सफलतापूर्वक निष्क्रिय कर दिया गया है।",
     "failedToggleStatus": "उत्पाद स्थिति अपडेट करने में विफल।",
-    "toggleStatusConfirm": "क्या आप निश्चित रूप से \"{{name}}\" की स्थिति बदलना चाहते हैं?"
+    "toggleStatusConfirm": "क्या आप निश्चित रूप से \"{{name}}\" की स्थिति बदलना चाहते हैं?",
+    "stock": "स्टॉक",
+    "unavailable": "उपलब्ध नहीं"
   },
   "cart": {
     "myCart": "मेरी कार्ट",
@@ -426,7 +430,9 @@
     "timelineCancelled": "ऑर्डर रद्द किया गया",
     "customerOrder": "ग्राहक का ऑर्डर",
     "viewOrderDetails": "ऑर्डर विवरण देखें",
-    "noOrders": "कोई ऑर्डर नहीं मिला।"
+    "noOrders": "कोई ऑर्डर नहीं मिला।",
+    "orderCancelled": "ऑर्डर रद्द किया गया",
+    "orderId": "ऑर्डर आईडी"
   },
   "farmer": {
     "dashboard": "किसान डैशबोर्ड",
@@ -649,7 +655,10 @@
     "khetiSalahkar": "कृषि सलाहकार",
     "stock": "स्टॉक",
     "toggleStatusConfirmTitle": "स्थिति परिवर्तन की पुष्टि करें",
-    "toggleStatusConfirmDesc": "क्या आप वाकई स्थिति बदलना चाहते हैं?"
+    "toggleStatusConfirmDesc": "क्या आप वाकई स्थिति बदलना चाहते हैं?",
+    "addFirstProductDesc": "ऑर्डर प्राप्त करना शुरू करने के लिए अपना पहला ताज़ा कृषि उत्पाद जोड़ें।",
+    "noProductsYet": "अभी तक कोई उत्पाद नहीं जोड़ा गया",
+    "selectUnit": "इकाई चुनें"
   },
   "notifications": {
     "title": "सूचनाएं",
@@ -679,7 +688,8 @@
     "noMessages": "कोई संदेश नहीं",
     "notFound": "सूचना विवरण नहीं मिला।",
     "noMessagesThread": "इस थ्रेड में अभी तक कोई संदेश नहीं है।",
-    "notificationConversation": "सूचना वार्तालाप"
+    "notificationConversation": "सूचना वार्तालाप",
+    "deleteSelectedConfirm": "चयनित सूचनाएं हटाएं?"
   },
   "profile": {
     "myProfile": "मेरी प्रोफ़ाइल",
@@ -729,7 +739,10 @@
     "failedToUpdate": "प्रोफ़ाइल अपडेट करने में विफल",
     "updatedTitle": "प्रोफ़ाइल अपडेट हो गई!",
     "farmSavedDesc": "आपकी खेत प्रोफ़ाइल और विवरण सफलतापूर्वक सहेजे गए हैं।",
-    "savedWithSync": "आपकी प्रोफ़ाइल विवरण सफलतापूर्वक सहेजे गए हैं और आपका वितरण पता सिंक हो गया है।"
+    "savedWithSync": "आपकी प्रोफ़ाइल विवरण सफलतापूर्वक सहेजे गए हैं और आपका वितरण पता सिंक हो गया है।",
+    "chooseAnotherPhoto": "दूसरी फोटो चुनें",
+    "confirmPhotoSubtitle": "सहेजने से पहले अपनी नई प्रोफ़ाइल फोटो की पुष्टि करें।",
+    "previewPhoto": "फोटो पूर्वावलोकन"
   },
   "validation": {
     "nameRequired": "पूरा नाम आवश्यक है",
@@ -767,7 +780,10 @@
     "noProductsFound": "कोई उत्पाद नहीं मिला",
     "subtitle": "ताज़ा कृषि उत्पाद देखें",
     "noCategoriesAvailable": "कोई श्रेणी उपलब्ध नहीं है",
-    "noCategoriesAvailableDesc": "बाज़ार में कॉन्फ़िगर की गई श्रेणियां यहां दिखाई देंगी।"
+    "noCategoriesAvailableDesc": "बाज़ार में कॉन्फ़िगर की गई श्रेणियां यहां दिखाई देंगी।",
+    "leafyVegetable": "पत्तेदार सब्जी",
+    "rootVegetable": "जड़ वाली सब्जी",
+    "wildForestVegetable": "जंगली सब्जी"
   },
   "status": {
     "pending": "लंबित",
@@ -827,7 +843,8 @@
     "unauthorized": "आपका सत्र समाप्त हो गया है। कृपया पुनः प्रवेश करें।",
     "forbidden": "आपके पास यह कार्य करने की अनुमति नहीं है।",
     "notFound": "अनुरोधित वस्तु नहीं मिली।",
-    "timeout": "अनुरोध का समय समाप्त हो गया। कृपया पुनः प्रयास करें।"
+    "timeout": "अनुरोध का समय समाप्त हो गया। कृपया पुनः प्रयास करें।",
+    "tooManyRequests": "बहुत अधिक अनुरोध। कृपया थोड़ी देर बाद पुनः प्रयास करें।"
   },
   "aiChat": {
     "customerTitle": "फार्म2होम एआई सहायक",
@@ -1215,7 +1232,8 @@
     "policyViolation": "नीति उल्लंघन",
     "sinceDate": "दिनांक से: {{since}}",
     "noVideoUploadedSub": "किसान ने अभी तक इस खेत का कोई वीडियो अपलोड नहीं किया है।",
-    "rejectVerificationDesc": "कृपया खेत सत्यापन अनुरोध को अस्वीकार करने का स्पष्ट कारण बताएं।"
+    "rejectVerificationDesc": "कृपया खेत सत्यापन अनुरोध को अस्वीकार करने का स्पष्ट कारण बताएं।",
+    "fromAddress": "पते से"
   },
   "wishlist": {
     "title": "इच्छासूची",
@@ -1240,7 +1258,11 @@
     "shorts": "शॉर्ट्स",
     "videoCannotBePlayed": "यह वीडियो नहीं चलाया जा सकता",
     "videoCannotBePlayedDesc": "वीडियो स्ट्रीम लोड करने में असमर्थ। कृपया अपना कनेक्शन जांचें या पुनः प्रयास करें।",
-    "farmerShort": "किसान शॉर्ट"
+    "farmerShort": "किसान शॉर्ट",
+    "discoverStories": "खेत की कहानियाँ देखें",
+    "shareFarmShorts": "फ़ार्म शॉर्ट्स साझा करें",
+    "shareFarmShortsDesc": "अपने सत्यापित खेत के छोटे वीडियो अपलोड करें।",
+    "watchFarmVideos": "खेत के वीडियो देखें"
   },
   "weather": {
     "currentLocation": "वर्तमान स्थान",

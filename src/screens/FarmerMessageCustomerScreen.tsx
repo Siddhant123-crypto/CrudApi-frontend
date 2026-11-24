@@ -22,6 +22,13 @@ import { useTranslation } from 'react-i18next';
 import { NotificationService } from '../services/NotificationService';
 import { NotificationSendRequest } from '../types';
 import api from '../services/api';
+import {
+  MESSAGING_RECIPIENTS_ENDPOINT,
+  MessagingRecipient,
+  parseMessagingRecipients,
+  filterMessagingRecipients,
+  buildFarmerMessagePayload,
+} from '../utils/messagingRecipientsUtils';
 import { useAuth } from '../context/AuthContext';
 import { FarmerPageBackground } from '../components/farmer/FarmerPageBackground';
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
@@ -39,7 +46,7 @@ export const FarmerMessageCustomerScreen = () => {
   const preSelectedName = route.params?.preSelectedCustomerName;
   const preSelectedRole = route.params?.preSelectedRole;
   const isAdminMessage = preSelectedRole === 'ADMIN';
-  const [recipient, setRecipient] = useState<'ALL' | 'SPECIFIC'>(preSelectedId ? 'SPECIFIC' : 'ALL');
+  const [recipient, setRecipient] = useState<'SPECIFIC'>('SPECIFIC');
   const [specificUserId, setSpecificUserId] = useState<string>(preSelectedId || '');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -48,7 +55,7 @@ export const FarmerMessageCustomerScreen = () => {
   const messageInputRef = useRef<TextInput>(null);
   
   const [searchQuery, setSearchQuery] = useState(preSelectedName || '');
-  const [customersList, setCustomersList] = useState<any[]>([]);
+  const [customersList, setCustomersList] = useState<MessagingRecipient[]>([]);
   useEffect(() => {
     if (recipient === 'SPECIFIC') {
       fetchCustomers();
@@ -57,9 +64,8 @@ export const FarmerMessageCustomerScreen = () => {
   const fetchCustomers = async () => {
     setFetchingUsers(true);
     try {
-      const response = await api.get('/user/getAll');
-      const allUsers = Array.isArray(response.data) ? response.data : (response.data?.data || []);
-      const customers = allUsers.filter((u: any) => u.role === 'CUSTOMER');
+      const response = await api.get(MESSAGING_RECIPIENTS_ENDPOINT);
+      const customers = parseMessagingRecipients(response.data, 'CUSTOMER');
       setCustomersList(customers);
     } catch (error) {
       console.log('Failed to fetch customers:', error);
@@ -114,21 +120,25 @@ export const FarmerMessageCustomerScreen = () => {
       Alert.alert(t('common.error', 'Error'), t('support.titleAndMessageRequired', 'Title and message are required.'));
       return;
     }
-    if (recipient === 'SPECIFIC' && !specificUserId) {
-      Alert.alert(t('common.error', 'Error'), t('support.selectCustomerRequired', 'Please select a specific customer.'));
+    const senderName = user?.name || user?.email || t('common.farmerRole', 'Farm2Home Producer');
+    const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
+    const built = buildFarmerMessagePayload({
+      isAdminMessage,
+      specificUserId,
+      title: currentTitle,
+      formattedMessage,
+    });
+    if (!built.ok || !built.payload) {
+      if (built.errorCode === 'SELECT_CUSTOMER_REQUIRED') {
+        Alert.alert(t('common.error', 'Error'), t('support.selectCustomerRequired', 'Please select a specific customer.'));
+      } else {
+        Alert.alert(t('common.error', 'Error'), t('support.titleAndMessageRequired', 'Title and message are required.'));
+      }
       return;
     }
     setLoading(true);
     try {
-      const senderName = user?.name || user?.email || t('common.farmerRole', 'Farm2Home Producer');
-      const formattedMessage = `From: ${senderName}\n\n${currentMessage.trim()}`;
-      const payload: NotificationSendRequest = {
-        receiverType: isAdminMessage ? 'ADMIN' : 'CUSTOMER',
-        receiverId: isAdminMessage ? specificUserId : (recipient === 'ALL' ? undefined : specificUserId),
-        title: currentTitle.trim(),
-        message: formattedMessage,
-        notificationType: isAdminMessage ? 'ADMIN' : 'FARMER',
-      };
+      const payload: NotificationSendRequest = built.payload;
       await NotificationService.sendNotification(payload);
       Alert.alert(t('common.success', 'Success'), t('support.messageSentSuccess', 'Message sent successfully'), [
         { text: t('common.ok', 'OK'), onPress: () => navigation.goBack() }
@@ -142,11 +152,7 @@ export const FarmerMessageCustomerScreen = () => {
       setLoading(false);
     }
   };
-  const filteredCustomers = customersList.filter(u => {
-    const nameMatch = (u.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const emailMatch = (u.email || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return nameMatch || emailMatch;
-  });
+  const filteredCustomers = filterMessagingRecipients(customersList, searchQuery);
   return (
     <FarmerPageBackground>
       <StatusBar barStyle="light-content" backgroundColor="#1F7A4D" />
@@ -178,27 +184,7 @@ export const FarmerMessageCustomerScreen = () => {
           </View>
         ) : (
           <>
-            <Text style={styles.label}>{t('support.receiver', 'Receiver')}</Text>
-            <View style={styles.rowSelector}>
-              <TouchableOpacity
-                style={[styles.selectorBtn, recipient === 'ALL' && styles.selectorBtnActive]}
-                onPress={() => setRecipient('ALL')}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.selectorText, recipient === 'ALL' && styles.selectorTextActive]}>
-                  {t('support.allCustomers', 'All Customers')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.selectorBtn, recipient === 'SPECIFIC' && styles.selectorBtnActive]}
-                onPress={() => setRecipient('SPECIFIC')}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.selectorText, recipient === 'SPECIFIC' && styles.selectorTextActive]}>
-                  {t('support.selectCustomer', 'Select Customer')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.label}>{t('support.selectCustomer', 'Select Customer')}</Text>
           </>
         )}
         {!isAdminMessage && recipient === 'SPECIFIC' && (
@@ -220,7 +206,7 @@ export const FarmerMessageCustomerScreen = () => {
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.usersScroll}>
                 {filteredCustomers.map((user) => {
-                  const uId = user.userId || user.id;
+                  const uId = user.userId;
                   const isSelected = specificUserId === uId;
                   return (
                     <TouchableOpacity
@@ -231,7 +217,7 @@ export const FarmerMessageCustomerScreen = () => {
                     >
                       <Ionicons name="person-circle-outline" size={32} color={isSelected ? "#FFF" : "#5C6B60"} />
                       <Text style={[styles.userName, isSelected && { color: '#FFF' }]} numberOfLines={1}>
-                        {user.name || user.email || 'Unknown'}
+                        {user.name}
                       </Text>
                     </TouchableOpacity>
                   );

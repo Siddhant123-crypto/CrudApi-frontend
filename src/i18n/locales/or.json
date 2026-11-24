@@ -65,7 +65,8 @@
     "phone": "ଫୋନ୍",
     "description": "ବିବରଣୀ",
     "validationError": "ପ୍ରମାଣୀକରଣ ତ୍ରୁଟି",
-    "serverWaking": "ସର୍ଭର୍ ସହିତ ସଂଯୋଗ ହେଉଛି, ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ..."
+    "serverWaking": "ସର୍ଭର୍ ସହିତ ସଂଯୋଗ ହେଉଛି, ଦୟାକରି କିଛି ସମୟ ଅପେକ୍ଷା କରନ୍ତୁ...",
+    "selected": "ଚୟନିତ"
   },
   "language": {
     "selectLanguage": "ଭାଷା ବାଛନ୍ତୁ",
@@ -182,7 +183,8 @@
     "linkingError": "ଲିଙ୍କ୍ ତ୍ରୁଟି",
     "failedLinkGoogle": "ଗୁଗଲ୍ ଆକାଉଣ୍ଟ୍ ଲିଙ୍କ୍ କରିବାରେ ବିଫଳ ହେଲା।",
     "unableLinkAccount": "ଖାତା ଲିଙ୍କ୍ କରିବାରେ ଅସମର୍ଥ।",
-    "pasteResetTokenPlaceholder": "ଇମେଲରୁ ରିସେଟ୍ ଟୋକନ୍ ପେଷ୍ଟ କରନ୍ତୁ"
+    "pasteResetTokenPlaceholder": "ଇମେଲରୁ ରିସେଟ୍ ଟୋକନ୍ ପେଷ୍ଟ କରନ୍ତୁ",
+    "enterPasswordShort": "ପାସୱାର୍ଡ ଦିଅନ୍ତୁ"
   },
   "nav": {
     "home": "ମୁଖ୍ୟ ପୃଷ୍ଠା",
@@ -308,7 +310,9 @@
     "activatedSuccess": "ଉତ୍ପାଦ ସଫଳତାର ସହିତ ସକ୍ରିୟ ହୋଇଛି।",
     "deactivatedSuccess": "ଉତ୍ପାଦ ସଫଳତାର ସହିତ ନିଷ୍କ୍ରିୟ ହୋଇଛି।",
     "failedToggleStatus": "ଉତ୍ପାଦ ସ୍ଥିତି ଅପଡେଟ୍ କରିବାରେ ବିଫଳ।",
-    "toggleStatusConfirm": "ଆପଣ ନିଶ୍ଚିତ କି ଆପଣ \"{{name}}\" ର ସ୍ଥିତି ପରିବର୍ତ୍ତନ କରିବାକୁ ଚାହୁଁଛନ୍ତି?"
+    "toggleStatusConfirm": "ଆପଣ ନିଶ୍ଚିତ କି ଆପଣ \"{{name}}\" ର ସ୍ଥିତି ପରିବର୍ତ୍ତନ କରିବାକୁ ଚାହୁଁଛନ୍ତି?",
+    "stock": "ଷ୍ଟକ୍",
+    "unavailable": "ଉପଲବ୍ଧ ନାହିଁ"
   },
   "cart": {
     "myCart": "ମୋ କାର୍ଟ",
@@ -426,7 +430,9 @@
     "timelineCancelled": "ଅର୍ଡର ବାତିଲ ହେଲା",
     "customerOrder": "ଗ୍ରାହକ ଅର୍ଡର",
     "viewOrderDetails": "ଅର୍ଡର ବିବରଣୀ ଦେଖନ୍ତୁ",
-    "noOrders": "କୌଣସି ଅର୍ଡର ମିଳିଲା ନାହିଁ।"
+    "noOrders": "କୌଣସି ଅର୍ଡର ମିଳିଲା ନାହିଁ।",
+    "orderCancelled": "ଅର୍ଡର ବାତିଲ ହୋଇଛି",
+    "orderId": "ଅର୍ଡର ଆଇଡି"
   },
   "farmer": {
     "dashboard": "ଚାଷୀ ଡ୍ୟାସବୋର୍ଡ",
@@ -649,7 +655,10 @@
     "khetiSalahkar": "କୃଷି ପରାମର୍ଶଦାତା",
     "stock": "ମହଜୁଦ",
     "toggleStatusConfirmTitle": "ସ୍ଥିତି ପରିବର୍ତ୍ତନ ନିଶ୍ଚିତ କରନ୍ତୁ",
-    "toggleStatusConfirmDesc": "ଆପଣ ନିଶ୍ଚିତ କି ସ୍ଥିତି ବଦଳାଇବାକୁ ଚାହାଁନ୍ତି?"
+    "toggleStatusConfirmDesc": "ଆପଣ ନିଶ୍ଚିତ କି ସ୍ଥିତି ବଦଳାଇବାକୁ ଚାହାଁନ୍ତି?",
+    "addFirstProductDesc": "ଅର୍ଡର ପାଇବା ଆରମ୍ଭ କରିବାକୁ ଆପଣଙ୍କର ପ୍ରଥମ ତାଜା ଫସଲ ଯୋଗ କରନ୍ତୁ।",
+    "noProductsYet": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉତ୍ପାଦ ଯୋଗ କରାଯାଇନାହିଁ",
+    "selectUnit": "ଏକକ ବାଛନ୍ତୁ"
   },
   "notifications": {
     "title": "ସୂଚନା",
@@ -679,7 +688,8 @@
     "noMessages": "କୌଣସି ବାର୍ତ୍ତା ନାହିଁ",
     "notFound": "ବିଜ୍ଞପ୍ତି ବିବରଣୀ ମିଳିଲା ନାହିଁ।",
     "noMessagesThread": "ଏହି ଥ୍ରେଡରେ ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ବାର୍ତ୍ତା ନାହିଁ।",
-    "notificationConversation": "ବିଜ୍ଞପ୍ତି ବାର୍ତ୍ତାଳାପ"
+    "notificationConversation": "ବିଜ୍ଞପ୍ତି ବାର୍ତ୍ତାଳାପ",
+    "deleteSelectedConfirm": "ଚୟନିତ ବିଜ୍ଞପ୍ତିଗୁଡ଼ିକୁ ବିଲୋପ କରିବେ କି?"
   },
   "profile": {
     "myProfile": "ମୋ ପ୍ରୋଫାଇଲ୍",
@@ -729,7 +739,10 @@
     "failedToUpdate": "ପ୍ରୋଫାଇଲ୍ ଅପଡେଟ୍ କରିବାରେ ବିଫଳ",
     "updatedTitle": "ପ୍ରୋଫାଇଲ୍ ଅପଡେଟ୍ ହୋଇଛି!",
     "farmSavedDesc": "ଆପଣଙ୍କ ଫାର୍ମ ପ୍ରୋଫାଇଲ୍ ଏବଂ ବିବରଣୀ ସଫଳତାର ସହିତ ସଞ୍ଚିତ ହୋଇଛି।",
-    "savedWithSync": "ଆପଣଙ୍କ ପ୍ରୋଫାଇଲ୍ ବିବରଣୀ ସଫଳତାର ସହିତ ସଞ୍ଚିତ ହୋଇଛି ଏବଂ ଆପଣଙ୍କ ବିତରଣ ଠିକଣା ସିଙ୍କ୍ ହୋଇଛି।"
+    "savedWithSync": "ଆପଣଙ୍କ ପ୍ରୋଫାଇଲ୍ ବିବରଣୀ ସଫଳତାର ସହିତ ସଞ୍ଚିତ ହୋଇଛି ଏବଂ ଆପଣଙ୍କ ବିତରଣ ଠିକଣା ସିଙ୍କ୍ ହୋଇଛି।",
+    "chooseAnotherPhoto": "ଅନ୍ୟ ଫଟୋ ବାଛନ୍ତୁ",
+    "confirmPhotoSubtitle": "ସଂରକ୍ଷଣ କରିବା ପୂର୍ବରୁ ଆପଣଙ୍କର ନୂତନ ପ୍ରୋଫାଇଲ୍ ଫଟୋ ନିଶ୍ଚିତ କରନ୍ତୁ।",
+    "previewPhoto": "ଫଟୋ ପୂର୍ବାବଲୋକନ"
   },
   "validation": {
     "nameRequired": "ପୂରା ନାମ ଆବଶ୍ୟକ",
@@ -767,7 +780,10 @@
     "noProductsFound": "କୌଣସି ଉତ୍ପାଦ ମିଳିଲା ନାହିଁ",
     "subtitle": "ତାଜା କୃଷି ଉତ୍ପାଦ ଅନୁସନ୍ଧାନ କରନ୍ତୁ",
     "noCategoriesAvailable": "କୌଣସି ବର୍ଗ ଉପଲବ୍ଧ ନାହିଁ",
-    "noCategoriesAvailableDesc": "ବଜାରରେ ବିନ୍ୟାସିତ ବର୍ଗ ଏଠାରେ ଦେଖାଯିବ।"
+    "noCategoriesAvailableDesc": "ବଜାରରେ ବିନ୍ୟାସିତ ବର୍ଗ ଏଠାରେ ଦେଖାଯିବ।",
+    "leafyVegetable": "ଶାଗ ପନିପରିବା",
+    "rootVegetable": "ମୂଳ ପନିପରିବା",
+    "wildForestVegetable": "ଜଙ୍ଗଲୀ ପନିପରିବା"
   },
   "status": {
     "pending": "ବକେୟା",
@@ -827,7 +843,8 @@
     "unauthorized": "ଆପଣଙ୍କ ଅଧିବେଶନ ସମାପ୍ତ ହୋଇଛି। ଦୟାକରି ପୁନର୍ବାର ସାଇନ୍ ଇନ୍ କରନ୍ତୁ।",
     "forbidden": "ଏହି କାର୍ଯ୍ୟ କରିବା ପାଇଁ ଆପଣଙ୍କ ପାଖରେ ଅନୁମତି ନାହିଁ।",
     "notFound": "ଅନୁରୋଧିତ ବସ୍ତୁ ମିଳିଲା ନାହିଁ।",
-    "timeout": "ଅନୁରୋଧ ସମୟ ସମାପ୍ତ ହେଲା। ଦୟାକରି ପୁନଃ ଚେଷ୍ଟା କରନ୍ତୁ।"
+    "timeout": "ଅନୁରୋଧ ସମୟ ସମାପ୍ତ ହେଲା। ଦୟାକରି ପୁନଃ ଚେଷ୍ଟା କରନ୍ତୁ।",
+    "tooManyRequests": "ଅତ୍ୟଧିକ ଅନୁରୋଧ। ଦୟାକରି କିଛି ସମୟ ପରେ ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
   },
   "aiChat": {
     "customerTitle": "Farm2Home AI ସହାୟକ",
@@ -1215,7 +1232,8 @@
     "policyViolation": "ନୀତି ଉଲ୍ଲଂଘନ",
     "sinceDate": "ଠାରୁ: {{since}}",
     "noVideoUploadedSub": "କୃଷକ ଏପର୍ଯ୍ୟନ୍ତ ଏହି ଜମି ପାଇଁ କୌଣସି ଭିଡିଓ ଅପଲୋଡ୍ କରିନାହାଁନ୍ତି।",
-    "rejectVerificationDesc": "ଜମି ଯାଞ୍ଚ ଅନୁରୋଧକୁ ପ୍ରତ୍ୟାଖ୍ୟାନ କରିବାର ଏକ ସ୍ପଷ୍ଟ କାରଣ ପ୍ରଦାନ କରନ୍ତୁ।"
+    "rejectVerificationDesc": "ଜମି ଯାଞ୍ଚ ଅନୁରୋଧକୁ ପ୍ରତ୍ୟାଖ୍ୟାନ କରିବାର ଏକ ସ୍ପଷ୍ଟ କାରଣ ପ୍ରଦାନ କରନ୍ତୁ।",
+    "fromAddress": "ଠିକଣାରୁ"
   },
   "wishlist": {
     "title": "ଇଚ୍ଛାସୂଚୀ",
@@ -1240,7 +1258,11 @@
     "shorts": "ସର୍ଟସ୍",
     "videoCannotBePlayed": "ଏହି ଭିଡିଓ ଚାଲିପାରିବ ନାହିଁ",
     "videoCannotBePlayedDesc": "ଭିଡିଓ ଷ୍ଟ୍ରିମ୍ ଲୋଡ୍ କରିବାରେ ଅସମର୍ଥ। ଦୟାକରି ସଂଯୋଗ ଯାଞ୍ଚ କରନ୍ତୁ କିମ୍ବା ପୁନଃ ଚେଷ୍ଟା କରନ୍ତୁ।",
-    "farmerShort": "କୃଷକ ସର୍ଟସ୍"
+    "farmerShort": "କୃଷକ ସର୍ଟସ୍",
+    "discoverStories": "ଫାର୍ମ କାହାଣୀ ଦେଖନ୍ତୁ",
+    "shareFarmShorts": "ଫାର୍ମ ସର୍ଟସ୍ ସେୟାର କରନ୍ତୁ",
+    "shareFarmShortsDesc": "ଆପଣଙ୍କର ଯାଞ୍ଚ ହୋଇଥିବା ଫାର୍ମର ଛୋଟ ଭିଡିଓ ଅପଲୋଡ୍ କରନ୍ତୁ।",
+    "watchFarmVideos": "ଫାର୍ମ ଭିଡିଓ ଦେଖନ୍ତୁ"
   },
   "weather": {
     "currentLocation": "ବର୍ତ୍ତମାନର ସ୍ଥାନ",
