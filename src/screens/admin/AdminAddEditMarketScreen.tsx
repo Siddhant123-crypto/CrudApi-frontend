@@ -298,8 +298,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
     <AdminPageBackground>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 12}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <AdminHeader
           variant="inner"
@@ -560,7 +559,7 @@ export const AdminAddEditMarketScreen: React.FC = () => {
         </ScrollView>
 
         {keyboardHeight === 0 && (
-          <AdminStickyBar>
+          <AdminStickyBar style={styles.stickyBarLower}>
             <AdminPrimaryButton
               title={isEdit ? t('admin.updateMarket') : t('admin.saveMarket')}
               onPress={handleSave}
@@ -576,6 +575,10 @@ export const AdminAddEditMarketScreen: React.FC = () => {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
+  },
+  stickyBarLower: {
+    paddingTop: 12,
+    paddingBottom: 10,
   },
   scrollContent: {
     paddingHorizontal: 16,
