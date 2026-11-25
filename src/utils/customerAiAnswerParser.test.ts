@@ -90,6 +90,44 @@ test('parseCustomerAiAnswer: parses structuredProducts array if provided', () =>
   assert.equal(parsed.productCards[1].stockDisplay, 'Out of stock');
 });
 
+test('parseCustomerAiAnswer: parses backend AiProductCardDto with stockStatus and productPhoto', () => {
+  const backendCards = [
+    {
+      id: 'uuid-1',
+      name: 'Tomato',
+      price: 35,
+      unit: 'KG',
+      stockStatus: '25.0 KG in stock',
+      farmName: 'Green Valley Farm',
+      location: 'Nashik',
+      productPhoto: 'https://cdn.farm2home.com/tomato.jpg',
+    },
+    {
+      id: 'uuid-2',
+      name: 'Onion',
+      price: 30,
+      unit: 'KG',
+      stockStatus: 'Out of stock',
+      farmName: 'Green Valley Farm',
+      location: 'Nashik',
+    },
+  ];
+
+  const parsed = parseCustomerAiAnswer('Here are the available products:', backendCards);
+
+  assert.equal(parsed.isProductCatalog, true);
+  assert.equal(parsed.productCards.length, 2);
+  assert.equal(parsed.productCards[0].id, 'uuid-1');
+  assert.equal(parsed.productCards[0].productName, 'Tomato');
+  assert.equal(parsed.productCards[0].priceDisplay, 'Rs. 35 / KG');
+  assert.equal(parsed.productCards[0].stockDisplay, '25.0 KG in stock');
+  assert.equal(parsed.productCards[0].isOutOfStock, false);
+  assert.equal(parsed.productCards[0].productPhoto, 'https://cdn.farm2home.com/tomato.jpg');
+  assert.equal(parsed.productCards[1].id, 'uuid-2');
+  assert.equal(parsed.productCards[1].isOutOfStock, true);
+  assert.equal(parsed.productCards[1].stockDisplay, 'Out of stock');
+});
+
 test('parseCustomerAiAnswer: parses numbered steps for how-to questions', () => {
   const rawText = `Order karne ke aasan tareeqe:
 1. Product chunein aur quantity select karein

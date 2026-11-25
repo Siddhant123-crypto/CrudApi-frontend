@@ -5,6 +5,7 @@ export interface CustomerProductCard {
   priceDisplay: string;
   stockDisplay: string;
   isOutOfStock: boolean;
+  productPhoto?: string;
 }
 
 export interface CustomerParsedAnswer {
@@ -106,16 +107,24 @@ export const parseCustomerAiAnswer = (
     const cards: CustomerProductCard[] = structuredProducts.map((p) => {
       const price = p.price != null ? Number(p.price) : 0;
       const unit = p.unit || 'KG';
-      const qty = p.quantity != null ? Number(p.quantity) : 0;
-      const isOos = qty <= 0;
+      const hasQty = p.quantity !== undefined && p.quantity !== null;
+      const qty = hasQty ? Number(p.quantity) : null;
+      const rawStockStatus = typeof p.stockStatus === 'string' ? p.stockStatus.trim() : '';
+      const isOos = hasQty
+        ? (qty !== null && qty <= 0)
+        : rawStockStatus.toLowerCase().includes('out of stock');
+      const stockDisplay = hasQty
+        ? (isOos ? 'Out of stock' : `${Number.isInteger(qty) ? qty : qty!.toFixed(1)} ${unit} in stock`)
+        : (rawStockStatus || 'In stock');
 
       return {
         id: p.productId || p.id,
         productName: p.productName || p.name || 'Product',
         farmName: p.farmName || p.farmer?.farmName || undefined,
         priceDisplay: `Rs. ${Number.isInteger(price) ? price : price.toFixed(2)} / ${unit}`,
-        stockDisplay: isOos ? 'Out of stock' : `${Number.isInteger(qty) ? qty : qty.toFixed(1)} ${unit} in stock`,
+        stockDisplay,
         isOutOfStock: isOos,
+        productPhoto: p.productPhoto || undefined,
       };
     });
 
