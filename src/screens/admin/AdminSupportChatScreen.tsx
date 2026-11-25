@@ -152,6 +152,8 @@ export const AdminSupportChatScreen = () => {
 
   const fetchMessages = async (reqId: string, showLoader: boolean = true) => {
     try {
+      const { hasActiveAuthToken } = await import('../../services/api');
+      if (!hasActiveAuthToken()) return;
       if (showLoader) setLoading(true);
       const response = await api.get(`/admin/support/${reqId}/messages`);
       if (response.data && response.data.data) {
@@ -163,8 +165,11 @@ export const AdminSupportChatScreen = () => {
           console.log('Failed to mark messages as read', e);
         }
       }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
+    } catch (error: any) {
+      if (error?.code === 'ERR_CANCELED' || error?._isStaleAuth || error?.response?.status === 401) return;
+      if (__DEV__) {
+        console.log('Support messages poll skipped:', error?.message || error);
+      }
     } finally {
       if (showLoader) setLoading(false);
     }

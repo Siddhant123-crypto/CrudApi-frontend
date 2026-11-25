@@ -17,7 +17,7 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../services/api';
-import { getUserProfileImageUrl, getCurrentUserProfile } from '../services/userService';
+import { getUserProfileImageUrl, getCurrentUserProfile, getUserById, getUserPhoto } from '../services/userService';
 import { THEME } from '../constants/theme';
 import { LogoutModal } from '../components/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,7 +30,18 @@ const CustomerMenuScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { user, logout, updateUserData } = useAuth();
   const [logoutModalVisible, setLogoutModalVisible] = React.useState(false);
+  const [profilePhoto, setProfilePhoto] = React.useState<string | null>(user?.profilePhoto || null);
+  const [displayName, setDisplayName] = React.useState<string>(user?.name || '');
   const [imgError, setImgError] = React.useState(false);
+
+  React.useEffect(() => {
+    if (user?.profilePhoto) {
+      setProfilePhoto(user.profilePhoto);
+    }
+    if (user?.name) {
+      setDisplayName(user.name);
+    }
+  }, [user?.profilePhoto, user?.name]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -40,14 +51,56 @@ const CustomerMenuScreen: React.FC = () => {
         try {
           const token = await AsyncStorage.getItem('userToken');
           if (!token || !isMounted) return;
+
           const meData = await getCurrentUserProfile().catch(() => null);
           if (!isMounted) return;
-          const profile = meData?.response || meData;
-          if (profile && (profile.profilePhoto !== user?.profilePhoto || profile.name !== user?.name)) {
+          const meProfile = meData?.response || meData;
+
+          const resolvedUserId =
+            meProfile?.userId || user?.userId || (user as any)?.id;
+
+          let resolvedPhoto: string | null =
+            meProfile?.profilePhoto || null;
+          let resolvedName: string | undefined =
+            meProfile?.name || user?.name;
+
+          if (!resolvedPhoto && resolvedUserId) {
+            const byIdData = await getUserById(resolvedUserId).catch(() => null);
+            if (!isMounted) return;
+            const byIdProfile = byIdData?.response || byIdData;
+            if (byIdProfile?.profilePhoto) {
+              resolvedPhoto = byIdProfile.profilePhoto;
+            }
+            if (byIdProfile?.name && !resolvedName) {
+              resolvedName = byIdProfile.name;
+            }
+          }
+
+          if (!resolvedPhoto && resolvedUserId) {
+            const rawPhoto = await getUserPhoto(resolvedUserId).catch(() => null);
+            if (!isMounted) return;
+            if (typeof rawPhoto === 'string' && rawPhoto.trim() && rawPhoto !== 'null' && rawPhoto !== 'undefined') {
+              resolvedPhoto = rawPhoto.trim();
+            }
+          }
+
+          if (resolvedPhoto) {
+            setProfilePhoto(resolvedPhoto);
+          }
+          if (resolvedName) {
+            setDisplayName(resolvedName);
+          }
+
+          const finalPhoto = resolvedPhoto || user?.profilePhoto;
+          if (
+            (finalPhoto && finalPhoto !== user?.profilePhoto) ||
+            (resolvedName && resolvedName !== user?.name) ||
+            (resolvedUserId && resolvedUserId !== user?.userId)
+          ) {
             updateUserData({
-              profilePhoto: profile.profilePhoto,
-              name: profile.name,
-              userId: profile.userId || user?.userId,
+              ...(finalPhoto ? { profilePhoto: finalPhoto } : {}),
+              ...(resolvedName ? { name: resolvedName } : {}),
+              ...(resolvedUserId ? { userId: resolvedUserId } : {}),
             });
           }
         } catch (e) {
@@ -58,7 +111,7 @@ const CustomerMenuScreen: React.FC = () => {
       return () => {
         isMounted = false;
       };
-    }, [user, user?.profilePhoto, user?.name])
+    }, [user?.userId, user?.profilePhoto, user?.name])
   );
 
   const state = navigation.getState();
@@ -94,11 +147,11 @@ const CustomerMenuScreen: React.FC = () => {
     setLogoutModalVisible(true);
   };
 
-  const photoUrl = getUserProfileImageUrl(user?.profilePhoto);
+  const photoUrl = getUserProfileImageUrl(profilePhoto || user?.profilePhoto);
 
   React.useEffect(() => {
     setImgError(false);
-  }, [photoUrl]);
+  }, [photoUrl, profilePhoto, user?.profilePhoto]);
 
   return (
     <View style={styles.modalOverlay}>
@@ -125,20 +178,22 @@ const CustomerMenuScreen: React.FC = () => {
               <View style={styles.userInfoRow}>
                 {photoUrl && !imgError ? (
                   <Image
+                    key={photoUrl}
                     source={{ uri: photoUrl }}
                     style={styles.avatarImage}
+                    resizeMode="cover"
                     onError={() => setImgError(true)}
                   />
                 ) : (
                   <View style={styles.avatarCircle}>
                     <Text style={styles.avatarText}>
-                      {(user?.name || 'U').charAt(0).toUpperCase()}
+                      {(displayName || user?.name || 'U').charAt(0).toUpperCase()}
                     </Text>
                   </View>
                 )}
                 <View style={styles.userTextContainer}>
                   <Text style={styles.userName} numberOfLines={1}>
-                    {user?.name || t('common.guestUser', 'Guest User')}
+                    {displayName || user?.name || t('common.guestUser', 'Guest User')}
                   </Text>
                   <Text style={styles.userRole} numberOfLines={1}>
                     {user?.email || t('common.customerRole', 'Farm2Home Customer')}

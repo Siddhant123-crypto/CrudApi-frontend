@@ -18,7 +18,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { FARMER_THEME } from '../constants/farmerTheme';
 import { BASE_URL } from '../services/api';
-import { getFarmerById } from '../services/farmerService';
+import { getFarmerById, getFarmerPhoto } from '../services/farmerService';
 import { getUserProfileImageUrl, getCurrentUserProfile } from '../services/userService';
 import { LogoutModal } from '../components/ui';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +37,15 @@ const FarmerMenuScreen: React.FC = () => {
   const [farmerDisplayName, setFarmerDisplayName] = useState<string>(
     user?.name || user?.email?.split('@')[0] || 'Farmer'
   );
+
+  React.useEffect(() => {
+    if (user?.profilePhoto) {
+      setProfilePhoto(user.profilePhoto);
+    }
+    if (user?.name) {
+      setFarmerDisplayName(user.name);
+    }
+  }, [user?.profilePhoto, user?.name]);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,47 +68,59 @@ const FarmerMenuScreen: React.FC = () => {
           const meData = await getCurrentUserProfile().catch(() => null);
           if (!isMounted) return;
           const currentProfile = meData?.response || meData;
-          if (currentProfile) {
-            if (currentProfile.profilePhoto) {
-              setProfilePhoto(currentProfile.profilePhoto);
-            }
-            if (currentProfile.name) {
-              setFarmerDisplayName(currentProfile.name);
-            }
-            updateUserData({
-              profilePhoto: currentProfile.profilePhoto,
-              name: currentProfile.name,
-              farmerId: currentProfile.farmerId || user?.farmerId,
-              userId: currentProfile.userId || user?.userId,
-            });
-            return;
-          }
 
-          // 2. Fallback to getFarmerById only if still authenticated
-          const stillHasToken = await AsyncStorage.getItem('userToken');
-          if (!stillHasToken || !isMounted) return;
-          const fId = user?.farmerId || (user as any)?.id;
-          if (fId) {
-            const data = await getFarmerById(fId);
+          const resolvedFarmerId =
+            currentProfile?.farmerId || user?.farmerId || (user as any)?.id;
+          const resolvedUserId =
+            currentProfile?.userId || user?.userId;
+
+          let resolvedPhoto: string | null =
+            currentProfile?.profilePhoto || null;
+          let resolvedName: string | undefined =
+            currentProfile?.name || user?.name;
+
+          // 2. Fallback to getFarmerById if /user/me didn't return a photo
+          if (!resolvedPhoto && resolvedFarmerId) {
+            const data = await getFarmerById(resolvedFarmerId).catch(() => null);
             if (!isMounted) return;
             const profile = data?.response || data;
-            if (profile) {
-              if (profile.profilePhoto) {
-                setProfilePhoto(profile.profilePhoto);
-              }
-              if (profile.name) {
-                setFarmerDisplayName(profile.name);
-              }
-              if (
-                profile.profilePhoto !== user?.profilePhoto ||
-                profile.name !== user?.name
-              ) {
-                updateUserData({
-                  profilePhoto: profile.profilePhoto,
-                  name: profile.name,
-                });
-              }
+            if (profile?.profilePhoto) {
+              resolvedPhoto = profile.profilePhoto;
             }
+            if (profile?.name && !resolvedName) {
+              resolvedName = profile.name;
+            }
+          }
+
+          // 3. Fallback to /farmer/getPhoto/{id} if still missing
+          if (!resolvedPhoto && resolvedFarmerId) {
+            const rawPhoto = await getFarmerPhoto(resolvedFarmerId).catch(() => null);
+            if (!isMounted) return;
+            if (typeof rawPhoto === 'string' && rawPhoto.trim() && rawPhoto !== 'null' && rawPhoto !== 'undefined') {
+              resolvedPhoto = rawPhoto.trim();
+            }
+          }
+
+          if (resolvedPhoto) {
+            setProfilePhoto(resolvedPhoto);
+          }
+          if (resolvedName) {
+            setFarmerDisplayName(resolvedName);
+          }
+
+          const finalPhoto = resolvedPhoto || user?.profilePhoto;
+          if (
+            (finalPhoto && finalPhoto !== user?.profilePhoto) ||
+            (resolvedName && resolvedName !== user?.name) ||
+            (resolvedFarmerId && resolvedFarmerId !== user?.farmerId) ||
+            (resolvedUserId && resolvedUserId !== user?.userId)
+          ) {
+            updateUserData({
+              ...(finalPhoto ? { profilePhoto: finalPhoto } : {}),
+              ...(resolvedName ? { name: resolvedName } : {}),
+              ...(resolvedFarmerId ? { farmerId: resolvedFarmerId } : {}),
+              ...(resolvedUserId ? { userId: resolvedUserId } : {}),
+            });
           }
         } catch (e: any) {
           if (e?.response?.status !== 401) {

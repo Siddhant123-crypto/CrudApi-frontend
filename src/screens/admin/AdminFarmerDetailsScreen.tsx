@@ -20,6 +20,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import api, { BASE_URL } from '../../services/api';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
+import { isValidBlockUntilDate, calculateBlockDurationDays } from '../../utils/blockDateUtils';
 import {
   AdminPageBackground,
   AdminHeader,
@@ -51,37 +52,11 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
   const [blockReason, setBlockReason] = useState('');
   const [blockUntilDate, setBlockUntilDate] = useState('');
 
-  const parseDateFromDDMMYYYY = (dateStr: string) => {
-    const parts = dateStr.trim().split(/[-/]/);
-    if (parts.length === 3) {
-      const d = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10) - 1;
-      const y = parseInt(parts[2], 10);
-      if (!isNaN(d) && !isNaN(m) && !isNaN(y) && m >= 0 && m <= 11 && d >= 1 && d <= 31 && y > 1900) {
-        return new Date(y, m, d, 0, 0, 0, 0);
-      }
-    }
-    return new Date('invalid');
-  };
+  const isValidBlockDate = () => isValidBlockUntilDate(blockUntilDate);
 
-  const isValidBlockDate = () => {
-    const trimmed = blockUntilDate.trim();
-    const regex = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/;
-    if (!regex.test(trimmed)) return false;
-    const targetDate = parseDateFromDDMMYYYY(trimmed);
-    if (isNaN(targetDate.getTime())) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return targetDate.getTime() > today.getTime();
-  };
+  const showBlockDateError = blockUntilDate.trim().length > 0 && !isValidBlockDate();
 
-  const calculateDurationDays = () => {
-    const targetDate = parseDateFromDDMMYYYY(blockUntilDate.trim());
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diffTime = targetDate.getTime() - today.getTime();
-    return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-  };
+  const calculateDurationDays = () => calculateBlockDurationDays(blockUntilDate);
 
   useEffect(() => {
     fetchFarmerData();
@@ -622,7 +597,10 @@ export const AdminFarmerDetailsScreen: React.FC = () => {
                 placeholder={t('admin.egDate')}
                 value={blockUntilDate}
                 onChangeText={setBlockUntilDate}
-                maxLength={10}
+                maxLength={16}
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={showBlockDateError ? t('admin.egDate') : undefined}
               />
 
               <View style={styles.modalActions}>
@@ -1152,6 +1130,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   modalConfirmBtnActive: {
+    backgroundColor: '#DC2626',
     shadowColor: '#DC2626',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.45,
@@ -1159,11 +1138,14 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalConfirmBtnFaint: {
+    backgroundColor: '#FEE2E2',
     shadowOpacity: 0,
     elevation: 0,
   },
   confirmGradient: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

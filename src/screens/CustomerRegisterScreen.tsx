@@ -41,6 +41,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { userRegister } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
+import RegistrationSuccessModal from '../components/RegistrationSuccessModal';
 import { useTranslation } from 'react-i18next';
 import { GoogleRegistrationPasswordHelper } from '../components/GoogleRegistrationPasswordHelper';
 import { mapApiError } from '../utils/errorUtils';
@@ -478,6 +479,8 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
   });
 
   const [photo, setPhoto] = useState<any>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
   const [pendingPhoto, setPendingPhoto] = useState<any>(null);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [showPhotoPreviewModal, setShowPhotoPreviewModal] = useState(false);
@@ -657,16 +660,8 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
         const accessToken = result.accessToken || responseData.accessToken;
         if (!accessToken) {
           console.warn('Customer registration API did not return accessToken.');
-          Alert.alert(
-            t('auth.registrationSuccessful', 'Registration Successful'),
-            t('auth.accountCreatedSuccess', 'Account created successfully. Please login.'),
-            [
-              {
-                text: t('common.ok', 'OK'),
-                onPress: () => navigation.navigate('NewUserLogin'),
-              },
-            ]
-          );
+          setSuccessMessage(t('auth.accountCreatedSuccess', 'Account created successfully. Please login.'));
+          setShowSuccessModal(true);
           return;
         }
         const userData = {
@@ -680,18 +675,8 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
         return;
       }
       console.log('Manual Customer Registration Flow');
-      Alert.alert(
-        t('auth.registrationSuccessful', 'Registration Successful'),
-        t('auth.customerAccountCreated', 'Your customer account has been created successfully. Please login.'),
-        [
-          {
-            text: t('common.ok', 'OK'),
-            onPress: () => {
-              navigation.navigate('NewUserLogin');
-            },
-          },
-        ]
-      );
+      setSuccessMessage(t('auth.customerAccountCreated', 'Your customer account has been created successfully. Please login.'));
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.log('Customer Registration Error Status:', error.response?.status);
       console.log('Customer Registration Error Response:', error.response?.data);
@@ -1133,6 +1118,18 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
           </View>
         </View>
       </Modal>
+
+      <RegistrationSuccessModal
+        visible={showSuccessModal}
+        role="CUSTOMER"
+        userName={formData.name}
+        userEmail={formData.email}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessModal(false);
+          navigation.navigate('NewUserLogin');
+        }}
+      />
     </SafeAreaView>
   );
 };

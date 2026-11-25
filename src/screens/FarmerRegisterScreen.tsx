@@ -41,6 +41,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { farmerRegister } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
+import RegistrationSuccessModal from '../components/RegistrationSuccessModal';
 import { useTranslation } from 'react-i18next';
 import { GoogleRegistrationPasswordHelper } from '../components/GoogleRegistrationPasswordHelper';
 import { mapApiError } from '../utils/errorUtils';
@@ -471,6 +472,8 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
   });
 
   const [photo, setPhoto] = useState<any>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
   const [pendingPhoto, setPendingPhoto] = useState<any>(null);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [showPhotoPreviewModal, setShowPhotoPreviewModal] = useState(false);
@@ -652,16 +655,8 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           console.warn(
             'Farmer registration API did not return an accessToken.'
           );
-          Alert.alert(
-            t('auth.registrationSuccessful', 'Registration Successful'),
-            t('auth.accountCreatedSuccess', 'Account created successfully. Please login.'),
-            [
-              {
-                text: t('common.ok', 'OK'),
-                onPress: () => navigation.navigate('NewUserLogin'),
-              },
-            ]
-          );
+          setSuccessMessage(t('auth.accountCreatedSuccess', 'Account created successfully. Please login.'));
+          setShowSuccessModal(true);
           return;
         }
         const userData = {
@@ -675,18 +670,8 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
         return;
       }
       console.log('Manual Farmer Registration Flow');
-      Alert.alert(
-        t('auth.registrationSuccessful', 'Registration Successful'),
-        t('auth.farmerAccountCreated', 'Your farmer account has been created successfully. Please login.'),
-        [
-          {
-            text: t('common.ok', 'OK'),
-            onPress: () => {
-              navigation.navigate('NewUserLogin');
-            },
-          },
-        ]
-      );
+      setSuccessMessage(t('auth.farmerAccountCreated', 'Your farmer account has been created successfully. Please login.'));
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.log('Farmer Registration Error Status:', error.response?.status);
       console.log('Farmer Registration Error Response:', error.response?.data);
@@ -1121,6 +1106,18 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           </View>
         </View>
       </Modal>
+
+      <RegistrationSuccessModal
+        visible={showSuccessModal}
+        role="FARMER"
+        userName={formData.name}
+        userEmail={formData.email}
+        message={successMessage}
+        onContinue={() => {
+          setShowSuccessModal(false);
+          navigation.navigate('NewUserLogin');
+        }}
+      />
     </SafeAreaView>
   );
 };

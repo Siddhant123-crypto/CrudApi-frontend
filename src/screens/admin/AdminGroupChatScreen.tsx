@@ -124,6 +124,8 @@ export const AdminGroupChatScreen = () => {
 
   const fetchMessages = async (showLoader: boolean = true) => {
     try {
+      const { hasActiveAuthToken, isAuthOrCanceledError } = await import('../../services/api');
+      if (!hasActiveAuthToken()) return;
       if (showLoader) setLoading(true);
       const response = await getAdminGroupMessages();
       if (response && Array.isArray(response)) {
@@ -133,8 +135,11 @@ export const AdminGroupChatScreen = () => {
         setMessages(response.data);
         markAdminGroupAsRead();
       }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
+    } catch (error: any) {
+      if (error?.code === 'ERR_CANCELED' || error?._isStaleAuth || error?.response?.status === 401) return;
+      if (__DEV__) {
+        console.log('Admin group messages poll skipped:', error?.message || error);
+      }
     } finally {
       if (showLoader) setLoading(false);
     }

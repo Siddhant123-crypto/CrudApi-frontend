@@ -29,12 +29,16 @@ export const deleteFarmer = async (id: number | string) => {
   return response.data;
 };
 export const uploadFarmerPhoto = async (id: number | string, fileUri: string) => {
+  const filename = fileUri.split('/').pop() || 'farmer_photo.jpg';
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const mimeType =
+    ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
   const formData = new FormData();
   formData.append('file', {
     uri: fileUri,
-    name: 'farmer_photo.jpg',
-    type: 'image/jpeg',
-  });
+    name: filename.includes('.') ? filename : 'farmer_photo.jpg',
+    type: mimeType,
+  } as any);
   const response = await api.post(`/farmer/uploadPhoto/${id}`, formData, {
     headers: {'Content-Type': 'multipart/form-data'},
   });

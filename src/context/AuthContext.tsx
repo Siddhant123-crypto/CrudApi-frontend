@@ -162,7 +162,32 @@ export const AuthProvider: React.FC<{
       setInitialAuthRoute(
         'Welcome',
       );
-      
+
+      // Immediately sync latest profilePhoto & IDs from /user/me after login (non-admin)
+      const isAdminSession = String(userData?.role || '').toUpperCase() === 'ADMIN';
+      if (!isAdminSession && token) {
+        getCurrentUserProfile()
+          .then((meData) => {
+            const profile = meData?.response || meData;
+            if (profile) {
+              const { role: _ignoredRole, ...safeProfile } = profile;
+              setUser((prev) => {
+                if (!prev) return prev;
+                const merged: User = {
+                  ...prev,
+                  ...safeProfile,
+                  profilePhoto: safeProfile.profilePhoto || prev.profilePhoto,
+                  name: safeProfile.name || prev.name,
+                  role: prev.role,
+                };
+                AsyncStorage.setItem('userData', JSON.stringify(merged)).catch(() => {});
+                return merged;
+              });
+            }
+          })
+          .catch(() => {});
+      }
+
       console.log(
         'AUTH LOGIN SUCCESSFUL',
       );
@@ -175,19 +200,20 @@ export const AuthProvider: React.FC<{
     }
   };
   const logout = async () => {
+    const prevUserId = user?.userId;
     try {
+      // Clear in-memory token and unmount authenticated screens immediately
+      // so background intervals stop before AsyncStorage cleanup completes.
       setAuthToken(null);
-      await clearChatTimestampOnLogout(user?.userId);
-      await AsyncStorage.removeItem(
-        'userData',
-      );
-      await AsyncStorage.removeItem(
-        'userToken',
-      );
       setUser(null);
       setInitialAuthRoute(
         'NewUserLogin',
       );
+      await clearChatTimestampOnLogout(prevUserId);
+      await AsyncStorage.multiRemove([
+        'userData',
+        'userToken',
+      ]);
       
       console.log(
         'LOGOUT SUCCESSFUL',
@@ -203,18 +229,24 @@ export const AuthProvider: React.FC<{
     updatedData: Partial<User>,
   ) => {
     try {
-      if (!user) {
-        return;
-      }
-      const mergedUser = {
-        ...user,
-        ...updatedData,
-      };
-      await AsyncStorage.setItem(
-        'userData',
-        JSON.stringify(mergedUser),
-      );
-      setUser(mergedUser);
+      setUser((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        const cleanedUpdates: Partial<User> = { ...updatedData };
+        if (cleanedUpdates.profilePhoto === undefined) {
+          delete cleanedUpdates.profilePhoto;
+        }
+        const mergedUser: User = {
+          ...prev,
+          ...cleanedUpdates,
+        };
+        AsyncStorage.setItem(
+          'userData',
+          JSON.stringify(mergedUser),
+        ).catch(() => {});
+        return mergedUser;
+      });
       console.log(
         'USER DATA UPDATED',
       );

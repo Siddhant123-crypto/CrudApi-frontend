@@ -51,6 +51,7 @@ export const ReviewForm = ({
   const [rating, setRating] = useState<number>(0);
   const [reviewText, setReviewText] = useState<string>('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [videoUri, setVideoUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
@@ -69,6 +70,7 @@ export const ReviewForm = ({
         setPhotoUri(null);
         setVideoUri(null);
       }
+      setPendingPhotoUri(null);
       setSuccess(false);
     }
   }, [visible, existingReview]);
@@ -83,12 +85,73 @@ export const ReviewForm = ({
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 0.85,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotoUri(result.assets[0].uri);
+      setPendingPhotoUri(result.assets[0].uri);
     }
+  };
+
+  const renderPhotoPreviewOverlay = () => {
+    if (!pendingPhotoUri) return null;
+    return (
+      <View style={styles.photoPreviewOverlay}>
+        <View style={styles.photoPreviewCard}>
+          <Text style={styles.photoPreviewTitle}>
+            {t('farmer.selectedPhoto', 'Selected Photo')}
+          </Text>
+
+          <View style={styles.photoPreviewFrame}>
+            <Image
+              source={{ uri: pendingPhotoUri }}
+              style={styles.photoPreviewImage}
+              resizeMode="cover"
+            />
+          </View>
+
+          <View style={styles.photoPreviewActions}>
+            <TouchableOpacity
+              style={styles.photoPreviewCancelBtn}
+              onPress={() => setPendingPhotoUri(null)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.photoPreviewCancelText}>
+                {t('common.cancel', 'Cancel')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.photoPreviewDoneBtn}
+              onPress={() => {
+                setPhotoUri(pendingPhotoUri);
+                setPendingPhotoUri(null);
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.photoPreviewDoneText}>
+                {t('common.done', 'Done')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={styles.photoPreviewRepickBtn}
+            onPress={() => {
+              setPendingPhotoUri(null);
+              setTimeout(() => handleSelectPhoto(), 150);
+            }}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="images-outline" size={16} color="#15803D" style={{ marginRight: 6 }} />
+            <Text style={styles.photoPreviewRepickText}>
+              {t('profile.chooseAnotherPhoto', 'Choose Another Photo')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   };
   const handleSelectVideo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -268,6 +331,7 @@ export const ReviewForm = ({
               </ScrollView>
             )}
           </KeyboardAvoidingView>
+          {renderPhotoPreviewOverlay()}
         </PageBackground>
       </Modal>
     );
@@ -393,6 +457,7 @@ export const ReviewForm = ({
         )}
       </SafeAreaView>
       </KeyboardAvoidingView>
+      {renderPhotoPreviewOverlay()}
     </Modal>
   );
 };
@@ -727,5 +792,100 @@ const styles = StyleSheet.create({
     color: '#7A6350',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  photoPreviewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    zIndex: 100,
+  },
+  photoPreviewCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 24,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F0E1CF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  photoPreviewTitle: {
+    fontFamily: THEME.fonts.bold,
+    fontSize: 18,
+    color: '#3B1A0E',
+    marginBottom: 14,
+  },
+  photoPreviewFrame: {
+    width: '100%',
+    height: 260,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#F3E9DD',
+    borderWidth: 1.5,
+    borderColor: '#E8D5C0',
+    marginBottom: 18,
+  },
+  photoPreviewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPreviewActions: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  photoPreviewCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5D5C3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPreviewCancelText: {
+    fontFamily: THEME.fonts.semiBold,
+    fontSize: 14.5,
+    color: '#6B5545',
+  },
+  photoPreviewDoneBtn: {
+    flex: 1.3,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#16A34A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  photoPreviewDoneText: {
+    fontFamily: THEME.fonts.bold,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+  photoPreviewRepickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  photoPreviewRepickText: {
+    fontFamily: THEME.fonts.semiBold,
+    fontSize: 13.5,
+    color: '#15803D',
   },
 });

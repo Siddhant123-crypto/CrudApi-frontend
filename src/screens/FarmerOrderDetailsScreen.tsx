@@ -19,6 +19,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import api from '../services/api';
 import { getProductImageUrl } from '../services/productService';
 import { getFarmerItemsStatus } from '../services/orderService';
+import { getFarmerReviews } from '../services/reviewService';
+import { Review } from '../types';
+import { StarRating } from '../components/reviews/StarRating';
 import { OrderStatusBadge } from '../components/orders/OrderStatusBadge';
 import { OrderTimeline } from '../components/orders/OrderTimeline';
 import { FarmerPaymentBadge } from '../components/orders/FarmerPaymentBadge';
@@ -46,6 +49,8 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
   const [updating, setUpdating] = useState(false);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
+  const [orderReviews, setOrderReviews] = useState<Record<string, Review>>({});
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [successModalData, setSuccessModalData] = useState<{
     title: string;
@@ -57,10 +62,26 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
     buttonText: 'Awesome, Got it!',
   });
 
+  const fetchOrderReviews = async (currentOrderId: string) => {
+    try {
+      const allFarmerReviews = await getFarmerReviews();
+      const map: Record<string, Review> = {};
+      (allFarmerReviews || []).forEach((rev) => {
+        if (rev.orderId && String(rev.orderId) === String(currentOrderId) && rev.productId) {
+          map[String(rev.productId)] = rev;
+        }
+      });
+      setOrderReviews(map);
+    } catch (error) {
+      console.log('Error fetching order reviews for farmer:', error);
+    }
+  };
+
   const fetchOrderDetails = async () => {
     try {
       const response = await api.get(`/order/${orderId}`);
       setOrder(response.data);
+      fetchOrderReviews(String(response.data?.orderId || orderId));
     } catch (error) {
       console.log('Error fetching order details:', error);
       if (!initialOrder) {
@@ -339,28 +360,99 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
           {order.items &&
             order.items.map((item: any, index: number) => {
               const imageUrl = item.imageUrl ? getProductImageUrl(item.imageUrl) : null;
+              const itemReview = item.productId ? orderReviews[String(item.productId)] : undefined;
+              const reviewPhotos = itemReview?.media?.filter((m) => m.mediaType === 'IMAGE') || [];
+              const reviewDate = itemReview?.createdAt
+                ? new Date(itemReview.createdAt).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : '';
+
               return (
                 <View
                   key={index}
-                  style={[styles.itemRow, index > 0 && styles.itemRowBorder]}
+                  style={[styles.itemBlock, index > 0 && styles.itemRowBorder]}
                 >
-                  {imageUrl ? (
-                    <Image source={{ uri: imageUrl }} style={styles.itemImage} />
-                  ) : (
-                    <View style={styles.placeholderImage}>
-                      <Ionicons name="leaf-outline" size={20} color={FARMER_THEME.colors.emeraldPrimary} />
+                  <View style={styles.itemRow}>
+                    {imageUrl ? (
+                      <Image source={{ uri: imageUrl }} style={styles.itemImage} />
+                    ) : (
+                      <View style={styles.placeholderImage}>
+                        <Ionicons name="leaf-outline" size={20} color={FARMER_THEME.colors.emeraldPrimary} />
+                      </View>
+                    )}
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName}>{item.productName}</Text>
+                      <Text style={styles.itemMeta}>
+                        {item.quantity} {item.unit} x {formatCurrency(item.price)}
+                      </Text>
+                      <View style={{ marginTop: 6 }}>
+                        <OrderStatusBadge status={item.status} variant="farmer" />
+                      </View>
+                    </View>
+                    <Text style={styles.itemTotal}>{formatCurrency(item.subtotal)}</Text>
+                  </View>
+
+                  {itemReview && (
+                    <View style={styles.customerReviewBox}>
+                      <View style={styles.customerReviewHeader}>
+                        <View style={styles.customerReviewTitleRow}>
+                          <Ionicons name="star" size={14} color="#F0A020" style={{ marginRight: 5 }} />
+                          <Text style={styles.customerReviewTitle}>
+                            {t('product.reviews', 'Customer Reviews')}
+                          </Text>
+                        </View>
+                        {itemReview.isVerifiedPurchase && (
+                          <View style={styles.verifiedPurchasePill}>
+                            <Ionicons name="checkmark-circle" size={12} color="#17663F" />
+                            <Text style={styles.verifiedPurchaseText}>
+                              {t('reviews.verifiedPurchase', 'Verified Purchase')}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.customerReviewRatingRow}>
+                        <StarRating
+                          rating={itemReview.rating}
+                          size={15}
+                          disabled={true}
+                          variant="farmer"
+                        />
+                        <Text style={styles.customerReviewScore}>{itemReview.rating}/5</Text>
+                        {reviewDate ? (
+                          <Text style={styles.customerReviewDate}>{reviewDate}</Text>
+                        ) : null}
+                      </View>
+
+                      {itemReview.reviewText ? (
+                        <Text style={styles.customerReviewText}>
+                          "{itemReview.reviewText}"
+                        </Text>
+                      ) : null}
+
+                      {reviewPhotos.length > 0 && (
+                        <View style={styles.reviewPhotosRow}>
+                          {reviewPhotos.map((photo) => {
+                            const photoUrl = getProductImageUrl(photo.mediaUrl);
+                            if (!photoUrl) return null;
+                            return (
+                              <TouchableOpacity
+                                key={photo.mediaId}
+                                activeOpacity={0.85}
+                                onPress={() => setPreviewImageUrl(photoUrl)}
+                                style={styles.reviewPhotoWrap}
+                              >
+                                <Image source={{ uri: photoUrl }} style={styles.reviewPhotoThumb} />
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
                     </View>
                   )}
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{item.productName}</Text>
-                    <Text style={styles.itemMeta}>
-                      {item.quantity} {item.unit} x {formatCurrency(item.price)}
-                    </Text>
-                    <View style={{ marginTop: 6 }}>
-                      <OrderStatusBadge status={item.status} variant="farmer" />
-                    </View>
-                  </View>
-                  <Text style={styles.itemTotal}>{formatCurrency(item.subtotal)}</Text>
                 </View>
               );
             })}
@@ -443,6 +535,31 @@ const FarmerOrderDetailsScreen = ({ route, navigation }: any) => {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Fullscreen Review Photo Preview Modal */}
+      <Modal
+        visible={!!previewImageUrl}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewImageUrl(null)}
+      >
+        <View style={styles.photoPreviewOverlay}>
+          <TouchableOpacity
+            style={styles.photoPreviewCloseBtn}
+            onPress={() => setPreviewImageUrl(null)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="close" size={26} color="#FFFFFF" />
+          </TouchableOpacity>
+          {previewImageUrl && (
+            <Image
+              source={{ uri: previewImageUrl }}
+              style={styles.photoPreviewImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
       </Modal>
 
       {/* Celebratory Farmer Success Modal */}
@@ -600,10 +717,116 @@ const styles = StyleSheet.create({
     color: '#7F1D1D',
     lineHeight: 20,
   },
+  itemBlock: {
+    paddingVertical: 12,
+  },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+  },
+  customerReviewBox: {
+    marginTop: 10,
+    backgroundColor: '#F3FAF5',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#C8E6D2',
+  },
+  customerReviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 6,
+  },
+  customerReviewTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  customerReviewTitle: {
+    fontSize: 12.5,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#0E4D2E',
+  },
+  verifiedPurchasePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DDF3E4',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#B8E2C8',
+  },
+  verifiedPurchaseText: {
+    fontSize: 10.5,
+    fontFamily: FARMER_THEME.fonts.semiBold,
+    color: '#17663F',
+    marginLeft: 3,
+  },
+  customerReviewRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  customerReviewScore: {
+    fontSize: 12.5,
+    fontFamily: FARMER_THEME.fonts.bold,
+    color: '#0E3B29',
+    marginLeft: 6,
+  },
+  customerReviewDate: {
+    fontSize: 11.5,
+    fontFamily: FARMER_THEME.fonts.regular,
+    color: FARMER_THEME.colors.sageText,
+    marginLeft: 'auto',
+  },
+  customerReviewText: {
+    fontSize: 13.5,
+    fontFamily: FARMER_THEME.fonts.medium,
+    color: '#1B2A22',
+    lineHeight: 19,
+    marginTop: 8,
+  },
+  reviewPhotosRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+    gap: 8,
+  },
+  reviewPhotoWrap: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#C8E6D2',
+  },
+  reviewPhotoThumb: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#E5EFE3',
+  },
+  photoPreviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  photoPreviewCloseBtn: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  photoPreviewImage: {
+    width: '100%',
+    height: '75%',
   },
   itemRowBorder: {
     borderTopWidth: 1,

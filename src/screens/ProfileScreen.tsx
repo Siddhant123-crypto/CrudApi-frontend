@@ -257,6 +257,9 @@ const ProfileScreen = () => {
         await updateFarmer(targetFarmerId, updatedData);
         if (selectedPhotoUri) {
           await uploadFarmerPhoto(targetFarmerId, selectedPhotoUri);
+          await updateUserData({ profilePhoto: selectedPhotoUri, name: updatedData.name });
+        } else {
+          await updateUserData({ name: updatedData.name });
         }
         setProfileData((prev: any) => ({ ...(prev || {}), ...updatedData }));
         setSuccessModalConfig({
@@ -269,6 +272,9 @@ const ProfileScreen = () => {
         const updateRes: any = await updateUser(targetUserId, updatedData);
         if (selectedPhotoUri) {
           await uploadUserPhoto(targetUserId, selectedPhotoUri);
+          await updateUserData({ profilePhoto: selectedPhotoUri, name: updatedData.name });
+        } else {
+          await updateUserData({ name: updatedData.name });
         }
         setProfileData((prev: any) => ({ ...(prev || {}), ...updatedData }));
         const syncCount = updateRes?.synchronizedOrdersCount || 0;

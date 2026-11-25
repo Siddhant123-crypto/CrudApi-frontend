@@ -15,6 +15,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../services/api';
 import { getProductImageUrl } from '../services/productService';
 import { getFarmerItemsStatus } from '../services/orderService';
+import { getFarmerReviews } from '../services/reviewService';
+import { Review } from '../types';
+import { StarRating } from '../components/reviews/StarRating';
 import { OrderEmptyState } from '../components/orders/OrderEmptyState';
 import { OrderSkeleton } from '../components/orders/OrderSkeleton';
 import { FarmerPaymentBadge } from '../components/orders/FarmerPaymentBadge';
@@ -31,6 +34,7 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
+  const [reviewsByOrderId, setReviewsByOrderId] = useState<Record<string, Review[]>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('All');
@@ -48,8 +52,28 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
   const fetchOrders = async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
     try {
-      const response = await api.get('/order/farmer');
-      setOrders(response.data.reverse());
+      const [ordersResult, reviewsResult] = await Promise.allSettled([
+        api.get('/order/farmer'),
+        getFarmerReviews(),
+      ]);
+
+      if (ordersResult.status === 'fulfilled') {
+        setOrders([...(ordersResult.value.data || [])].reverse());
+      } else {
+        console.log('Error fetching farmer orders:', ordersResult.reason);
+      }
+
+      if (reviewsResult.status === 'fulfilled') {
+        const grouped: Record<string, Review[]> = {};
+        (reviewsResult.value || []).forEach((rev) => {
+          if (rev.orderId) {
+            const key = String(rev.orderId);
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(rev);
+          }
+        });
+        setReviewsByOrderId(grouped);
+      }
     } catch (error) {
       console.log('Error fetching farmer orders:', error);
     } finally {
@@ -134,6 +158,8 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
     const fStatus = item.status === 'CANCELLED' ? 'CANCELLED' : getFarmerItemsStatus(item.items || []);
     const isNew = fStatus === 'PENDING';
     const isCancelled = fStatus === 'CANCELLED';
+    const orderReviews = item.orderId ? reviewsByOrderId[String(item.orderId)] || [] : [];
+    const primaryReview = orderReviews.length > 0 ? orderReviews[0] : null;
 
     const orderIdLabel = `${t('orders.orderNumber', 'Order #').replace('{{id}}', '')}${
       item.orderNumber ? item.orderNumber.substring(0, 12) : item.orderId.substring(0, 8)
@@ -246,6 +272,33 @@ const FarmerOrdersScreen = ({ navigation }: any) => {
               </View>
             </View>
           </View>
+
+          {/* Customer Review Banner on reviewed orders */}
+          {!isCancelled && primaryReview && (
+            <View style={styles.reviewBanner}>
+              <View style={styles.reviewBannerHeader}>
+                <View style={styles.reviewBannerLeft}>
+                  <StarRating
+                    rating={primaryReview.rating}
+                    size={13}
+                    disabled={true}
+                    variant="farmer"
+                  />
+                  <Text style={styles.reviewBannerScore}>{primaryReview.rating}/5</Text>
+                </View>
+                <Text style={styles.reviewBannerCount}>
+                  {orderReviews.length === 1
+                    ? t('reviews.reviewOne', 'Review')
+                    : `${orderReviews.length} ${t('reviews.reviewOther', 'Reviews')}`}
+                </Text>
+              </View>
+              {primaryReview.reviewText ? (
+                <Text style={styles.reviewBannerText} numberOfLines={2}>
+                  "{primaryReview.reviewText}"
+                </Text>
+              ) : null}
+            </View>
+          )}
 
           {/* Cancellation Reason Banner directly on cancelled order card */}
           {isCancelled && (
@@ -556,6 +609,41 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: '#7F1D1D',
     lineHeight: 18,
+  },
+  reviewBanner: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: '#F3FAF5',
+    borderWidth: 1,
+    borderColor: '#C8E6D2',
+  },
+  reviewBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reviewBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewBannerScore: {
+    fontFamily: FARMER_THEME.fonts.bold,
+    fontSize: 12,
+    color: '#0E3B29',
+    marginLeft: 6,
+  },
+  reviewBannerCount: {
+    fontFamily: FARMER_THEME.fonts.semiBold,
+    fontSize: 11.5,
+    color: '#17663F',
+  },
+  reviewBannerText: {
+    fontFamily: FARMER_THEME.fonts.medium,
+    fontSize: 12.5,
+    color: '#1B2A22',
+    lineHeight: 18,
+    marginTop: 5,
   },
 });
 

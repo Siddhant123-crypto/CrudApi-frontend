@@ -82,6 +82,7 @@ import FarmerWeatherDetailsScreen from '../screens/FarmerWeatherDetailsScreen';
 import FarmerAiChatScreen from '../screens/FarmerAiChatScreen';
 import CustomerAiChatScreen from '../screens/CustomerAiChatScreen';
 import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
+import { PremiumSplashView } from '../components/PremiumSplashView';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -468,12 +469,23 @@ const MainStack: React.FC<{role?: string}> = ({role}) => {
 };
 const AppNavigator: React.FC = () => {
   const {user, isLoading, isLoggedIn, initialAuthRoute} = useAuth();
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+  const [showAuthenticatedSplash, setShowAuthenticatedSplash] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      if (isLoggedIn) {
+        const timer = setTimeout(() => {
+          setShowAuthenticatedSplash(false);
+        }, 1800);
+        return () => clearTimeout(timer);
+      } else {
+        setShowAuthenticatedSplash(false);
+      }
+    }
+  }, [isLoading, isLoggedIn]);
+
+  if (isLoading || (isLoggedIn && showAuthenticatedSplash)) {
+    return <PremiumSplashView />;
   }
   if (!isLoggedIn) {
     return <AuthStack initialRoute={initialAuthRoute} />;

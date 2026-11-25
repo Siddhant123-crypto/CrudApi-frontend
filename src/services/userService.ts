@@ -1,12 +1,22 @@
-import api, { BASE_URL, resolveBaseUrl } from './api';
+import api, { BASE_URL, resolveBaseUrl, resolveMediaUrl } from './api';
 
 export const getUserProfileImageUrl = (photo?: string | null): string | null => {
   if (!photo || typeof photo !== 'string') return null;
   const trimmed = photo.trim();
   if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return null;
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  if (trimmed.startsWith('file://') || trimmed.startsWith('content://') || trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return resolveMediaUrl(trimmed) || trimmed;
+  }
   const activeBase = resolveBaseUrl();
-  const clean = trimmed.replace(/^\/?(uploads\/)+/, '');
+  const normalized = trimmed.replace(/\\/g, '/');
+  const clean = normalized
+    .replace(/^\/+/, '')
+    .replace(/^(uploads\/)+/, '')
+    .replace(/^(user\/image\/|farmer\/image\/)/, '');
+  if (!clean) return null;
   return `${activeBase}/user/image/${clean}`;
 };
 
@@ -31,12 +41,16 @@ export const deleteUser = async (id: number | string) => {
   return response.data;
 };
 export const uploadUserPhoto = async (id: number | string, fileUri: string) => {
+  const filename = fileUri.split('/').pop() || 'photo.jpg';
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const mimeType =
+    ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
   const formData = new FormData();
   formData.append('file', {
     uri: fileUri,
-    name: 'photo.jpg',
-    type: 'image/jpeg',
-  });
+    name: filename.includes('.') ? filename : 'photo.jpg',
+    type: mimeType,
+  } as any);
   const response = await api.post(`/user/uploadPhoto/${id}`, formData, {
     headers: {'Content-Type': 'multipart/form-data'},
   });

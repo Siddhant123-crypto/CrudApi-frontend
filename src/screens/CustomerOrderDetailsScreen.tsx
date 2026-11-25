@@ -417,16 +417,6 @@ const CustomerOrderDetailsScreen = ({route, navigation}: any) => {
             <OrderStatusBadge status={order.status} variant="customer" />
           </View>
           <OrderTimeline status={order.status} variant="customer" />
-
-          {/* Track Order Action (if confirmed/out for delivery) */}
-          {order.status !== 'CANCELLED' && order.status !== 'PENDING' && (
-            <View style={{ marginTop: 16 }}>
-              <OutlineButton
-                title={t('orders.trackOrder', 'Track Order')}
-                onPress={() => navigation.navigate('CustomerOrderTracking', { orderId: order.orderId })}
-              />
-            </View>
-          )}
         </Card>
 
         {/* Cancellation Reason Card (if cancelled) */}

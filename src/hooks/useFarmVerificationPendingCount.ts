@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { getFarmVerificationPendingCount } from '../services/adminService';
+import { hasActiveAuthToken } from '../services/api';
 
 export interface FarmVerificationCounts {
   pendingCount: number;
@@ -18,7 +19,7 @@ let isFetching = false;
 const listeners = new Set<(counts: FarmVerificationCounts) => void>();
 
 export const refreshFarmVerificationPendingCount = async (): Promise<FarmVerificationCounts> => {
-  if (isFetching) return globalCounts;
+  if (!hasActiveAuthToken() || isFetching) return globalCounts;
   isFetching = true;
   try {
     const res = await getFarmVerificationPendingCount();

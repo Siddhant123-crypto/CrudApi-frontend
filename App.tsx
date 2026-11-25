@@ -42,6 +42,7 @@ import { NotificationProvider } from './src/context/NotificationContext';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { THEME } from './src/constants/theme';
 import { warmUpBackend, resolveBaseUrl } from './src/services/api';
+import { PremiumSplashView } from './src/components/PremiumSplashView';
 
 // Set global cap on font scaling to prevent text clipping
 if ((Text as any).defaultProps == null) {
@@ -109,7 +110,7 @@ const App = () => {
   }, []);
 
   if (!fontsLoaded) {
-    return null;
+    return <PremiumSplashView />;
   }
 
   return (

@@ -1,26 +1,18 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  Dimensions,
-  ActivityIndicator,
-  StatusBar,
-  ImageBackground,
-} from 'react-native';
 import { hasUserSelectedLanguage, initAppLanguage } from '../i18n';
-
-const { width, height } = Dimensions.get('window');
+import { PremiumSplashView } from '../components/PremiumSplashView';
 
 const WelcomeScreen = ({ navigation }: any) => {
   useEffect(() => {
     let isMounted = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     const prepareAndNavigate = async () => {
       try {
         await initAppLanguage();
         const hasSelected = await hasUserSelectedLanguage();
 
-        const timer = setTimeout(() => {
+        timer = setTimeout(() => {
           if (!isMounted) return;
           if (!hasSelected) {
             navigation.replace('LanguageSelection', { fromSettings: false });
@@ -28,15 +20,12 @@ const WelcomeScreen = ({ navigation }: any) => {
             navigation.replace('NewUserLogin');
           }
         }, 2200);
-
-        return () => clearTimeout(timer);
       } catch (err) {
-        const timer = setTimeout(() => {
+        timer = setTimeout(() => {
           if (isMounted) {
             navigation.replace('NewUserLogin');
           }
         }, 2200);
-        return () => clearTimeout(timer);
       }
     };
 
@@ -44,40 +33,11 @@ const WelcomeScreen = ({ navigation }: any) => {
 
     return () => {
       isMounted = false;
+      if (timer) clearTimeout(timer);
     };
   }, [navigation]);
 
-  return (
-    <View style={styles.container}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-      <ImageBackground
-        source={require('../../assets/welcomelogo.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <View style={styles.loaderWrapper}>
-          <ActivityIndicator size="large" color="#2D983A" />
-        </View>
-      </ImageBackground>
-    </View>
-  );
+  return <PremiumSplashView />;
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  loaderWrapper: {
-    paddingBottom: 50,
-  },
-});
 
 export default WelcomeScreen;

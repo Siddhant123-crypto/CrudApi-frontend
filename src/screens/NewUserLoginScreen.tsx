@@ -377,9 +377,12 @@ const NewUserLoginScreen = ({ navigation }: any) => {
       } catch (error) {
         console.log('No previous Google session');
       }
-      const googleResult = await GoogleSignin.signIn();
+      const googleResult: any = await GoogleSignin.signIn();
       console.log('GOOGLE RESULT:', googleResult);
-      const idToken = googleResult.data?.idToken;
+      if (googleResult?.type === 'cancelled') {
+        return;
+      }
+      const idToken = googleResult?.data?.idToken || googleResult?.idToken;
       if (!idToken) {
         Alert.alert(t('auth.googleLoginFailed', 'Google Login Failed'), t('auth.googleTokenNotReceived', 'Google ID token was not received.'));
         return;
@@ -440,7 +443,18 @@ const NewUserLoginScreen = ({ navigation }: any) => {
       Alert.alert(t('auth.googleLoginFailed', 'Google Login Failed'), backendResult?.message || t('auth.googleLoginFailed', 'Google login failed.'));
     } catch (error: any) {
       console.log('Google Login Error:', error);
-      if (error?.code === 'SIGN_IN_CANCELLED' || error?.message?.includes('cancelled')) {
+      if (
+        error?.code === 'SIGN_IN_CANCELLED' ||
+        error?.code === '12501' ||
+        error?.message?.toLowerCase?.().includes('cancel')
+      ) {
+        return;
+      }
+      if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+        Alert.alert(
+          t('auth.googleLoginError', 'Google Login Error'),
+          t('errors.networkError', 'Unable to connect to server. Please check your internet connection and try again.')
+        );
         return;
       }
       Alert.alert(t('auth.googleLoginError', 'Google Login Error'), error?.message || t('auth.unableLinkAccount', 'Unable to login with Google.'));
@@ -780,7 +794,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
                 style={styles.textInput}
                 value={linkPassword}
                 onChangeText={setLinkPassword}
-                placeholder={t('auth.passwordPlaceholder', 'Enter your Farm2Home password')}
+                placeholder={t('auth.enterPasswordShort', 'Enter password')}
                 placeholderTextColor="#8E9A90"
                 secureTextEntry={!showLinkPassword}
                 autoCapitalize="none"

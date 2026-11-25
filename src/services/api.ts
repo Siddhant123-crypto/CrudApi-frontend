@@ -154,6 +154,16 @@ export const setAuthToken = (token: string | null, markFreshLogin = false) => {
   }
 };
 
+export const hasActiveAuthToken = (): boolean => Boolean(activeAuthToken);
+
+export const isAuthOrCanceledError = (err: any): boolean =>
+  Boolean(
+    axios.isCancel(err) ||
+      err?.code === 'ERR_CANCELED' ||
+      err?._isStaleAuth === true ||
+      err?.response?.status === 401
+  );
+
 api.interceptors.request.use(
   async config => {
     if (__DEV__) {
@@ -164,6 +174,18 @@ api.interceptors.request.use(
     const token = activeAuthToken || (await AsyncStorage.getItem('userToken'));
     if (token && !activeAuthToken) {
       activeAuthToken = token;
+    }
+    if (!token) {
+      const url = config?.url || '';
+      const isStrictAuthPoll =
+        url.includes('/support/admin/') ||
+        url.includes('/notifications/unread/count') ||
+        url.includes('/order/farmer/new-orders-count') ||
+        url.includes('/admin/group/messages') ||
+        (url.startsWith('/admin/') && !url.startsWith('/admin/auth/'));
+      if (isStrictAuthPoll) {
+        return Promise.reject(new axios.CanceledError('Skipped unauthenticated request after logout'));
+      }
     }
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`;
@@ -236,11 +258,24 @@ api.interceptors.response.use(
       return api(config);
     }
 
-    // Log genuine unhandled API errors in DEV (suppressing noisy background heartbeat polls)
+    // Log genuine unhandled API errors in DEV (suppressing noisy background heartbeat polls & stale post-logout 401s)
+    const reqAuthHeader = String(
+      config?.headers?.['Authorization'] || config?.headers?.Authorization || ''
+    );
+    const reqToken = reqAuthHeader.startsWith('Bearer ')
+      ? reqAuthHeader.slice(7).trim()
+      : '';
+    const currentTokenSnapshot = activeAuthToken || (status === 401 ? await AsyncStorage.getItem('userToken') : null);
+    const isStaleOrUnauth401 =
+      status === 401 && (!reqToken || Boolean(currentTokenSnapshot && reqToken !== currentTokenSnapshot));
+
     if (__DEV__) {
       const isSilentBackground = Boolean(
+        isStaleOrUnauth401 ||
         config?.url?.includes('/notifications/unread/count') ||
-        config?.url?.includes('/order/farmer/new-orders-count')
+        config?.url?.includes('/order/farmer/new-orders-count') ||
+        config?.url?.includes('/support/admin/unread-counts') ||
+        config?.url?.includes('/admin/group/messages')
       );
       if (!isSilentBackground) {
         console.log('=================================');
@@ -256,26 +291,20 @@ api.interceptors.response.use(
 
     // 2. HTTP 401: Never blindly kick out a freshly logged-in user on a stale/background request
     if (status === 401) {
-      const reqAuthHeader = String(
-        config?.headers?.['Authorization'] || config?.headers?.Authorization || ''
-      );
-      const reqToken = reqAuthHeader.startsWith('Bearer ')
-        ? reqAuthHeader.slice(7).trim()
-        : '';
-      const currentToken = activeAuthToken || (await AsyncStorage.getItem('userToken'));
+      const currentToken = currentTokenSnapshot;
       const msSinceLogin = Date.now() - lastLoginTimestamp;
       const isBackgroundPoll = Boolean(
         config?.url?.includes('/notifications/unread/count') ||
         config?.url?.includes('/order/farmer/new-orders-count') ||
+        config?.url?.includes('/support/admin/') ||
+        config?.url?.includes('/admin/group/messages') ||
         config?.url?.includes('/farmer/notifications') ||
         config?.url?.includes('/shorts')
       );
 
       // Ignore 401 from an unauthenticated request or from a stale/superseded token
       if (!reqToken || (currentToken && reqToken !== currentToken)) {
-        if (__DEV__) {
-          console.log('[API] Ignoring 401 from stale/unauthenticated request:', config?.url);
-        }
+        (error as any)._isStaleAuth = true;
         return Promise.reject(error);
       }
 
