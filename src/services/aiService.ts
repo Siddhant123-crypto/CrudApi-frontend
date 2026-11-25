@@ -30,6 +30,7 @@ export interface AiChatApiResponseData {
   role?: string;
   model?: string;
   sources?: string[];
+  products?: any[];
 }
 
 export interface AiChatApiResponse {
@@ -66,6 +67,8 @@ export interface AiStatusResponse {
   message: string;
   data: {
     available: boolean;
+    llmAvailable?: boolean;
+    mode?: string;
     model?: string;
   } | null;
 }

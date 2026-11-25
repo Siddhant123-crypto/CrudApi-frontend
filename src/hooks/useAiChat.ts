@@ -37,20 +37,17 @@ export function useAiChat({ userId, role = 'FARMER', initialChips }: UseAiChatOp
   const isSendingRef = useRef(false);
 
   // Check AI Service Status
+  // Note: Farm2Home's built-in knowledge base, farmer advisory, FAQ, and live catalog search
+  // operate inside the backend even when optional local Ollama LLM is offline in cloud production.
   const checkStatus = useCallback(async () => {
     try {
-      const res = await getAiServiceStatus();
-      if (res && res.data) {
-        setIsAiAvailable(res.data.available);
-        if (!res.data.available) {
-          setStatusMessage('AI assistant is currently unavailable. Please try again later.');
-        } else {
-          setStatusMessage(null);
-        }
-      }
-    } catch {
-      // If status call fails, assume available or let chat request determine
+      await getAiServiceStatus();
       setIsAiAvailable(true);
+      setStatusMessage(null);
+    } catch {
+      // If status call fails transiently, allow chat requests to determine availability
+      setIsAiAvailable(true);
+      setStatusMessage(null);
     }
   }, []);
 
@@ -172,6 +169,7 @@ export function useAiChat({ userId, role = 'FARMER', initialChips }: UseAiChatOp
             text: response.data.answer,
             summary: response.data.summary,
             sources: response.data.sources || [],
+            data: response.data,
             createdAt: new Date().toISOString(),
           };
 
