@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import { adminSupportService, SupportRequestResponse } from '../../services/adminSupportService';
 import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
 import { AdminHeader } from '../../components/admin/AdminHeader';
@@ -59,6 +60,7 @@ export const AdminSupportChatScreen = () => {
   const prevMessageCountRef = useRef(0);
   const flatListRef = useRef<FlatList>(null);
   const { user } = useAuth();
+  const { refreshUnreadCount } = useNotification();
 
   const handleScroll = (event: any) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
@@ -140,6 +142,30 @@ export const AdminSupportChatScreen = () => {
         setSupportRequest(activeReq);
         fetchMessages(activeReq.supportRequestId, true);
         return;
+      }
+
+      // Fallback: if all conversations for this farmer are RESOLVED, load the latest resolved one
+      // so the Admin can still read past messages and tap Reopen.
+      try {
+        const resolvedRes = await adminSupportService.getResolvedSupportRequests();
+        const resolvedList: SupportRequestResponse[] = resolvedRes?.data || resolvedRes || [];
+        if (Array.isArray(resolvedList) && resolvedList.length > 0) {
+          const matchingResolved = resolvedList.find(
+            (r) =>
+              r.userId === farmerId ||
+              (farmerName &&
+                r.userName &&
+                r.userName.trim().toLowerCase() === String(farmerName).trim().toLowerCase())
+          );
+          if (matchingResolved) {
+            setSupportRequestId(matchingResolved.supportRequestId);
+            setSupportRequest(matchingResolved);
+            fetchMessages(matchingResolved.supportRequestId, true);
+            return;
+          }
+        }
+      } catch {
+        // Ignore fallback lookup errors
       }
 
       setLoading(false);
@@ -340,18 +366,38 @@ export const AdminSupportChatScreen = () => {
         onPress: async () => {
           try {
             setLoading(true);
-            await adminSupportService.reopenSupportRequest(supportRequestId);
-            if (user?.userId) {
-              await adminSupportService.transferSupportRequest(supportRequestId, user.userId);
+            const reopenRes = await adminSupportService.reopenSupportRequest(supportRequestId);
+            let updatedReq: SupportRequestResponse | undefined = reopenRes?.data || reopenRes;
+
+            // If fallback PUT /status ran against an older backend and left assignedAdminId empty, claim it
+            if (!updatedReq?.assignedAdminId) {
+              try {
+                const assignRes = await adminSupportService.assignSupportRequest(supportRequestId);
+                if (assignRes?.data) {
+                  updatedReq = assignRes.data;
+                }
+              } catch {
+                // Ignore if already assigned to another admin on older backend
+              }
             }
+
             setSupportRequest((prev) =>
               prev
-                ? { ...prev, status: 'IN_PROGRESS', assignedAdminId: user?.userId || '' }
+                ? {
+                    ...prev,
+                    ...(updatedReq && updatedReq.supportRequestId ? updatedReq : {}),
+                    status: 'IN_PROGRESS',
+                    assignedAdminId:
+                      updatedReq?.assignedAdminId || user?.userId || prev.assignedAdminId || '',
+                  }
                 : prev
             );
+            refreshUnreadCount();
             Alert.alert(t('common.success'), t('admin.reopenedSuccess'));
-          } catch (error) {
-            console.error(error);
+          } catch (error: any) {
+            if (__DEV__) {
+              console.log('Reopen support request error:', error?.response?.data || error?.message);
+            }
             Alert.alert(t('common.error'), t('admin.couldNotReopen'));
           } finally {
             setLoading(false);

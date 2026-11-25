@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api, { BASE_URL } from '../../services/api';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
@@ -28,6 +29,7 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
   const { t } = useTranslation();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { customerId } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState<any>(null);
@@ -150,7 +152,14 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
         }
       />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        nestedScrollEnabled={true}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 20) + 20 },
+        ]}
+      >
         {/* 1) PROFILE ADMIN CARD (72px avatar, 3px white ring, shadow, Fraunces 22 name) */}
         <AdminCard style={styles.profileCard}>
           <View style={styles.avatarContainer}>
@@ -256,15 +265,30 @@ export const AdminCustomerDetailsScreen: React.FC = () => {
           </AdminCard>
         )}
 
-        {/* 4) ORDER HISTORY */}
+        {/* 4) ORDER HISTORY (Contained single card with internal scroll) */}
         <AdminCard style={styles.ordersCard}>
-          <Text style={styles.sectionTitle}>{t('admin.orderHistory', 'Order History')}</Text>
+          <View style={styles.ordersCardHeader}>
+            <Text style={styles.ordersSectionTitle}>{t('admin.orderHistory', 'Order History')}</Text>
+            {orders.length > 0 && (
+              <View style={styles.ordersCountBadge}>
+                <Text style={styles.ordersCountText}>{orders.length}</Text>
+              </View>
+            )}
+          </View>
           {orders.length > 0 ? (
-            orders.map((order) => (
-              <React.Fragment key={order.orderId}>
-                {renderOrderItem({ item: order })}
-              </React.Fragment>
-            ))
+            <ScrollView
+              nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={true}
+              persistentScrollbar={true}
+              style={styles.ordersScrollArea}
+              contentContainerStyle={styles.ordersScrollContent}
+            >
+              {orders.map((order, idx) => (
+                <React.Fragment key={order.orderId || order.orderNumber || String(idx)}>
+                  {renderOrderItem({ item: order })}
+                </React.Fragment>
+              ))}
+            </ScrollView>
           ) : (
             <Text style={styles.emptyTextSmall}>{t('orders.noOrders', 'No orders yet.')}</Text>
           )}
@@ -425,6 +449,38 @@ const styles = StyleSheet.create({
   // Orders Card
   ordersCard: {
     padding: 16,
+  },
+  ordersCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  ordersSectionTitle: {
+    fontFamily: AdminFonts.heading,
+    fontSize: 18,
+    color: ADMIN_THEME.colors.ink,
+  },
+  ordersCountBadge: {
+    minWidth: 28,
+    height: 24,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: ADMIN_THEME.colors.indigoTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ordersCountText: {
+    fontFamily: AdminFonts.bold,
+    fontSize: 12,
+    color: ADMIN_THEME.colors.indigo,
+  },
+  ordersScrollArea: {
+    maxHeight: 285,
+  },
+  ordersScrollContent: {
+    paddingRight: 4,
+    paddingBottom: 2,
   },
   orderCard: {
     backgroundColor: ADMIN_THEME.colors.inputBg,

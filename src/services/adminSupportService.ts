@@ -46,8 +46,18 @@ export const adminSupportService = {
   },
   
   reopenSupportRequest: async (supportRequestId: string) => {
-    const response = await api.put(`/admin/support/${supportRequestId}/status`, { status: 'IN_PROGRESS' });
-    return response.data;
+    try {
+      const response = await api.post(`/admin/support/${supportRequestId}/reopen`);
+      return response.data;
+    } catch (err: any) {
+      // Fallback to PUT /status for backward compatibility while backend deploy rolls out
+      const statusCode = err?.response?.status;
+      if (statusCode === 404 || statusCode === 405) {
+        const fallbackRes = await api.put(`/admin/support/${supportRequestId}/status`, { status: 'IN_PROGRESS' });
+        return fallbackRes.data;
+      }
+      throw err;
+    }
   },
   
   getAdminUnreadCounts: async () => {
