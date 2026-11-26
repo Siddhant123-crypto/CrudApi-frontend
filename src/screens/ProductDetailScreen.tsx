@@ -18,7 +18,6 @@ import {
   Platform,
 } from 'react-native';
 import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Rect } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { getProductImageUrl, getProductById, getProductVideoUrl } from '../services/productService';
 import { getProductReviews } from '../services/reviewService';

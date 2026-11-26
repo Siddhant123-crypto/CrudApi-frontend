@@ -43,6 +43,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { THEME } from './src/constants/theme';
 import { warmUpBackend, resolveBaseUrl } from './src/services/api';
 import { PremiumSplashView } from './src/components/PremiumSplashView';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 // Set global cap on font scaling to prevent text clipping
 if ((Text as any).defaultProps == null) {
@@ -114,20 +115,22 @@ const App = () => {
   }
 
   return (
-    <KeyboardProvider>
-      <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <NotificationProvider>
-              <NavigationContainer linking={linking} theme={navigationTheme}>
-                <StatusBar barStyle="light-content" backgroundColor="#A23A14" />
-                <AppNavigator />
-              </NavigationContainer>
-            </NotificationProvider>
-          </WishlistProvider>
-        </CartProvider>
-      </AuthProvider>
-    </KeyboardProvider>
+    <ErrorBoundary>
+      <KeyboardProvider>
+        <AuthProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <NotificationProvider>
+                <NavigationContainer linking={linking} theme={navigationTheme}>
+                  <StatusBar barStyle="light-content" backgroundColor="#A23A14" />
+                  <AppNavigator />
+                </NavigationContainer>
+              </NotificationProvider>
+            </WishlistProvider>
+          </CartProvider>
+        </AuthProvider>
+      </KeyboardProvider>
+    </ErrorBoundary>
   );
 };
 export default App;

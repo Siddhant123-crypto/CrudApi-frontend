@@ -531,8 +531,11 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
     }
     if (!formData.password.trim()) {
       newErrors.password = t('validation.passwordRequired', 'Password is required');
-    } else if (formData.password.length < 6) {
-      newErrors.password = t('validation.passwordTooShort', 'Password must be at least 6 characters');
+    } else if (!/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@#$%^&+=!*?._-]).{8,}$/.test(formData.password)) {
+      newErrors.password = t(
+        'validation.passwordPolicy',
+        'Password must contain uppercase, lowercase, number and special character',
+      );
     }
     if (!formData.confirmPassword.trim()) {
       newErrors.confirmPassword = t('validation.confirmPasswordRequired', 'Confirm password is required');
@@ -651,15 +654,17 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
         !result.message.includes('Registration Successful')
       ) {
         setLoading(false);
-        Alert.alert(t('auth.registrationFailed', 'Registration Failed'), mapApiError(result.message, t));
+        Alert.alert(
+          t('auth.registrationFailed', 'Registration Failed'),
+          typeof result.message === 'string' ? result.message : mapApiError(result, t),
+        );
         return;
       }
       if (isGoogleSignUp) {
-        console.log('Google Customer Registration Flow');
         const responseData = result.response || result;
         const accessToken = result.accessToken || responseData.accessToken;
+        const refreshToken = result.refreshToken || responseData.refreshToken;
         if (!accessToken) {
-          console.warn('Customer registration API did not return accessToken.');
           setSuccessMessage(t('auth.accountCreatedSuccess', 'Account created successfully. Please login.'));
           setShowSuccessModal(true);
           return;
@@ -671,7 +676,7 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
           userId: responseData.userId || responseData.id,
           profilePhoto: responseData.profilePhoto,
         };
-        await login(userData, accessToken);
+        await login(userData, accessToken, refreshToken);
         return;
       }
       console.log('Manual Customer Registration Flow');

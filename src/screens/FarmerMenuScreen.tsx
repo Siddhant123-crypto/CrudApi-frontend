@@ -60,8 +60,8 @@ const FarmerMenuScreen: React.FC = () => {
 
       const loadLatestProfile = async () => {
         try {
-          const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-          const token = await AsyncStorage.getItem('userToken');
+          const { getAccessToken } = await import('../services/tokenStorage');
+          const token = await getAccessToken();
           if (!token || !isMounted) return;
 
           // 1. Fetch current profile from /user/me

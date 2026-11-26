@@ -14,9 +14,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../services/api';
+import { getAccessToken } from '../services/tokenStorage';
 import { getUserProfileImageUrl, getCurrentUserProfile, getUserById, getUserPhoto } from '../services/userService';
 import { THEME } from '../constants/theme';
 import { LogoutModal } from '../components/ui';
@@ -49,7 +49,7 @@ const CustomerMenuScreen: React.FC = () => {
       let isMounted = true;
       const refreshProfile = async () => {
         try {
-          const token = await AsyncStorage.getItem('userToken');
+          const token = await getAccessToken();
           if (!token || !isMounted) return;
 
           const meData = await getCurrentUserProfile().catch(() => null);

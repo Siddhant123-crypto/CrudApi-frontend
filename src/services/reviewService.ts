@@ -1,5 +1,5 @@
 import api, { BASE_URL } from './api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAccessToken } from './tokenStorage';
 import { Review, ProductRatingResponse } from '../types';
 const getMimeType = (filename: string, isVideo: boolean = false): string => {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -53,7 +53,7 @@ export const createReview = async (
       type: fileType,
     } as any);
   }
-  const token = await AsyncStorage.getItem('userToken');
+  const token = await getAccessToken();
   const response = await fetch(`${BASE_URL}/review`, {
     method: 'POST',
     headers: {
@@ -112,7 +112,7 @@ export const updateReview = async (
       type: fileType,
     } as any);
   }
-  const token = await AsyncStorage.getItem('userToken');
+  const token = await getAccessToken();
   const response = await fetch(`${BASE_URL}/review/${reviewId}`, {
     method: 'PUT',
     headers: {

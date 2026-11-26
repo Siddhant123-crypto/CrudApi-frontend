@@ -287,8 +287,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
             Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
             return;
           }
-          await login(userData, data.token);
-          console.log('ADMIN LOGIN COMPLETED');
+          await login(userData, data.token, data.refreshToken);
           return;
         } else {
           Alert.alert(t('auth.loginFailed', 'Login Failed'), result?.message || t('auth.invalidCredentials', 'Invalid credentials'));
@@ -296,34 +295,42 @@ const NewUserLoginScreen = ({ navigation }: any) => {
         }
       } else {
         result = await newUserLogin(identifier.trim(), password);
-        console.log('NORMAL LOGIN RESPONSE:', result);
 
-        if (result?.message === 'Account Not Found') {
-          const adminResult = await adminLogin(identifier.trim(), password);
-          console.log('ADMIN LOGIN FALLBACK RESPONSE:', adminResult);
-
-          if (adminResult?.message?.includes('successful') || adminResult?.data?.role === 'ADMIN') {
-            const data = adminResult.data || {};
-            const userData: UserData = {
-              name: data.name || 'System Admin',
-              email: data.email || identifier.trim(),
-              role: 'ADMIN',
-              userId: data.adminId,
-            };
-            if (!data.token) {
-              Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
+        // BUG-M01 anti-enumeration compatibility: if /newuser/login fails with generic invalid credentials
+        // (and identifier looks like an email), transparently check adminLogin before surfacing generic error.
+        const normalSucceeded = Boolean(result?.message?.includes('Login Successful') && result?.response);
+        if (!normalSucceeded && identifier.includes('@')) {
+          try {
+            const adminResult = await adminLogin(identifier.trim(), password);
+            if (adminResult?.message?.includes('successful') || adminResult?.data?.role === 'ADMIN') {
+              const data = adminResult.data || {};
+              const userData: UserData = {
+                name: data.name || 'System Admin',
+                email: data.email || identifier.trim(),
+                role: 'ADMIN',
+                userId: data.adminId,
+              };
+              if (!data.token) {
+                Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
+                return;
+              }
+              await login(userData, data.token, data.refreshToken);
+              return;
+            } else if (
+              adminResult?.message &&
+              adminResult.message !== 'Invalid email/mobile or password' &&
+              adminResult.message !== 'Account not found' &&
+              adminResult.message !== 'Email not found'
+            ) {
+              Alert.alert(t('auth.loginFailed', 'Login Failed'), adminResult.message);
               return;
             }
-            await login(userData, data.token);
-            console.log('ADMIN LOGIN COMPLETED');
-            return;
-          } else if (
-            adminResult?.message &&
-            adminResult.message !== 'Account not found' &&
-            adminResult.message !== 'Email not found'
-          ) {
-            Alert.alert(t('auth.loginFailed', 'Login Failed'), adminResult.message);
-            return;
+          } catch (adminErr: any) {
+            const adminErrMsg = adminErr?.response?.data?.message;
+            if (adminErr?.response?.status === 403 && typeof adminErrMsg === 'string') {
+              Alert.alert(t('auth.loginFailed', 'Login Failed'), adminErrMsg);
+              return;
+            }
           }
         }
       }
@@ -339,14 +346,11 @@ const NewUserLoginScreen = ({ navigation }: any) => {
           userId: !isFarmer && !isAdmin ? response.userId || response.id : undefined,
           profilePhoto: response.profilePhoto,
         };
-        console.log('NORMAL LOGIN USER:', userData);
-        console.log('NORMAL LOGIN TOKEN:', result.accessToken ? 'YES' : 'NO');
         if (!result.accessToken) {
           Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
           return;
         }
-        await login(userData, result.accessToken);
-        console.log('NORMAL LOGIN COMPLETED');
+        await login(userData, result.accessToken, result.refreshToken);
         return;
       }
       Alert.alert(t('auth.loginFailed', 'Login Failed'), result?.message || t('auth.invalidCredentials', 'Invalid credentials'));
@@ -408,8 +412,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
           Alert.alert(t('auth.googleLoginError', 'Google Login Error'), t('auth.backendTokenNotReceived', 'Backend login successful but JWT token was not received.'));
           return;
         }
-        await login(userData, backendResult.accessToken);
-        console.log('GOOGLE EXISTING USER LOGIN SUCCESS');
+        await login(userData, backendResult.accessToken, backendResult.refreshToken);
         return;
       }
       if (backendResult?.message === 'NEW_USER' && backendResult?.response) {
@@ -490,7 +493,7 @@ const NewUserLoginScreen = ({ navigation }: any) => {
         setShowLinkModal(false);
         setLinkPassword('');
         setLinkAccountData(null);
-        await login(userData, linkResult.accessToken);
+        await login(userData, linkResult.accessToken, linkResult.refreshToken);
         return;
       }
       Alert.alert(t('auth.linkingFailed', 'Linking Failed'), linkResult?.message || t('auth.failedLinkGoogle', 'Failed to link Google account.'));

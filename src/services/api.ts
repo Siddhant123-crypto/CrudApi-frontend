@@ -1,6 +1,12 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, NativeModules, Platform } from 'react-native';
+import {
+  clearStoredAuthTokens,
+  getAccessToken,
+  getRefreshToken,
+  saveAuthTokens,
+  setInMemoryAccessToken,
+} from './tokenStorage';
 
 // ============================================================================
 // BACKEND SERVER IP CONFIGURATION
@@ -139,19 +145,54 @@ const api = axios.create({
   },
 });
 
-// In-memory auth token cache to avoid AsyncStorage read races right after login
+// In-memory auth token cache to avoid SecureStore read races right after login
 let activeAuthToken: string | null = null;
 let lastLoginTimestamp = 0;
 const POST_LOGIN_401_GRACE_MS = 8000;
+let refreshInFlight: Promise<string | null> | null = null;
 
 export const setAuthToken = (token: string | null, markFreshLogin = false) => {
   activeAuthToken = token;
+  setInMemoryAccessToken(token);
   if (token && markFreshLogin) {
     lastLoginTimestamp = Date.now();
     isHandling401 = false;
   } else if (!token) {
     lastLoginTimestamp = 0;
   }
+};
+
+const refreshAccessTokenSingleFlight = async (): Promise<string | null> => {
+  if (refreshInFlight) {
+    return refreshInFlight;
+  }
+  refreshInFlight = (async () => {
+    try {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        return null;
+      }
+      const activeBase = resolveBaseUrl();
+      const resp = await axios.post(
+        `${activeBase}/auth/refresh`,
+        { refreshToken },
+        { timeout: 15000, headers: { Accept: 'application/json', 'Content-Type': 'application/json' } }
+      );
+      const newAccess = resp?.data?.accessToken;
+      const newRefresh = resp?.data?.refreshToken;
+      if (newAccess && typeof newAccess === 'string') {
+        await saveAuthTokens(newAccess, newRefresh ?? refreshToken);
+        setAuthToken(newAccess, true);
+        return newAccess;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
 };
 
 export const hasActiveAuthToken = (): boolean => Boolean(activeAuthToken);
@@ -171,7 +212,7 @@ api.interceptors.request.use(
       BASE_URL = activeBase;
       config.baseURL = activeBase;
     }
-    const token = activeAuthToken || (await AsyncStorage.getItem('userToken'));
+    const token = activeAuthToken || (await getAccessToken());
     if (token && !activeAuthToken) {
       activeAuthToken = token;
     }
@@ -265,7 +306,7 @@ api.interceptors.response.use(
     const reqToken = reqAuthHeader.startsWith('Bearer ')
       ? reqAuthHeader.slice(7).trim()
       : '';
-    const currentTokenSnapshot = activeAuthToken || (status === 401 ? await AsyncStorage.getItem('userToken') : null);
+    const currentTokenSnapshot = activeAuthToken || (status === 401 ? await getAccessToken() : null);
     const isStaleOrUnauth401 =
       status === 401 && (!reqToken || Boolean(currentTokenSnapshot && reqToken !== currentTokenSnapshot));
 
@@ -323,6 +364,20 @@ api.interceptors.response.use(
         return api(config);
       }
 
+      // Attempt refresh-token rotation once before clearing session (BUG-M02)
+      const refreshAttempted = (config as any)?._refreshAttempted;
+      const isRefreshCall = Boolean(config?.url?.includes('/auth/refresh') || config?.url?.includes('/auth/logout'));
+      if (!refreshAttempted && !isRefreshCall && config) {
+        (config as any)._refreshAttempted = true;
+        const rotatedToken = await refreshAccessTokenSingleFlight();
+        if (rotatedToken) {
+          if (config.headers) {
+            config.headers['Authorization'] = `Bearer ${rotatedToken}`;
+          }
+          return api(config);
+        }
+      }
+
       // Still inside post-login grace window for a background poll? Reject silently instead of kicking user back to login
       if (isBackgroundPoll && msSinceLogin < POST_LOGIN_401_GRACE_MS * 2) {
         if (__DEV__) {
@@ -334,12 +389,12 @@ api.interceptors.response.use(
       if (!isHandling401) {
         isHandling401 = true;
         if (__DEV__) {
-          console.log('[API] 401 Unauthorized received — clearing auth storage and resetting session');
+          console.log('[API] 401 Unauthorized received — clearing secure auth storage and resetting session');
         }
         try {
           activeAuthToken = null;
           lastLoginTimestamp = 0;
-          await AsyncStorage.multiRemove(['userToken', 'userData']);
+          await clearStoredAuthTokens();
           if (unauthorizedHandler) {
             unauthorizedHandler();
           }
@@ -374,7 +429,8 @@ api.interceptors.response.use(
               text: 'Log in',
               onPress: async () => {
                 try {
-                  await AsyncStorage.multiRemove(['userToken', 'userData']);
+                  setAuthToken(null);
+                  await clearStoredAuthTokens();
                   if (unauthorizedHandler) {
                     unauthorizedHandler();
                   }

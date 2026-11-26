@@ -7,7 +7,13 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
-import { setUnauthorizedHandler, setAuthToken } from '../services/api';
+import api, { setUnauthorizedHandler, setAuthToken } from '../services/api';
+import {
+  clearStoredAuthTokens,
+  getAccessToken,
+  getRefreshToken,
+  saveAuthTokens,
+} from '../services/tokenStorage';
 import { clearChatTimestampOnLogout } from '../services/aiService';
 import { getCurrentUserProfile } from '../services/userService';
 interface AuthContextType {
@@ -16,6 +22,7 @@ interface AuthContextType {
   login: (
     userData: User,
     token?: string,
+    refreshToken?: string | null,
   ) => Promise<void>;
   logout: () => Promise<void>;
   updateUserData: (
@@ -61,18 +68,11 @@ export const AuthProvider: React.FC<{
         await AsyncStorage.getItem(
           'userData',
         );
-      const storedToken =
-        await AsyncStorage.getItem(
-          'userToken',
-        );
-      console.log(
-        'APP START - USER:',
-        storedUser ? 'YES' : 'NO',
-      );
-      console.log(
-        'APP START - TOKEN:',
-        storedToken ? 'YES' : 'NO',
-      );
+      const storedToken = await getAccessToken();
+      if (__DEV__) {
+        console.log('APP START - USER:', storedUser ? 'YES' : 'NO');
+        console.log('APP START - TOKEN:', storedToken ? 'YES' : 'NO');
+      }
       if (storedUser && storedToken) {
         setAuthToken(storedToken, false);
         const rawParsed = JSON.parse(storedUser);
@@ -99,12 +99,7 @@ export const AuthProvider: React.FC<{
           }
         }).catch(() => {});
       } else {
-        await AsyncStorage.removeItem(
-          'userData',
-        );
-        await AsyncStorage.removeItem(
-          'userToken',
-        );
+        await clearStoredAuthTokens();
         setUser(null);
       }
     } catch (error) {
@@ -120,44 +115,17 @@ export const AuthProvider: React.FC<{
   const login = async (
     userData: User,
     token?: string,
+    refreshToken?: string | null,
   ) => {
     try {
-      console.log(
-        'AUTH LOGIN STARTED',
-      );
-      console.log(
-        'USER:',
-        userData,
-      );
-      console.log(
-        'TOKEN EXISTS:',
-        token ? 'YES' : 'NO',
-      );
       await AsyncStorage.setItem(
         'userData',
         JSON.stringify(userData),
       );
       if (token) {
         setAuthToken(token, true);
-        await AsyncStorage.setItem(
-          'userToken',
-          token,
-        );
+        await saveAuthTokens(token, refreshToken);
       }
-      const savedToken =
-        await AsyncStorage.getItem(
-          'userToken',
-        );
-      console.log(
-        'SAVED USER TOKEN:',
-        savedToken ? 'YES' : 'NO',
-      );
-      console.log(
-        'TOKEN LENGTH:',
-        savedToken
-          ? savedToken.length
-          : 0,
-      );
       setUser(userData);
       setInitialAuthRoute(
         'Welcome',
@@ -202,27 +170,39 @@ export const AuthProvider: React.FC<{
   const logout = async () => {
     const prevUserId = user?.userId;
     try {
+      const [accessTokenSnapshot, refreshTokenSnapshot] = await Promise.all([
+        getAccessToken().catch(() => null),
+        getRefreshToken().catch(() => null),
+      ]);
       // Clear in-memory token and unmount authenticated screens immediately
-      // so background intervals stop before AsyncStorage cleanup completes.
+      // so background intervals stop before storage cleanup completes.
       setAuthToken(null);
       setUser(null);
-      setInitialAuthRoute(
-        'NewUserLogin',
-      );
+      setInitialAuthRoute('NewUserLogin');
+
+      // Best-effort server-side refresh-token family revocation
+      if (refreshTokenSnapshot || accessTokenSnapshot) {
+        api
+          .post(
+            '/auth/logout',
+            { refreshToken: refreshTokenSnapshot || undefined },
+            accessTokenSnapshot
+              ? { headers: { Authorization: `Bearer ${accessTokenSnapshot}` } }
+              : undefined,
+          )
+          .catch(() => {});
+      }
+
       await clearChatTimestampOnLogout(prevUserId);
-      await AsyncStorage.multiRemove([
-        'userData',
-        'userToken',
-      ]);
-      
-      console.log(
-        'LOGOUT SUCCESSFUL',
-      );
+      await clearStoredAuthTokens();
+
+      if (__DEV__) {
+        console.log('LOGOUT SUCCESSFUL');
+      }
     } catch (error) {
-      console.log(
-        'Logout error:',
-        error,
-      );
+      if (__DEV__) {
+        console.log('Logout error:', error);
+      }
     }
   };
   const updateUserData = async (

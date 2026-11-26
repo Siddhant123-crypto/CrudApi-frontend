@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "node --experimental-strip-types --test --test-concurrency=1 src/utils/orderReuseUtils.test.ts src/utils/paymentHelpers.test.ts src/utils/aiAnswerParser.test.ts src/utils/aiChatHelpers.test.ts src/utils/customerAiAnswerParser.test.ts src/utils/addressSyncUtils.test.ts src/utils/googleAuthUtils.test.ts src/utils/messagingRecipientsUtils.test.ts src/i18n/i18n.test.ts",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 src/utils/orderReuseUtils.test.ts src/utils/paymentHelpers.test.ts src/utils/aiAnswerParser.test.ts src/utils/aiChatHelpers.test.ts src/utils/customerAiAnswerParser.test.ts src/utils/addressSyncUtils.test.ts src/utils/googleAuthUtils.test.ts src/utils/messagingRecipientsUtils.test.ts src/utils/blockDateUtils.test.ts src/utils/mediumSecurity.test.ts src/i18n/i18n.test.ts",
     "i18n:audit": "node scripts/audit-i18n.js",
     "postinstall": "patch-package"
   },
@@ -40,6 +40,7 @@
     "expo-location": "~19.0.8",
     "expo-modules-core": "~3.0.30",
     "expo-print": "~15.0.8",
+    "expo-secure-store": "~15.0.8",
     "expo-sharing": "~14.0.8",
     "expo-status-bar": "~3.0.9",
     "expo-updates": "~29.0.20",

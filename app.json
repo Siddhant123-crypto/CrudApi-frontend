@@ -44,9 +44,10 @@
       "runtimeVersion": "1.0.0"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
+      "expo-secure-store",
       "expo-web-browser",
       "expo-font",
       "@react-native-firebase/app",

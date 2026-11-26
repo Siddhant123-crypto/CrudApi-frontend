@@ -1,6 +1,6 @@
 import { AppState, AppStateStatus } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { resolveBaseUrl } from './api';
+import { getAccessToken } from './tokenStorage';
 import { NotificationResponse } from '../types';
 
 export type NotificationEventListener = (notification: NotificationResponse) => void;
@@ -70,7 +70,7 @@ class SseNotificationClient {
     this.isConnecting = true;
 
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await getAccessToken();
       if (!token) {
         this.isConnecting = false;
         return;
