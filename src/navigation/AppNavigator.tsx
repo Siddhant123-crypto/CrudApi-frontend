@@ -444,9 +444,9 @@ const AppNavigator: React.FC = () => {
   }
   const validatedRole = normalizeMainRole(user?.role);
   if (!isLoggedIn || !validatedRole) {
-    return <AuthStack initialRoute={initialAuthRoute} />;
+    return <AuthStack key={`auth-${initialAuthRoute}`} initialRoute={initialAuthRoute} />;
   }
-  return <MainStack role={validatedRole} />;
+  return <MainStack key={`main-${validatedRole}`} role={validatedRole} />;
 };
 const styles = StyleSheet.create({
   loadingContainer: {

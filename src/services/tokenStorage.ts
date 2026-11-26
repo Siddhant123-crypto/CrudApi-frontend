@@ -1,106 +1,40 @@
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  ACCESS_TOKEN_KEY,
+  LOGGED_OUT_KEY,
+  REFRESH_TOKEN_KEY,
+  USER_DATA_KEY,
+  createTokenStore,
+} from './authSessionCore';
 
-const ACCESS_TOKEN_KEY = 'farm2home_access_token';
-const REFRESH_TOKEN_KEY = 'farm2home_refresh_token';
 const LEGACY_TOKEN_KEY = 'userToken';
 
-let cachedAccessToken: string | null = null;
-let cachedRefreshToken: string | null = null;
+const tokenStore = createTokenStore({
+  secureStore: SecureStore,
+  asyncStorage: {
+    getItem: (key: string) => AsyncStorage.getItem(key),
+    setItem: (key: string, value: string) => AsyncStorage.setItem(key, value),
+    removeItem: (key: string) => AsyncStorage.removeItem(key),
+    multiRemove: (keys: string[]) => AsyncStorage.multiRemove(keys),
+  },
+  legacyTokenKey: LEGACY_TOKEN_KEY,
+});
 
-async function safeSecureGet(key: string): Promise<string | null> {
-  try {
-    return await SecureStore.getItemAsync(key);
-  } catch {
-    return null;
-  }
-}
+export { ACCESS_TOKEN_KEY, LEGACY_TOKEN_KEY, LOGGED_OUT_KEY, REFRESH_TOKEN_KEY, USER_DATA_KEY };
 
-async function safeSecureSet(key: string, value: string): Promise<void> {
-  try {
-    await SecureStore.setItemAsync(key, value);
-  } catch {
-    // Best-effort secure persistence; in-memory token cache remains active
-  }
-}
+export const getSessionEpoch = tokenStore.getSessionEpoch;
+export const isSessionLoggedOutInMemory = tokenStore.isLoggedOutInMemory;
+export const isLoggedOutPersisted = tokenStore.isLoggedOutPersisted;
+export const beginLoginSession = tokenStore.beginLoginSession;
+export const invalidateSessionEpoch = tokenStore.invalidateSessionEpoch;
+export const snapshotAndInvalidateForLogout = tokenStore.snapshotAndInvalidateForLogout;
+export const getAccessToken = tokenStore.getAccessToken;
+export const getRefreshToken = tokenStore.getRefreshToken;
+export const saveAuthTokens = tokenStore.saveAuthTokens;
+export const setInMemoryAccessToken = tokenStore.setInMemoryAccessToken;
 
-async function safeSecureDelete(key: string): Promise<void> {
-  try {
-    await SecureStore.deleteItemAsync(key);
-  } catch {
-    // Best-effort deletion
-  }
-}
-
-/**
- * Reads the stored JWT access token from Expo SecureStore.
- * One-time transparent migration: if a legacy plaintext 'userToken' exists in AsyncStorage,
- * moves it into SecureStore and removes the AsyncStorage copy immediately.
- */
-export async function getAccessToken(): Promise<string | null> {
-  if (cachedAccessToken) {
-    return cachedAccessToken;
-  }
-  const secureToken = await safeSecureGet(ACCESS_TOKEN_KEY);
-  if (secureToken) {
-    cachedAccessToken = secureToken;
-    // Ensure any stale legacy plaintext copy is wiped
-    AsyncStorage.removeItem(LEGACY_TOKEN_KEY).catch(() => {});
-    return secureToken;
-  }
-
-  // Migrate legacy plaintext AsyncStorage token on upgrade, then delete plaintext key
-  try {
-    const legacyToken = await AsyncStorage.getItem(LEGACY_TOKEN_KEY);
-    if (legacyToken) {
-      await safeSecureSet(ACCESS_TOKEN_KEY, legacyToken);
-      await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
-      cachedAccessToken = legacyToken;
-      return legacyToken;
-    }
-  } catch {
-    // Ignore storage read fallback failure
-  }
-  return null;
-}
-
-export async function getRefreshToken(): Promise<string | null> {
-  if (cachedRefreshToken) {
-    return cachedRefreshToken;
-  }
-  const token = await safeSecureGet(REFRESH_TOKEN_KEY);
-  if (token) {
-    cachedRefreshToken = token;
-  }
-  return token;
-}
-
-export async function saveAuthTokens(accessToken: string, refreshToken?: string | null): Promise<void> {
-  cachedAccessToken = accessToken;
-  await safeSecureSet(ACCESS_TOKEN_KEY, accessToken);
-  if (refreshToken !== undefined) {
-    if (refreshToken) {
-      cachedRefreshToken = refreshToken;
-      await safeSecureSet(REFRESH_TOKEN_KEY, refreshToken);
-    } else {
-      cachedRefreshToken = null;
-      await safeSecureDelete(REFRESH_TOKEN_KEY);
-    }
-  }
-  // Never leave a second plaintext token copy in AsyncStorage
+export async function clearStoredAuthTokens(markLoggedOut = true): Promise<void> {
+  await tokenStore.clearStoredAuthTokens(markLoggedOut);
   await AsyncStorage.removeItem(LEGACY_TOKEN_KEY).catch(() => {});
-}
-
-export function setInMemoryAccessToken(token: string | null): void {
-  cachedAccessToken = token;
-}
-
-export async function clearStoredAuthTokens(): Promise<void> {
-  cachedAccessToken = null;
-  cachedRefreshToken = null;
-  await Promise.allSettled([
-    safeSecureDelete(ACCESS_TOKEN_KEY),
-    safeSecureDelete(REFRESH_TOKEN_KEY),
-    AsyncStorage.multiRemove([LEGACY_TOKEN_KEY, 'userData']),
-  ]);
 }

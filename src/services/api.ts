@@ -4,6 +4,9 @@ import {
   clearStoredAuthTokens,
   getAccessToken,
   getRefreshToken,
+  getSessionEpoch,
+  invalidateSessionEpoch,
+  isSessionLoggedOutInMemory,
   saveAuthTokens,
   setInMemoryAccessToken,
 } from './tokenStorage';
@@ -159,17 +162,25 @@ export const setAuthToken = (token: string | null, markFreshLogin = false) => {
     isHandling401 = false;
   } else if (!token) {
     lastLoginTimestamp = 0;
+    refreshInFlight = null;
   }
 };
 
 export const refreshAccessTokenSingleFlight = async (): Promise<string | null> => {
+  if (isSessionLoggedOutInMemory()) {
+    return null;
+  }
   if (refreshInFlight) {
     return refreshInFlight;
   }
+  const startEpoch = getSessionEpoch();
   refreshInFlight = (async () => {
     try {
+      if (isSessionLoggedOutInMemory() || getSessionEpoch() !== startEpoch) {
+        return null;
+      }
       const refreshToken = await getRefreshToken();
-      if (!refreshToken) {
+      if (!refreshToken || isSessionLoggedOutInMemory() || getSessionEpoch() !== startEpoch) {
         return null;
       }
       const activeBase = resolveBaseUrl();
@@ -178,10 +189,16 @@ export const refreshAccessTokenSingleFlight = async (): Promise<string | null> =
         { refreshToken },
         { timeout: 15000, headers: { Accept: 'application/json', 'Content-Type': 'application/json' } }
       );
+      if (isSessionLoggedOutInMemory() || getSessionEpoch() !== startEpoch) {
+        return null;
+      }
       const newAccess = resp?.data?.accessToken;
       const newRefresh = resp?.data?.refreshToken;
       if (newAccess && typeof newAccess === 'string') {
-        await saveAuthTokens(newAccess, newRefresh ?? refreshToken);
+        const saved = await saveAuthTokens(newAccess, newRefresh ?? refreshToken, startEpoch);
+        if (!saved || isSessionLoggedOutInMemory() || getSessionEpoch() !== startEpoch) {
+          return null;
+        }
         setAuthToken(newAccess, true);
         return newAccess;
       }
@@ -212,12 +229,23 @@ api.interceptors.request.use(
       BASE_URL = activeBase;
       config.baseURL = activeBase;
     }
-    const token = activeAuthToken || (await getAccessToken());
-    if (token && !activeAuthToken) {
+    const url = config?.url || '';
+    const isAuthPublicCall =
+      url.startsWith('/auth/') ||
+      url.includes('/login') ||
+      url.includes('/register') ||
+      url.includes('/forgot-password') ||
+      url.includes('/reset-password') ||
+      url === '/health';
+    if (isSessionLoggedOutInMemory() && !isAuthPublicCall) {
+      return Promise.reject(new axios.CanceledError('Skipped request after logout'));
+    }
+    const token =
+      activeAuthToken || (isSessionLoggedOutInMemory() ? null : await getAccessToken());
+    if (token && !activeAuthToken && !isSessionLoggedOutInMemory()) {
       activeAuthToken = token;
     }
     if (!token) {
-      const url = config?.url || '';
       const isStrictAuthPoll =
         url.includes('/support/admin/') ||
         url.includes('/notifications/unread/count') ||
@@ -276,6 +304,11 @@ api.interceptors.response.use(
     }
 
     // 1. Network / transient rate-limit (429 / 503) / transient login 500-502 retry handling
+    const isAuthLifecycleEndpoint = Boolean(
+      (config as any)?._skipRetry ||
+      config?.url?.includes('/auth/logout') ||
+      config?.url?.includes('/auth/refresh')
+    );
     const isNetworkError = error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED';
     const isLoginEndpoint = Boolean(
       config?.url?.includes('/newuser/login') ||
@@ -286,7 +319,7 @@ api.interceptors.response.use(
     );
     const isRateLimitOrUnavailable = status === 429 || status === 502 || status === 503 || (isLoginEndpoint && status === 500);
     const retryCount = config?._retryCount ?? 0;
-    if ((isNetworkError || isRateLimitOrUnavailable) && retryCount < MAX_RETRIES && config) {
+    if (!isAuthLifecycleEndpoint && (isNetworkError || isRateLimitOrUnavailable) && retryCount < MAX_RETRIES && config) {
       config._retryCount = retryCount + 1;
       const retryAfterHeader = Number(error?.response?.headers?.['retry-after']);
       const delayMs = isRateLimitOrUnavailable
@@ -306,7 +339,8 @@ api.interceptors.response.use(
     const reqToken = reqAuthHeader.startsWith('Bearer ')
       ? reqAuthHeader.slice(7).trim()
       : '';
-    const currentTokenSnapshot = activeAuthToken || (status === 401 ? await getAccessToken() : null);
+    const currentTokenSnapshot =
+      activeAuthToken || (status === 401 && !isSessionLoggedOutInMemory() ? await getAccessToken() : null);
     const isStaleOrUnauth401 =
       status === 401 && (!reqToken || Boolean(currentTokenSnapshot && reqToken !== currentTokenSnapshot));
 
@@ -398,9 +432,11 @@ api.interceptors.response.use(
           console.log('[API] 401 Unauthorized received — clearing secure auth storage and resetting session');
         }
         try {
+          invalidateSessionEpoch();
           activeAuthToken = null;
           lastLoginTimestamp = 0;
-          await clearStoredAuthTokens();
+          refreshInFlight = null;
+          await clearStoredAuthTokens(true);
           if (unauthorizedHandler) {
             unauthorizedHandler();
           }
@@ -435,8 +471,9 @@ api.interceptors.response.use(
               text: 'Log in',
               onPress: async () => {
                 try {
+                  invalidateSessionEpoch();
                   setAuthToken(null);
-                  await clearStoredAuthTokens();
+                  await clearStoredAuthTokens(true);
                   if (unauthorizedHandler) {
                     unauthorizedHandler();
                   }
