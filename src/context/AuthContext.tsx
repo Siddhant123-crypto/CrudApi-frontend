@@ -74,21 +74,32 @@ export const AuthProvider: React.FC<{
         console.log('APP START - TOKEN:', storedToken ? 'YES' : 'NO');
       }
       if (storedUser && storedToken) {
-        setAuthToken(storedToken, false);
         const rawParsed = JSON.parse(storedUser);
-        const normalizedRole =
-          typeof rawParsed?.role === 'string' && rawParsed.role.toUpperCase() === 'CUSTOMER'
+        const rawRole = typeof rawParsed?.role === 'string' ? rawParsed.role.trim().toUpperCase() : '';
+        const normalizedRole: 'USER' | 'FARMER' | 'ADMIN' | null =
+          rawRole === 'CUSTOMER' || rawRole === 'USER'
             ? 'USER'
-            : rawParsed?.role;
+            : rawRole === 'FARMER'
+              ? 'FARMER'
+              : rawRole === 'ADMIN'
+                ? 'ADMIN'
+                : null;
+        if (!normalizedRole) {
+          await clearStoredAuthTokens();
+          setAuthToken(null);
+          setUser(null);
+          return;
+        }
+        setAuthToken(storedToken, false);
         const parsedUser = { ...rawParsed, role: normalizedRole };
         setUser(parsedUser);
-        console.log(
-          'Stored login restored successfully',
-        );
+        if (__DEV__) {
+          console.log('Stored login restored cleanly');
+        }
 
         // Seamless background refresh from /user/me to sync profilePhoto and latest details.
         // Admins live in a separate `admin` table, so /user/me would always 404 for them — skip it.
-        const isAdminSession = String(parsedUser?.role || '').toUpperCase() === 'ADMIN';
+        const isAdminSession = parsedUser.role === 'ADMIN';
         if (!isAdminSession) getCurrentUserProfile().then(meData => {
           const profile = meData?.response || meData;
           if (profile && (profile.profilePhoto !== parsedUser.profilePhoto || profile.name !== parsedUser.name || profile.farmerId !== parsedUser.farmerId)) {
@@ -102,11 +113,11 @@ export const AuthProvider: React.FC<{
         await clearStoredAuthTokens();
         setUser(null);
       }
-    } catch (error) {
-      console.log(
-        'Error loading stored user:',
-        error,
-      );
+    } catch (error: any) {
+      if (__DEV__) {
+        console.log('Error loading stored user:', error?.message);
+      }
+      await clearStoredAuthTokens().catch(() => {});
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -118,21 +129,34 @@ export const AuthProvider: React.FC<{
     refreshToken?: string | null,
   ) => {
     try {
+      const rawRole = typeof userData?.role === 'string' ? userData.role.trim().toUpperCase() : '';
+      const normalizedRole: 'USER' | 'FARMER' | 'ADMIN' | null =
+        rawRole === 'CUSTOMER' || rawRole === 'USER'
+          ? 'USER'
+          : rawRole === 'FARMER'
+            ? 'FARMER'
+            : rawRole === 'ADMIN'
+              ? 'ADMIN'
+              : null;
+      if (!normalizedRole) {
+        throw new Error('Invalid or missing user role');
+      }
+      const sanitizedUser: User = { ...userData, role: normalizedRole };
       await AsyncStorage.setItem(
         'userData',
-        JSON.stringify(userData),
+        JSON.stringify(sanitizedUser),
       );
       if (token) {
         setAuthToken(token, true);
         await saveAuthTokens(token, refreshToken);
       }
-      setUser(userData);
+      setUser(sanitizedUser);
       setInitialAuthRoute(
         'Welcome',
       );
 
       // Immediately sync latest profilePhoto & IDs from /user/me after login (non-admin)
-      const isAdminSession = String(userData?.role || '').toUpperCase() === 'ADMIN';
+      const isAdminSession = sanitizedUser.role === 'ADMIN';
       if (!isAdminSession && token) {
         getCurrentUserProfile()
           .then((meData) => {
@@ -156,53 +180,54 @@ export const AuthProvider: React.FC<{
           .catch(() => {});
       }
 
-      console.log(
-        'AUTH LOGIN SUCCESSFUL',
-      );
-    } catch (error) {
-      console.log(
-        'Error saving login:',
-        error,
-      );
+      if (__DEV__) {
+        console.log('AUTH LOGIN SUCCESSFUL');
+      }
+    } catch (error: any) {
+      if (__DEV__) {
+        console.log('Error saving login:', error?.message);
+      }
       throw error;
     }
   };
   const logout = async () => {
     const prevUserId = user?.userId;
-    try {
-      const [accessTokenSnapshot, refreshTokenSnapshot] = await Promise.all([
-        getAccessToken().catch(() => null),
-        getRefreshToken().catch(() => null),
-      ]);
-      // Clear in-memory token and unmount authenticated screens immediately
-      // so background intervals stop before storage cleanup completes.
-      setAuthToken(null);
-      setUser(null);
-      setInitialAuthRoute('NewUserLogin');
+    const [accessTokenSnapshot, refreshTokenSnapshot] = await Promise.all([
+      getAccessToken().catch(() => null),
+      getRefreshToken().catch(() => null),
+    ]);
+    // Clear in-memory token and unmount authenticated screens immediately
+    // so background intervals stop before network/storage cleanup completes.
+    setAuthToken(null);
+    setUser(null);
+    setInitialAuthRoute('NewUserLogin');
 
-      // Best-effort server-side refresh-token family revocation
+    try {
+      // Best-effort server-side refresh-token family revocation (works even with expired access JWT)
       if (refreshTokenSnapshot || accessTokenSnapshot) {
-        api
+        await api
           .post(
             '/auth/logout',
             { refreshToken: refreshTokenSnapshot || undefined },
-            accessTokenSnapshot
-              ? { headers: { Authorization: `Bearer ${accessTokenSnapshot}` } }
-              : undefined,
+            {
+              timeout: 4000,
+              ...(accessTokenSnapshot
+                ? { headers: { Authorization: `Bearer ${accessTokenSnapshot}` } }
+                : {}),
+            },
           )
           .catch(() => {});
       }
-
-      await clearChatTimestampOnLogout(prevUserId);
-      await clearStoredAuthTokens();
-
       if (__DEV__) {
         console.log('LOGOUT SUCCESSFUL');
       }
-    } catch (error) {
+    } catch (error: any) {
       if (__DEV__) {
-        console.log('Logout error:', error);
+        console.log('Logout error:', error?.message);
       }
+    } finally {
+      await clearChatTimestampOnLogout(prevUserId).catch(() => {});
+      await clearStoredAuthTokens().catch(() => {});
     }
   };
   const updateUserData = async (
@@ -227,14 +252,10 @@ export const AuthProvider: React.FC<{
         ).catch(() => {});
         return mergedUser;
       });
-      console.log(
-        'USER DATA UPDATED',
-      );
-    } catch (error) {
-      console.log(
-        'Error updating user:',
-        error,
-      );
+    } catch (error: any) {
+      if (__DEV__) {
+        console.log('Error updating user:', error?.message);
+      }
     }
   };
   return (

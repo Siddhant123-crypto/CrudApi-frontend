@@ -645,9 +645,7 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
           type: type,
         } as any);
       }
-      console.log('Customer Registration Started');
       const result = await userRegister(data);
-      console.log('Customer Registration Result:', result);
       if (
         result &&
         result.message &&
@@ -679,13 +677,12 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
         await login(userData, accessToken, refreshToken);
         return;
       }
-      console.log('Manual Customer Registration Flow');
       setSuccessMessage(t('auth.customerAccountCreated', 'Your customer account has been created successfully. Please login.'));
       setShowSuccessModal(true);
     } catch (error: any) {
-      console.log('Customer Registration Error Status:', error.response?.status);
-      console.log('Customer Registration Error Response:', error.response?.data);
-      console.log('Customer Registration Error Message:', error.message);
+      if (__DEV__) {
+        console.log('Customer Registration Error Status:', error.response?.status, error.message);
+      }
       Alert.alert(t('auth.registrationFailed', 'Registration Failed'), mapApiError(error, t));
     } finally {
       setLoading(false);

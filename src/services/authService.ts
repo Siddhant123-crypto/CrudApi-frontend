@@ -21,14 +21,9 @@ export const userLogin = async (email: string, password: string) => {
   return response.data;
 };
 export const userRegister = async (formData: FormData) => {
-  console.log('USER REGISTER API CALL');
   const response = await api.post(
     '/user/register',
     formData,
-  );
-  console.log(
-    'USER REGISTER RESPONSE:',
-    response.data,
   );
   return response.data;
 };

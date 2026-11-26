@@ -17,7 +17,11 @@ async function safeSecureGet(key: string): Promise<string | null> {
 }
 
 async function safeSecureSet(key: string, value: string): Promise<void> {
-  await SecureStore.setItemAsync(key, value);
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch {
+    // Best-effort secure persistence; in-memory token cache remains active
+  }
 }
 
 async function safeSecureDelete(key: string): Promise<void> {

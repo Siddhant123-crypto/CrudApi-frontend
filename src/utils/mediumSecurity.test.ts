@@ -68,3 +68,74 @@ test('BUG-M04: registration screens enforce strong password policy (>= 8 chars, 
     assert.match(content, /\(\?=.*\.\*\[A-Z\]\).*\(\?=.*\.\*\\d\).*\{8,\}/, `${screen} must enforce strong password regex`);
   }
 });
+
+test('BUG-01: zero unguarded token, auth response, or password logging remains across mobile auth files', () => {
+  const forbiddenPatterns = [
+    /console\.log\(\s*['"]ADMIN LOGIN RESPONSE:['"]/,
+    /console\.log\(\s*['"]GOOGLE RESULT:['"]/,
+    /console\.log\(\s*['"]GOOGLE BACKEND RESPONSE:['"]/,
+    /console\.log\(\s*['"]GOOGLE EXISTING USER:['"]/,
+    /console\.log\(\s*['"]ACCOUNT_EXISTS_LINK_REQUIRED for:['"]/,
+    /console\.log\(\s*['"]Customer Registration Result:['"]/,
+    /console\.log\(\s*['"]Farmer Registration Result:['"]/,
+    /console\.log\(\s*['"]USER REGISTER RESPONSE:['"]/,
+  ];
+
+  const authFiles = [
+    'src/screens/NewUserLoginScreen.tsx',
+    'src/screens/CustomerRegisterScreen.tsx',
+    'src/screens/FarmerRegisterScreen.tsx',
+    'src/services/authService.ts',
+    'src/context/AuthContext.tsx',
+  ];
+
+  for (const rel of authFiles) {
+    const content = fs.readFileSync(path.join(MOBILE_ROOT, rel), 'utf8');
+    for (const pattern of forbiddenPatterns) {
+      assert.doesNotMatch(content, pattern, `${rel} must not contain sensitive auth log ${pattern}`);
+    }
+  }
+
+  const apiSource = fs.readFileSync(path.join(MOBILE_ROOT, 'src/services/api.ts'), 'utf8');
+  assert.match(apiSource, /isAuthPath/);
+  assert.doesNotMatch(apiSource, /console\.log\([^)]*Authorization/);
+});
+
+test('BUG-03A: single-flight refresh handles concurrent 401s cleanly across api, reviewService, and sseNotificationClient', () => {
+  const apiSource = fs.readFileSync(path.join(MOBILE_ROOT, 'src/services/api.ts'), 'utf8');
+  assert.match(apiSource, /export const refreshAccessTokenSingleFlight/);
+  assert.match(apiSource, /_staleRetry/);
+  assert.doesNotMatch(apiSource, /_authRetry/, 'Obsolete same-token sleep(600) retry loop must not run before refresh');
+
+  const reviewSource = fs.readFileSync(path.join(MOBILE_ROOT, 'src/services/reviewService.ts'), 'utf8');
+  assert.match(reviewSource, /refreshAccessTokenSingleFlight/);
+  assert.match(reviewSource, /response\.status === 401/);
+
+  const sseSource = fs.readFileSync(path.join(MOBILE_ROOT, 'src/services/sseNotificationClient.ts'), 'utf8');
+  assert.match(sseSource, /refreshAccessTokenSingleFlight/);
+  assert.match(sseSource, /xhr\.status === 401/);
+  assert.match(sseSource, /xhr\.status === 403/);
+});
+
+test('BUG-03B: ResetPasswordScreen enforces full backend password complexity policy', () => {
+  const resetSource = fs.readFileSync(path.join(MOBILE_ROOT, 'src/screens/ResetPasswordScreen.tsx'), 'utf8');
+  assert.match(resetSource, /hasLowercase\s*=\s*\/\[a-z\]\/\.test\(newPassword\)/);
+  assert.match(resetSource, /\(\?=.*\.\*\[A-Z\]\).*\(\?=.*\.\*\[a-z\]\).*\(\?=.*\.\*\\d\).*\{8,\}/);
+});
+
+test('BUG-03C & ISSUE-07: login heuristic fixed, roles strictly validated & partitioned, and logout awaits server revocation safely', () => {
+  const loginSource = fs.readFileSync(path.join(MOBILE_ROOT, 'src/screens/NewUserLoginScreen.tsx'), 'utf8');
+  assert.doesNotMatch(loginSource, /email\.includes\(\s*['"]admin['"]\s*\)/, 'Emails containing "admin" must not bypass /newuser/login');
+
+  const authCtxSource = fs.readFileSync(path.join(MOBILE_ROOT, 'src/context/AuthContext.tsx'), 'utf8');
+  assert.match(authCtxSource, /if \(!normalizedRole\)/);
+  assert.match(authCtxSource, /await api[\s\S]*\/auth\/logout/);
+  assert.match(authCtxSource, /finally\s*\{[\s\S]*clearStoredAuthTokens/);
+
+  const navSource = fs.readFileSync(path.join(MOBILE_ROOT, 'src/navigation/AppNavigator.tsx'), 'utf8');
+  assert.match(navSource, /normalizeMainRole/);
+  assert.match(navSource, /if \(!isLoggedIn \|\| !validatedRole\)/);
+  assert.match(navSource, /\{role === 'ADMIN' && \(/);
+  assert.match(navSource, /\{role === 'FARMER' && \(/);
+  assert.match(navSource, /\{role === 'USER' && \(/);
+});

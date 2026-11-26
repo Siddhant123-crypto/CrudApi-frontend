@@ -100,25 +100,27 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
     }
   }, [route?.params?.token]);
 
-  // Criteria calculations for UI chips & strength meter
+  // Criteria calculations for UI chips & strength meter aligned with backend InputValidationUtils policy
   const hasMinLength = newPassword.length >= 8;
   const hasUppercase = /[A-Z]/.test(newPassword);
-  const hasNumber = /[0-9]/.test(newPassword);
-  const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+  const hasLowercase = /[a-z]/.test(newPassword);
+  const hasNumber = /\d/.test(newPassword);
+  const hasSymbol = /[@#$%^&+=!*?._-]/.test(newPassword);
 
   const criteriaCount =
     (hasMinLength ? 1 : 0) +
     (hasUppercase ? 1 : 0) +
+    (hasLowercase ? 1 : 0) +
     (hasNumber ? 1 : 0) +
     (hasSymbol ? 1 : 0);
 
   const getStrengthInfo = () => {
     if (!newPassword) return { label: '', color: '#E0E8E1', activeBars: 0 };
-    if (criteriaCount <= 1)
+    if (criteriaCount <= 2)
       return { label: 'Weak', color: '#D32F2F', activeBars: 1 };
-    if (criteriaCount === 2)
-      return { label: 'Fair', color: '#E68A00', activeBars: 2 };
     if (criteriaCount === 3)
+      return { label: 'Fair', color: '#E68A00', activeBars: 2 };
+    if (criteriaCount === 4)
       return { label: 'Good', color: '#2A7A40', activeBars: 3 };
     return { label: 'Strong', color: '#165B31', activeBars: 4 };
   };
@@ -128,6 +130,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
     const cleanToken = token.trim();
+    const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@#$%^&+=!*?._-]).{8,}$/;
 
     if (!cleanToken) {
       newErrors.token = t('validation.resetTokenMissing', 'Reset token is missing. Please open the link from your email.');
@@ -135,8 +138,11 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
 
     if (!newPassword) {
       newErrors.newPassword = t('validation.passwordRequired', 'New password is required');
-    } else if (newPassword.length < 8) {
-      newErrors.newPassword = t('validation.passwordTooShort', 'Password must be at least 8 characters');
+    } else if (!strongPasswordRegex.test(newPassword)) {
+      newErrors.newPassword = t(
+        'validation.passwordPolicy',
+        'Password must be at least 8 characters with uppercase, lowercase, number and special character (@#$%^&+=!*?._-).'
+      );
     }
 
     if (!confirmPassword) {
@@ -424,6 +430,24 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
                     ]}
                   >
                     {hasUppercase ? '✓' : '○'} Uppercase
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.chip,
+                    hasLowercase ? styles.chipActive : styles.chipInactive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      hasLowercase
+                        ? styles.chipTextActive
+                        : styles.chipTextInactive,
+                    ]}
+                  >
+                    {hasLowercase ? '✓' : '○'} Lowercase
                   </Text>
                 </View>
 

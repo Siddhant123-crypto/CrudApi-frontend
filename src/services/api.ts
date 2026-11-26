@@ -162,7 +162,7 @@ export const setAuthToken = (token: string | null, markFreshLogin = false) => {
   }
 };
 
-const refreshAccessTokenSingleFlight = async (): Promise<string | null> => {
+export const refreshAccessTokenSingleFlight = async (): Promise<string | null> => {
   if (refreshInFlight) {
     return refreshInFlight;
   }
@@ -318,6 +318,12 @@ api.interceptors.response.use(
         config?.url?.includes('/support/admin/unread-counts') ||
         config?.url?.includes('/admin/group/messages')
       );
+      const isAuthPath = Boolean(
+        config?.url?.includes('/auth/') ||
+        config?.url?.includes('/login') ||
+        config?.url?.includes('/register') ||
+        config?.url?.includes('/reset-password')
+      );
       if (!isSilentBackground) {
         console.log('=================================');
         console.log('API ERROR');
@@ -326,11 +332,13 @@ api.interceptors.response.use(
         console.log('URL:', error?.config?.url);
         console.log('BASE URL:', error?.config?.baseURL);
         console.log('STATUS:', status);
-        console.log('DATA:', error?.response?.data);
+        if (!isAuthPath) {
+          console.log('DATA:', error?.response?.data);
+        }
       }
     }
 
-    // 2. HTTP 401: Never blindly kick out a freshly logged-in user on a stale/background request
+    // 2. HTTP 401: Handle concurrent refresh races cleanly and rotate via single-flight refresh
     if (status === 401) {
       const currentToken = currentTokenSnapshot;
       const msSinceLogin = Date.now() - lastLoginTimestamp;
@@ -343,28 +351,26 @@ api.interceptors.response.use(
         config?.url?.includes('/shorts')
       );
 
-      // Ignore 401 from an unauthenticated request or from a stale/superseded token
-      if (!reqToken || (currentToken && reqToken !== currentToken)) {
+      // Unauthenticated request or no active token left -> stale auth
+      if (!reqToken || !currentToken) {
         (error as any)._isStaleAuth = true;
         return Promise.reject(error);
       }
 
-      // Retry once with the latest active token before logging out, to protect against transient
-      // container-swap / token-race 401s (e.g., right after a Render redeploy or session switch).
-      const authRetry = (config as any)?._authRetry;
-      if (!authRetry && config && currentToken) {
-        (config as any)._authRetry = true;
-        if (config.headers) {
-          config.headers['Authorization'] = `Bearer ${currentToken}`;
+      // Another in-flight refresh already updated activeAuthToken -> retry once with the fresh token
+      if (reqToken !== currentToken) {
+        if (!(config as any)?._staleRetry && config) {
+          (config as any)._staleRetry = true;
+          if (config.headers) {
+            config.headers['Authorization'] = `Bearer ${currentToken}`;
+          }
+          return api(config);
         }
-        if (__DEV__) {
-          console.log('[API] Retrying 401 request once before logout:', config.url);
-        }
-        await sleep(600);
-        return api(config);
+        (error as any)._isStaleAuth = true;
+        return Promise.reject(error);
       }
 
-      // Attempt refresh-token rotation once before clearing session (BUG-M02)
+      // Attempt refresh-token rotation once via single-flight before clearing session (BUG-M02 / BUG-03A)
       const refreshAttempted = (config as any)?._refreshAttempted;
       const isRefreshCall = Boolean(config?.url?.includes('/auth/refresh') || config?.url?.includes('/auth/logout'));
       if (!refreshAttempted && !isRefreshCall && config) {

@@ -310,7 +310,15 @@ const AuthStack = ({initialRoute}: {initialRoute: 'Welcome' | 'RoleSelection' | 
     <Stack.Screen name="ResetPassword" component={ResetPasswordScreen as any} />
   </Stack.Navigator>
 );
-const MainStack: React.FC<{role?: string}> = ({role}) => {
+const normalizeMainRole = (role?: string): 'ADMIN' | 'FARMER' | 'USER' | null => {
+  const upper = String(role || '').trim().toUpperCase();
+  if (upper === 'ADMIN') return 'ADMIN';
+  if (upper === 'FARMER') return 'FARMER';
+  if (upper === 'USER' || upper === 'CUSTOMER') return 'USER';
+  return null;
+};
+
+const MainStack: React.FC<{role: 'ADMIN' | 'FARMER' | 'USER'}> = ({role}) => {
   const { t } = useTranslation();
   return (
   <Stack.Navigator screenOptions={{headerShown: false}}>
@@ -321,148 +329,95 @@ const MainStack: React.FC<{role?: string}> = ({role}) => {
     ) : (
       <Stack.Screen name="CustomerMain" component={CustomerTabs} />
     )}
-    <Stack.Screen
-      name="ProductDetail"
-      component={ProductDetailScreen as any}
-      options={{
-        headerShown: false,
-      }}
-    />
-    <Stack.Screen
-      name="FarmerProductDetail"
-      component={FarmerProductDetailScreen as any}
-      options={{
-        headerShown: false
-      }}
-    />
-    <Stack.Screen
-      name="AddProduct"
-      component={AddProductScreen as any}
-      options={{
-        headerShown: false,
-      }}
-    />
-    <Stack.Screen
-      name="CategoryDashboard"
-      component={CategoryDashboardScreen as any}
-      options={({ route }: any) => ({
-        headerShown: true,
-        headerBackTitleVisible: false,
-        title: formatCategory(route?.params?.category, t)
-      })}
-    />
-    <Stack.Screen
-      name="FarmerCategoryDashboard"
-      component={FarmerCategoryDashboardScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="FarmerCategories"
-      component={FarmerCategoriesScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="FarmerWeatherDetails"
-      component={FarmerWeatherDetailsScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="Cart"
-      component={CartScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="Wishlist"
-      component={WishlistScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="Checkout"
-      component={CheckoutScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="OrderSuccess"
-      component={OrderSuccessScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="PaymentSuccess"
-      component={PaymentSuccessScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="CustomerOrderDetails"
-      component={CustomerOrderDetailsScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="CustomerOrderTracking"
-      component={require('../screens/CustomerOrderTrackingScreen').default}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="FarmerOrderDetails"
-      component={FarmerOrderDetailsScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="FarmerProductReviews"
-      component={FarmerProductReviewsScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="MyProducts"
-      component={MyProductsScreen as any}
-      options={{headerShown: false}}
-    />
-    <Stack.Screen
-      name="EditFarmDetails"
-      component={EditFarmDetailsScreen as any}
-      options={{headerShown: false}}
-    />
-    {}
-    <Stack.Screen name="AdminFarmers" component={AdminFarmersScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminCustomers" component={AdminCustomersScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminProducts" component={AdminProductsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminOrders" component={AdminOrdersScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminFarmVerification" component={AdminFarmVerificationScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminMarkets" component={AdminMarketsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminAddEditMarket" component={AdminAddEditMarketScreen as any} options={{headerShown: false}} />
+
+    {role === 'USER' && (
+      <>
+        <Stack.Screen name="ProductDetail" component={ProductDetailScreen as any} options={{headerShown: false}} />
+        <Stack.Screen
+          name="CategoryDashboard"
+          component={CategoryDashboardScreen as any}
+          options={({ route }: any) => ({
+            headerShown: true,
+            headerBackTitleVisible: false,
+            title: formatCategory(route?.params?.category, t)
+          })}
+        />
+        <Stack.Screen name="Cart" component={CartScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="Wishlist" component={WishlistScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="Checkout" component={CheckoutScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="OrderSuccess" component={OrderSuccessScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="CustomerOrderDetails" component={CustomerOrderDetailsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen
+          name="CustomerOrderTracking"
+          component={require('../screens/CustomerOrderTrackingScreen').default}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen name="CustomerMenu" component={CustomerMenuScreen as any} options={{headerShown: false, presentation: 'transparentModal', animation: 'fade'}} />
+        <Stack.Screen name="CustomerFarmDetail" component={CustomerFarmDetailScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="CustomerFarmerFarms" component={CustomerFarmerFarmsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="CustomerMessageFarmer" component={CustomerMessageFarmerScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerShorts" component={FarmerShortsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="CustomerAiChat" component={CustomerAiChatScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="Categories" component={CategoriesScreen as any} options={{headerShown: false}} />
+      </>
+    )}
+
+    {role === 'FARMER' && (
+      <>
+        <Stack.Screen name="FarmerProductDetail" component={FarmerProductDetailScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AddProduct" component={AddProductScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerCategoryDashboard" component={FarmerCategoryDashboardScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerCategories" component={FarmerCategoriesScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerWeatherDetails" component={FarmerWeatherDetailsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerOrderDetails" component={FarmerOrderDetailsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerProductReviews" component={FarmerProductReviewsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="MyProducts" component={MyProductsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="EditFarmDetails" component={EditFarmDetailsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerMenu" component={FarmerMenuScreen as any} options={{headerShown: false, presentation: 'transparentModal', animation: 'fade'}} />
+        <Stack.Screen name="FarmerContactAdmin" component={FarmerContactAdminScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerMessageCustomer" component={FarmerMessageCustomerScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerSupportChatScreen" component={FarmerSupportChatScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerShorts" component={FarmerShortsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="FarmerAiChat" component={FarmerAiChatScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="MyFarm" component={MyFarmScreen as any} options={{headerShown: false}} />
+      </>
+    )}
+
+    {role === 'ADMIN' && (
+      <>
+        <Stack.Screen name="AdminFarmers" component={AdminFarmersScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminCustomers" component={AdminCustomersScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminProducts" component={AdminProductsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminOrders" component={AdminOrdersScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminFarmVerification" component={AdminFarmVerificationScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminMarkets" component={AdminMarketsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminAddEditMarket" component={AdminAddEditMarketScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="Analytics" component={ComingSoonScreen as any} options={{headerShown: false}} initialParams={{ title: 'Analytics & Reports', icon: 'bar-chart' }} />
+        <Stack.Screen name="AdminFarmerDetails" component={AdminFarmerDetailsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminCustomerDetails" component={AdminCustomerDetailsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminProductDetails" component={AdminProductDetailsScreen} options={{headerShown: false}} />
+        <Stack.Screen name="AdminCategoryProducts" component={AdminCategoryProductsScreen} options={{headerShown: false}} />
+        <Stack.Screen name="AdminOrderDetails" component={AdminOrderDetailsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminFarmVerificationDetails" component={AdminFarmVerificationDetailsScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminMenu" component={AdminMenuScreen as any} options={{headerShown: false, presentation: 'transparentModal', animation: 'fade'}} />
+        <Stack.Screen name="AdminSupportChatScreen" component={AdminSupportChatScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminGroupChat" component={AdminGroupChatScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminSupportInbox" component={AdminSupportInboxScreen} options={{headerShown: false}} />
+        <Stack.Screen name="AdminMessage" component={AdminMessageScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminMessageHistory" component={AdminMessageHistoryScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminMessageHistoryDetail" component={AdminMessageHistoryDetailScreen as any} options={{headerShown: false}} />
+        <Stack.Screen name="AdminSendNotification" component={AdminSendNotificationScreen as any} options={{headerShown: false}} />
+      </>
+    )}
+
+    {/* Shared authenticated routes */}
     <Stack.Screen name="MarketDetails" component={MarketDetailsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="Analytics" component={ComingSoonScreen as any} options={{headerShown: false}} initialParams={{ title: 'Analytics & Reports', icon: 'bar-chart' }} />
-    <Stack.Screen name="AdminFarmerDetails" component={AdminFarmerDetailsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminCustomerDetails" component={AdminCustomerDetailsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminProductDetails" component={AdminProductDetailsScreen} options={{headerShown: false}} />
-    <Stack.Screen name="AdminCategoryProducts" component={AdminCategoryProductsScreen} options={{headerShown: false}} />
-    <Stack.Screen name="AdminOrderDetails" component={AdminOrderDetailsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminFarmVerificationDetails" component={AdminFarmVerificationDetailsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminMenu" component={AdminMenuScreen as any} options={{headerShown: false, presentation: 'transparentModal', animation: 'fade'}} />
-    <Stack.Screen name="CustomerMenu" component={CustomerMenuScreen as any} options={{headerShown: false, presentation: 'transparentModal', animation: 'fade'}} />
-    <Stack.Screen name="FarmerMenu" component={FarmerMenuScreen as any} options={{headerShown: false, presentation: 'transparentModal', animation: 'fade'}} />
     <Stack.Screen name="Notifications" component={NotificationsScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="NotificationDetail" component={NotificationDetailScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="NotificationThread" component={NotificationThreadScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="FarmCertificate" component={FarmCertificateScreen as any} options={{headerShown: false, presentation: 'modal'}} />
-    <Stack.Screen name="CustomerFarmDetail" component={CustomerFarmDetailScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="CustomerFarmerFarms" component={CustomerFarmerFarmsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="CustomerMessageFarmer" component={CustomerMessageFarmerScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="FarmerContactAdmin" component={FarmerContactAdminScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="FarmerMessageCustomer" component={FarmerMessageCustomerScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="FarmerSupportChatScreen" component={FarmerSupportChatScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminSupportChatScreen" component={AdminSupportChatScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminGroupChat" component={AdminGroupChatScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminSupportInbox" component={AdminSupportInboxScreen} options={{headerShown: false}} />
-    <Stack.Screen name="AdminMessage" component={AdminMessageScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminMessageHistory" component={AdminMessageHistoryScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminMessageHistoryDetail" component={AdminMessageHistoryDetailScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="AdminSendNotification" component={AdminSendNotificationScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="FarmerShorts" component={FarmerShortsScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="FarmerAiChat" component={FarmerAiChatScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="CustomerAiChat" component={CustomerAiChatScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="Categories" component={CategoriesScreen as any} options={{headerShown: false}} />
-    <Stack.Screen name="MyFarm" component={MyFarmScreen as any} options={{headerShown: false}} />
     <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen as any} options={{headerShown: false}} />
   </Stack.Navigator>
   );
@@ -487,10 +442,11 @@ const AppNavigator: React.FC = () => {
   if (isLoading || (isLoggedIn && showAuthenticatedSplash)) {
     return <PremiumSplashView />;
   }
-  if (!isLoggedIn) {
+  const validatedRole = normalizeMainRole(user?.role);
+  if (!isLoggedIn || !validatedRole) {
     return <AuthStack initialRoute={initialAuthRoute} />;
   }
-  return <MainStack role={user?.role} />;
+  return <MainStack role={validatedRole} />;
 };
 const styles = StyleSheet.create({
   loadingContainer: {

@@ -9,11 +9,12 @@ export const validatePasswordPolicy = (password: string): { valid: boolean; mess
   if (!password || password.trim().length === 0) {
     return { valid: false, message: 'Password is required' };
   }
-  const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@#$%^&+=!]).{6,}$/;
+  const regex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@#$%^&+=!*?._-]).{8,}$/;
   if (!regex.test(password)) {
     return {
       valid: false,
-      message: 'Password must contain uppercase, lowercase, number and special character, min 6 characters',
+      message:
+        'Password must be at least 8 characters and include uppercase, lowercase, number, and special character (@#$%^&+=!*?._-)',
     };
   }
   return { valid: true };

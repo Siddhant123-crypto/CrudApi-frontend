@@ -1,4 +1,4 @@
-import api, { BASE_URL } from './api';
+import api, { refreshAccessTokenSingleFlight, resolveBaseUrl } from './api';
 import { getAccessToken } from './tokenStorage';
 import { Review, ProductRatingResponse } from '../types';
 const getMimeType = (filename: string, isVideo: boolean = false): string => {
@@ -12,6 +12,35 @@ const getMimeType = (filename: string, isVideo: boolean = false): string => {
     if (ext === 'webp') return 'image/webp';
     return 'image/jpeg';
   }
+};
+
+const fetchReviewWithAuthRetry = async (
+  path: string,
+  method: 'POST' | 'PUT',
+  formData: FormData
+): Promise<Review> => {
+  const baseUrl = resolveBaseUrl();
+  const buildInit = (token: string | null): RequestInit => ({
+    method,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  let token = await getAccessToken();
+  let response = await fetch(`${baseUrl}${path}`, buildInit(token));
+  if (response.status === 401) {
+    const refreshedToken = await refreshAccessTokenSingleFlight();
+    if (refreshedToken) {
+      response = await fetch(`${baseUrl}${path}`, buildInit(refreshedToken));
+    }
+  }
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw { response: { status: response.status, data: errorData } };
+  }
+  return await response.json();
 };
 export const createReview = async (
   productId: string,
@@ -53,19 +82,7 @@ export const createReview = async (
       type: fileType,
     } as any);
   }
-  const token = await getAccessToken();
-  const response = await fetch(`${BASE_URL}/review`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
-  });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw { response: { data: errorData } };
-  }
-  return await response.json();
+  return fetchReviewWithAuthRetry('/review', 'POST', formData);
 };
 export const getProductReviews = async (productId: string): Promise<Review[]> => {
   const response = await api.get(`/review/product/${productId}/reviews`);
@@ -112,19 +129,7 @@ export const updateReview = async (
       type: fileType,
     } as any);
   }
-  const token = await getAccessToken();
-  const response = await fetch(`${BASE_URL}/review/${reviewId}`, {
-    method: 'PUT',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
-  });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw { response: { data: errorData } };
-  }
-  return await response.json();
+  return fetchReviewWithAuthRetry(`/review/${reviewId}`, 'PUT', formData);
 };
 export const deleteReview = async (reviewId: string): Promise<void> => {
   await api.delete(`/review/${reviewId}`);

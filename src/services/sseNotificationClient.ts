@@ -1,5 +1,5 @@
 import { AppState, AppStateStatus } from 'react-native';
-import { resolveBaseUrl } from './api';
+import { refreshAccessTokenSingleFlight, resolveBaseUrl } from './api';
 import { getAccessToken } from './tokenStorage';
 import { NotificationResponse } from '../types';
 
@@ -12,6 +12,7 @@ class SseNotificationClient {
   private shouldRun = false;
   private reconnectTimer: any = null;
   private retryCount = 0;
+  private unauthorizedRetryCount = 0;
   private seenBytes = 0;
   private buffer = '';
   private currentEventName = 'message';
@@ -23,6 +24,7 @@ class SseNotificationClient {
     if (this.shouldRun) return;
     this.shouldRun = true;
     this.retryCount = 0;
+    this.unauthorizedRetryCount = 0;
 
     if (!this.appStateSubscription) {
       this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
@@ -98,9 +100,16 @@ class SseNotificationClient {
             this.isConnected = true;
             this.isConnecting = false;
             this.retryCount = 0;
+            this.unauthorizedRetryCount = 0;
             this.handleIncomingText(xhr.responseText);
-          } else if (xhr.status === 401 || xhr.status === 403) {
-            // Unauthorized; stop stream to avoid flooding
+          } else if (xhr.status === 401) {
+            xhr.onloadend = null;
+            xhr.onerror = null;
+            this.handleUnauthorizedAndRefresh();
+          } else if (xhr.status === 403) {
+            xhr.onloadend = null;
+            xhr.onerror = null;
+            // Forbidden role/account; stop stream to avoid flooding
             this.stop();
           }
         }
@@ -127,6 +136,25 @@ class SseNotificationClient {
       this.isConnecting = false;
       this.handleDisconnectAndRetry();
     }
+  }
+
+  private async handleUnauthorizedAndRefresh() {
+    this.disconnect();
+    if (!this.shouldRun || this.unauthorizedRetryCount >= 2) {
+      this.stop();
+      return;
+    }
+    this.unauthorizedRetryCount += 1;
+    try {
+      const refreshedToken = await refreshAccessTokenSingleFlight();
+      if (refreshedToken && this.shouldRun) {
+        this.handleDisconnectAndRetry();
+        return;
+      }
+    } catch {
+      // Refresh failed; fall through to stop
+    }
+    this.stop();
   }
 
   private disconnect() {

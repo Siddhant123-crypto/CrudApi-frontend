@@ -269,75 +269,55 @@ const NewUserLoginScreen = ({ navigation }: any) => {
     }
     setLoading(true);
     try {
-      let result;
-      const email = identifier.trim().toLowerCase();
-      const isSystemAdmin = email === 'admin@gmail.com' || email.includes('admin');
-      if (isSystemAdmin) {
-        result = await adminLogin(identifier.trim(), password);
-        console.log('ADMIN LOGIN RESPONSE:', result);
-        if (result?.message?.includes('successful') || result?.data?.role === 'ADMIN') {
-          const data = result.data || {};
-          const userData: UserData = {
-            name: data.name || 'System Admin',
-            email: data.email || identifier.trim(),
-            role: 'ADMIN',
-            userId: data.adminId,
-          };
-          if (!data.token) {
-            Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
+      const trimmedIdentifier = identifier.trim();
+      const result = await newUserLogin(trimmedIdentifier, password);
+
+      // Try /newuser/login first so customer/farmer emails containing "admin" are never locked out;
+      // fall back to /admin/auth/login for both email and mobile admin credentials when needed.
+      const normalSucceeded = Boolean(result?.message?.includes('Login Successful') && result?.response);
+      if (!normalSucceeded) {
+        try {
+          const adminResult = await adminLogin(trimmedIdentifier, password);
+          if (adminResult?.message?.includes('successful') || adminResult?.data?.role === 'ADMIN') {
+            const data = adminResult.data || {};
+            const userData: UserData = {
+              name: data.name || 'System Admin',
+              email: data.email || trimmedIdentifier,
+              role: 'ADMIN',
+              userId: data.adminId,
+            };
+            if (!data.token) {
+              Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
+              return;
+            }
+            await login(userData, data.token, data.refreshToken);
+            return;
+          } else if (
+            adminResult?.message &&
+            adminResult.message !== 'Invalid email/mobile or password' &&
+            adminResult.message !== 'Account not found' &&
+            adminResult.message !== 'Email not found'
+          ) {
+            Alert.alert(t('auth.loginFailed', 'Login Failed'), adminResult.message);
             return;
           }
-          await login(userData, data.token, data.refreshToken);
-          return;
-        } else {
-          Alert.alert(t('auth.loginFailed', 'Login Failed'), result?.message || t('auth.invalidCredentials', 'Invalid credentials'));
-          return;
-        }
-      } else {
-        result = await newUserLogin(identifier.trim(), password);
-
-        // BUG-M01 anti-enumeration compatibility: if /newuser/login fails with generic invalid credentials
-        // (and identifier looks like an email), transparently check adminLogin before surfacing generic error.
-        const normalSucceeded = Boolean(result?.message?.includes('Login Successful') && result?.response);
-        if (!normalSucceeded && identifier.includes('@')) {
-          try {
-            const adminResult = await adminLogin(identifier.trim(), password);
-            if (adminResult?.message?.includes('successful') || adminResult?.data?.role === 'ADMIN') {
-              const data = adminResult.data || {};
-              const userData: UserData = {
-                name: data.name || 'System Admin',
-                email: data.email || identifier.trim(),
-                role: 'ADMIN',
-                userId: data.adminId,
-              };
-              if (!data.token) {
-                Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
-                return;
-              }
-              await login(userData, data.token, data.refreshToken);
-              return;
-            } else if (
-              adminResult?.message &&
-              adminResult.message !== 'Invalid email/mobile or password' &&
-              adminResult.message !== 'Account not found' &&
-              adminResult.message !== 'Email not found'
-            ) {
-              Alert.alert(t('auth.loginFailed', 'Login Failed'), adminResult.message);
-              return;
-            }
-          } catch (adminErr: any) {
-            const adminErrMsg = adminErr?.response?.data?.message;
-            if (adminErr?.response?.status === 403 && typeof adminErrMsg === 'string') {
-              Alert.alert(t('auth.loginFailed', 'Login Failed'), adminErrMsg);
-              return;
-            }
+        } catch (adminErr: any) {
+          const adminErrMsg = adminErr?.response?.data?.message;
+          if (adminErr?.response?.status === 403 && typeof adminErrMsg === 'string') {
+            Alert.alert(t('auth.loginFailed', 'Login Failed'), adminErrMsg);
+            return;
           }
         }
       }
       if (result?.message?.includes('Login Successful') && result?.response) {
         const response = result.response;
-        const isFarmer = response.role === 'FARMER' || response.role === 'Farmer';
-        const isAdmin = response.role === 'ADMIN' || response.role === 'Admin';
+        const normalizedRole = String(response.role || '').trim().toUpperCase();
+        if (normalizedRole !== 'CUSTOMER' && normalizedRole !== 'USER' && normalizedRole !== 'FARMER' && normalizedRole !== 'ADMIN') {
+          Alert.alert(t('auth.loginError', 'Login Error'), t('auth.invalidCredentials', 'Unsupported account role.'));
+          return;
+        }
+        const isFarmer = normalizedRole === 'FARMER';
+        const isAdmin = normalizedRole === 'ADMIN';
         const userData: UserData = {
           name: response.name,
           email: response.email,
@@ -355,7 +335,9 @@ const NewUserLoginScreen = ({ navigation }: any) => {
       }
       Alert.alert(t('auth.loginFailed', 'Login Failed'), result?.message || t('auth.invalidCredentials', 'Invalid credentials'));
     } catch (error: any) {
-      console.log('Normal Login Error:', error);
+      if (__DEV__) {
+        console.log('Login error:', error?.message);
+      }
       const msg =
         error?.response?.data?.message ||
         error?.response?.data ||
@@ -378,11 +360,10 @@ const NewUserLoginScreen = ({ navigation }: any) => {
       });
       try {
         await GoogleSignin.signOut();
-      } catch (error) {
-        console.log('No previous Google session');
+      } catch {
+        // No previous Google session
       }
       const googleResult: any = await GoogleSignin.signIn();
-      console.log('GOOGLE RESULT:', googleResult);
       if (googleResult?.type === 'cancelled') {
         return;
       }
@@ -391,13 +372,16 @@ const NewUserLoginScreen = ({ navigation }: any) => {
         Alert.alert(t('auth.googleLoginFailed', 'Google Login Failed'), t('auth.googleTokenNotReceived', 'Google ID token was not received.'));
         return;
       }
-      console.log('GOOGLE ID TOKEN RECEIVED');
       const backendResult = await googleLogin(idToken);
-      console.log('GOOGLE BACKEND RESPONSE:', backendResult);
       if (backendResult?.message?.includes('Login Successful') && backendResult?.response) {
         const response = backendResult.response;
-        const isFarmer = response.role === 'FARMER' || response.role === 'Farmer';
-        const isAdmin = response.role === 'ADMIN' || response.role === 'Admin';
+        const normalizedRole = String(response.role || '').trim().toUpperCase();
+        if (normalizedRole !== 'CUSTOMER' && normalizedRole !== 'USER' && normalizedRole !== 'FARMER' && normalizedRole !== 'ADMIN') {
+          Alert.alert(t('auth.googleLoginError', 'Google Login Error'), t('auth.invalidCredentials', 'Unsupported account role.'));
+          return;
+        }
+        const isFarmer = normalizedRole === 'FARMER';
+        const isAdmin = normalizedRole === 'ADMIN';
         const userData: UserData = {
           name: response.name,
           email: response.email,
@@ -406,8 +390,6 @@ const NewUserLoginScreen = ({ navigation }: any) => {
           userId: !isFarmer && !isAdmin ? response.userId || response.id : undefined,
           profilePhoto: response.profilePhoto,
         };
-        console.log('GOOGLE EXISTING USER:', userData);
-        console.log('GOOGLE JWT:', backendResult.accessToken ? 'YES' : 'NO');
         if (!backendResult.accessToken) {
           Alert.alert(t('auth.googleLoginError', 'Google Login Error'), t('auth.backendTokenNotReceived', 'Backend login successful but JWT token was not received.'));
           return;
@@ -416,7 +398,6 @@ const NewUserLoginScreen = ({ navigation }: any) => {
         return;
       }
       if (backendResult?.message === 'NEW_USER' && backendResult?.response) {
-        console.log('NEW GOOGLE USER');
         navigation.navigate('RoleSelection', {
           email: backendResult.response.email,
           name: backendResult.response.name,
@@ -427,7 +408,6 @@ const NewUserLoginScreen = ({ navigation }: any) => {
         return;
       }
       if (backendResult?.message === 'ACCOUNT_EXISTS_LINK_REQUIRED' && backendResult?.response) {
-        console.log('ACCOUNT_EXISTS_LINK_REQUIRED for:', backendResult.response.email);
         setLinkAccountData({
           email: backendResult.response.email,
           idToken: idToken,
@@ -445,7 +425,9 @@ const NewUserLoginScreen = ({ navigation }: any) => {
       }
       Alert.alert(t('auth.googleLoginFailed', 'Google Login Failed'), backendResult?.message || t('auth.googleLoginFailed', 'Google login failed.'));
     } catch (error: any) {
-      console.log('Google Login Error:', error);
+      if (__DEV__) {
+        console.log('Google login failed:', error?.message);
+      }
       if (
         error?.code === 'SIGN_IN_CANCELLED' ||
         error?.code === '12501' ||

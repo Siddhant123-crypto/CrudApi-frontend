@@ -638,9 +638,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
           type: type,
         } as any);
       }
-      console.log('Farmer Registration Started');
       const result = await farmerRegister(data);
-      console.log('Farmer Registration Result:', result);
       if (
         result &&
         result.message &&
@@ -672,13 +670,12 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
         await login(userData, accessToken, refreshToken);
         return;
       }
-      console.log('Manual Farmer Registration Flow');
       setSuccessMessage(t('auth.farmerAccountCreated', 'Your farmer account has been created successfully. Please login.'));
       setShowSuccessModal(true);
     } catch (error: any) {
-      console.log('Farmer Registration Error Status:', error.response?.status);
-      console.log('Farmer Registration Error Response:', error.response?.data);
-      console.log('Farmer Registration Error Message:', error.message);
+      if (__DEV__) {
+        console.log('Farmer Registration Error Status:', error.response?.status, error.message);
+      }
       Alert.alert(t('auth.registrationFailed', 'Registration Failed'), mapApiError(error, t));
     } finally {
       setLoading(false);

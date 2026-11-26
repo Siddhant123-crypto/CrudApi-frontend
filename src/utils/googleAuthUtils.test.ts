@@ -23,6 +23,7 @@ test('shouldShowGooglePasswordGuidance only true for Google flow', () => {
 test('validatePasswordPolicy enforces strong password rules', () => {
   assert.equal(validatePasswordPolicy('Password@123').valid, true);
   assert.equal(validatePasswordPolicy('weak').valid, false);
+  assert.equal(validatePasswordPolicy('Short1!').valid, false);
   assert.equal(validatePasswordPolicy('NoSpecial123').valid, false);
   assert.equal(validatePasswordPolicy('no_uppercase123!').valid, false);
   assert.equal(validatePasswordPolicy('').valid, false);
