@@ -10,9 +10,15 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAllAdminOrders } from '../../services/orderService';
+import { isAuthOrCanceledError } from '../../services/api';
+import {
+  AdminOrderTab,
+  normalizeAdminOrderTab,
+  filterAdminOrders,
+} from '../../utils/adminDashboardUtils';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
   AdminPageBackground,
@@ -28,17 +34,23 @@ import {
 
 export const AdminOrdersScreen: React.FC = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('All');
+  const route = useRoute<any>();
+  const [activeTab, setActiveTab] = useState<AdminOrderTab>(() =>
+    normalizeAdminOrderTab(route.params?.status)
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-  const tabs = ['All', 'Processing', 'Delivered', 'Cancelled'];
+  const tabs: AdminOrderTab[] = ['All', 'Pending', 'Delivered', 'Cancelled'];
 
   useFocusEffect(
     useCallback(() => {
+      if (route.params?.status) {
+        setActiveTab(normalizeAdminOrderTab(route.params.status));
+      }
       fetchOrders();
-    }, [])
+    }, [route.params?.status])
   );
 
   const fetchOrders = async () => {
@@ -49,32 +61,14 @@ export const AdminOrdersScreen: React.FC = () => {
         setOrders(res.data);
       }
     } catch (error) {
+      if (isAuthOrCanceledError(error)) return;
       console.error('Error fetching admin orders:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredOrders = orders
-    .filter(o => {
-      // 1. Search filter
-      const shortId = `#ORD-${o.orderId.substring(0, 5).toUpperCase()}`;
-      if (searchQuery && !shortId.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-
-      // 2. Tab filter
-      if (activeTab === 'All') {
-        return true;
-      } else if (activeTab === 'Processing') {
-        return ['CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY'].includes(o.orderStatus);
-      } else if (activeTab === 'Delivered') {
-        return o.orderStatus === 'DELIVERED';
-      } else if (activeTab === 'Cancelled') {
-        return o.orderStatus === 'CANCELLED';
-      }
-
-      return false;
-    })
-    .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+  const filteredOrders = filterAdminOrders(orders, activeTab, searchQuery);
 
   const formatOrderDate = (dateVal: any) => {
     if (!dateVal) return '';
@@ -173,7 +167,15 @@ export const AdminOrdersScreen: React.FC = () => {
             {tabs.map(tab => (
               <AdminChip
                 key={tab}
-                label={tab === 'All' ? t('common.all', 'All') : tab}
+                label={
+                  tab === 'All'
+                    ? t('common.all', 'All')
+                    : tab === 'Pending'
+                    ? t('orders.statusPending', 'Pending')
+                    : tab === 'Delivered'
+                    ? t('orders.statusDelivered', 'Delivered')
+                    : t('orders.statusCancelled', 'Cancelled')
+                }
                 active={activeTab === tab}
                 onPress={() => setActiveTab(tab)}
               />

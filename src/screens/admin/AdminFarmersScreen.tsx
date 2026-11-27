@@ -83,9 +83,9 @@ export const AdminFarmersScreen: React.FC = () => {
 
   const calculateDurationDays = () => calculateBlockDurationDays(blockUntilDate);
 
-  const fetchFarmers = async () => {
+  const fetchFarmers = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get('/admin/farmers');
       if (response.data && response.data.data) {
         const mappedFarmers = response.data.data.map((f: any) => {
@@ -113,14 +113,16 @@ export const AdminFarmersScreen: React.FC = () => {
           };
         });
         setFarmers(mappedFarmers);
-        fetchUnreadCounts();
+        if (!silent) fetchUnreadCounts();
       }
     } catch (error) {
       if (isAuthOrCanceledError(error)) return;
-      console.error('Failed to fetch farmers:', error);
-      Alert.alert(t('common.error'), t('admin.failedFetchFarmers'));
+      if (!silent) {
+        console.error('Failed to fetch farmers:', error);
+        Alert.alert(t('common.error'), t('admin.failedFetchFarmers'));
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -139,10 +141,10 @@ export const AdminFarmersScreen: React.FC = () => {
     }
   };
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (silent = false) => {
     if (!hasActiveAuthToken()) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.get('/admin/customers');
       if (res.data && res.data.data) {
         setCustomers(res.data.data);
@@ -151,7 +153,7 @@ export const AdminFarmersScreen: React.FC = () => {
       if (isAuthOrCanceledError(error)) return;
       console.error('Failed to fetch customers:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -159,6 +161,7 @@ export const AdminFarmersScreen: React.FC = () => {
     useCallback(() => {
       if (userType === 'Farmers') {
         fetchFarmers();
+        fetchCustomers(true);
         const interval = setInterval(() => {
           if (hasActiveAuthToken()) {
             fetchUnreadCounts();
@@ -167,6 +170,7 @@ export const AdminFarmersScreen: React.FC = () => {
         return () => clearInterval(interval);
       } else {
         fetchCustomers();
+        fetchFarmers(true);
       }
     }, [userType])
   );

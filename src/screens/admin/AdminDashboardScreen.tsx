@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   View,
@@ -9,12 +9,15 @@ import {
   RefreshControl,
   useWindowDimensions,
   StatusBar,
+  AppState,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { getAdminDashboardSummary } from '../../services/adminService';
+import { hasActiveAuthToken, isAuthOrCanceledError } from '../../services/api';
+import { normalizeDashboardSummary, NormalizedAdminDashboardData } from '../../utils/adminDashboardUtils';
 import { refreshFarmVerificationPendingCount } from '../../hooks/useFarmVerificationPendingCount';
 import { ADMIN_THEME } from '../../constants/adminTheme';
 import { AdminPageBackground } from '../../components/admin/AdminPageBackground';
@@ -38,17 +41,7 @@ export const AdminDashboardScreen: React.FC = () => {
   const [periodIndex, setPeriodIndex] = useState(0);
   const periods = ['This month', 'Last month', 'This year'];
 
-  const [dashboardData, setDashboardData] = useState<{
-    totalFarmers: number;
-    totalCustomers: number;
-    totalProducts: number;
-    totalOrders: number;
-    pendingOrders?: number;
-    completedOrders?: number;
-    cancelledOrders?: number;
-    totalRevenue?: string | number;
-    recentOrders?: any[];
-  }>({
+  const [dashboardData, setDashboardData] = useState<NormalizedAdminDashboardData>({
     totalFarmers: 0,
     totalCustomers: 0,
     totalProducts: 0,
@@ -59,26 +52,55 @@ export const AdminDashboardScreen: React.FC = () => {
     totalRevenue: 0,
     recentOrders: [],
   });
+  const fetchInFlightRef = useRef<Promise<void> | null>(null);
 
-  const fetchData = async () => {
-    try {
-      refreshFarmVerificationPendingCount();
-      const res = await getAdminDashboardSummary();
-      if (res && res.data) {
-        setDashboardData((prev) => ({
-          ...prev,
-          ...res.data,
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching admin dashboard summary:', error);
+  const fetchData = useCallback(async () => {
+    if (!hasActiveAuthToken()) return;
+    if (fetchInFlightRef.current) {
+      return fetchInFlightRef.current;
     }
-  };
+
+    const request = (async () => {
+      try {
+        refreshFarmVerificationPendingCount();
+        const res = await getAdminDashboardSummary();
+        if (res && res.data) {
+          setDashboardData(normalizeDashboardSummary(res.data));
+        }
+      } catch (error) {
+        if (isAuthOrCanceledError(error)) return;
+        console.error('Error fetching admin dashboard summary:', error);
+      } finally {
+        fetchInFlightRef.current = null;
+      }
+    })();
+
+    fetchInFlightRef.current = request;
+    return request;
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [])
+
+      // Keep Admin dashboard synced while open if farmers, customers, products, or orders change
+      const pollInterval = setInterval(() => {
+        if (hasActiveAuthToken()) {
+          fetchData();
+        }
+      }, 10000);
+
+      const appStateSub = AppState.addEventListener('change', (nextState) => {
+        if (nextState === 'active' && hasActiveAuthToken()) {
+          fetchData();
+        }
+      });
+
+      return () => {
+        clearInterval(pollInterval);
+        appStateSub.remove();
+      };
+    }, [fetchData])
   );
 
   const onRefresh = async () => {
@@ -233,8 +255,8 @@ export const AdminDashboardScreen: React.FC = () => {
             <OrderStatusCard
               type="completed"
               count={dashboardData.completedOrders ?? 0}
-              label={t('orders.statusDelivered', 'Completed')}
-              onPress={() => navigation.navigate('AdminOrders', { status: 'Completed' })}
+              label={t('orders.statusDelivered', 'Delivered')}
+              onPress={() => navigation.navigate('AdminOrders', { status: 'Delivered' })}
             />
             <OrderStatusCard
               type="cancelled"

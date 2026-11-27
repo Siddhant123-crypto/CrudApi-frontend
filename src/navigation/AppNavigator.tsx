@@ -126,7 +126,7 @@ export type MainStackParamList = {
   AdminFarmers: undefined;
   AdminCustomers: undefined;
   AdminProducts: undefined;
-  AdminOrders: undefined;
+  AdminOrders: { status?: string } | undefined;
   AdminFarmVerification: undefined;
   AdminCategories: undefined;
   AdminMarkets: undefined;

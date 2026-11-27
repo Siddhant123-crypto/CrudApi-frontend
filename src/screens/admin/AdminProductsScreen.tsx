@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
-import api, { BASE_URL } from '../../services/api';
+import api, { BASE_URL, hasActiveAuthToken, isAuthOrCanceledError } from '../../services/api';
+import { AdminProductTab, filterAdminProducts } from '../../utils/adminDashboardUtils';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
   AdminPageBackground,
@@ -26,18 +28,15 @@ import {
 
 export const AdminProductsScreen: React.FC = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useState<AdminProductTab>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
-  const tabs = ['All', 'Active', 'Inactive'];
+  const tabs: AdminProductTab[] = ['All', 'Active', 'Inactive'];
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+    if (!hasActiveAuthToken()) return;
     try {
       setLoading(true);
       const res = await api.get('/admin/products');
@@ -45,24 +44,20 @@ export const AdminProductsScreen: React.FC = () => {
         setProducts(res.data.data);
       }
     } catch (error) {
+      if (isAuthOrCanceledError(error)) return;
       console.error('Failed to fetch products:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filteredProducts = products.filter(p => {
-    if (activeTab === 'All' && p.isActive !== true) return false;
-    if (activeTab === 'Active' && p.isActive !== true) return false;
-    if (activeTab === 'Inactive' && p.isActive !== false) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const matchProduct = p.productName?.toLowerCase().includes(q);
-      const matchFarmer = p.farmerName?.toLowerCase().includes(q);
-      if (!matchProduct && !matchFarmer) return false;
-    }
-    return true;
-  });
+  useFocusEffect(
+    useCallback(() => {
+      fetchProducts();
+    }, [fetchProducts])
+  );
+
+  const filteredProducts = filterAdminProducts(products, activeTab, searchQuery);
 
   const getProductImage = (item: any) => {
     if (item.productPhoto) {
@@ -170,6 +165,14 @@ export const AdminProductsScreen: React.FC = () => {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={fetchProducts}
+              colors={[ADMIN_THEME.colors.indigo]}
+              tintColor={ADMIN_THEME.colors.indigo}
+            />
+          }
         />
       ) : (
         <AdminEmptyState

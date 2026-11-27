@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View, StyleSheet, FlatList, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import api from '../../services/api';
+import { View, StyleSheet, FlatList, ScrollView, RefreshControl } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import api, { hasActiveAuthToken, isAuthOrCanceledError } from '../../services/api';
 import { ADMIN_THEME } from '../../constants/adminTheme';
 import {
   AdminPageBackground,
@@ -23,11 +23,8 @@ export const AdminCustomersScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const tabs = ['All', 'ACTIVE', 'INACTIVE', 'BLOCKED'];
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
+    if (!hasActiveAuthToken()) return;
     try {
       setLoading(true);
       const res = await api.get('/admin/customers');
@@ -35,11 +32,18 @@ export const AdminCustomersScreen: React.FC = () => {
         setCustomers(res.data.data);
       }
     } catch (error) {
+      if (isAuthOrCanceledError(error)) return;
       console.error('Failed to fetch customers:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCustomers();
+    }, [fetchCustomers])
+  );
 
   const filteredCustomers = customers.filter((c) => {
     if (activeTab !== 'All' && c.status !== activeTab) return false;
@@ -101,6 +105,14 @@ export const AdminCustomersScreen: React.FC = () => {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={fetchCustomers}
+              colors={[ADMIN_THEME.colors.indigo]}
+              tintColor={ADMIN_THEME.colors.indigo}
+            />
+          }
           ListEmptyComponent={
             <AdminEmptyState
               icon={<UserIcon size={46} color={ADMIN_THEME.colors.indigo} strokeWidth={1.8} />}
