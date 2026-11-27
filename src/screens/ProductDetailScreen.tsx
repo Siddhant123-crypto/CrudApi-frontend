@@ -366,19 +366,6 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
                 )}
               </TouchableOpacity>
             )}
-            {isCustomer && (
-              <TouchableOpacity
-                style={styles.headerGlassBtn}
-                onPress={() => toggleWishlist(productData.productId)}
-                activeOpacity={0.8}
-              >
-                <HeartIcon
-                  size={19}
-                  color={isInWishlist(productData.productId) ? THEME.colors.heartActive : THEME.colors.white}
-                  fill={isInWishlist(productData.productId) ? THEME.colors.heartActive : 'none'}
-                />
-              </TouchableOpacity>
-            )}
             <TouchableOpacity
               style={styles.headerGlassBtn}
               onPress={handleShare}
@@ -413,6 +400,21 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
               />
             ) : (
               <Text style={{ fontSize: 60 }}>🌱</Text>
+            )}
+
+            {isCustomer && (
+              <TouchableOpacity
+                style={styles.heroWishlistBtn}
+                onPress={() => toggleWishlist(productData.productId)}
+                activeOpacity={0.8}
+              >
+                <HeartIcon
+                  size={20}
+                  color={isInWishlist(productData.productId) ? THEME.colors.heartActive : THEME.colors.accent}
+                  strokeWidth={1.9}
+                  fill={isInWishlist(productData.productId) ? THEME.colors.heartActive : 'none'}
+                />
+              </TouchableOpacity>
             )}
 
             <View style={styles.organicTagOverlay}>
@@ -899,6 +901,28 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '80%',
     height: 200,
+  },
+  heroWishlistBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: THEME.colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   organicTagOverlay: {
     position: 'absolute',
