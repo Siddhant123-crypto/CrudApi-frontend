@@ -12,6 +12,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import api, { BASE_URL } from '../../services/api';
+import { getProductImageUrl } from '../../services/productService';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
   AdminPageBackground,
@@ -61,12 +62,8 @@ export const AdminCategoryProductsScreen: React.FC = () => {
   });
 
   const getProductImage = (item: any) => {
-    if (item.productPhoto) {
-      if (item.productPhoto.startsWith('http')) {
-        return item.productPhoto;
-      }
-      return `${BASE_URL}/product/image/${item.productPhoto}`;
-    }
+    const resolved = getProductImageUrl(item.productPhoto, 300);
+    if (resolved) return resolved;
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
       item.productName || 'Product'
     )}&background=F1F3FA&color=4F5BD5`;
@@ -106,7 +103,12 @@ export const AdminCategoryProductsScreen: React.FC = () => {
           style={styles.imageTile}
         >
           {item.productPhoto ? (
-            <Image source={{ uri: getProductImage(item) }} style={styles.productImage} />
+            <Image
+              source={{ uri: getProductImage(item) }}
+              style={styles.productImage}
+              resizeMethod="resize"
+              fadeDuration={0}
+            />
           ) : (
             <LeafIcon size={26} color={ADMIN_THEME.colors.indigo} />
           )}

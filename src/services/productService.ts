@@ -1,4 +1,5 @@
-import api, {BASE_URL, resolveBaseUrl, resolveMediaUrl} from './api';
+import api, { BASE_URL, resolveBaseUrl, resolveMediaUrl } from './api';
+import {optimizeImageUrl} from '../utils/imageUrlUtils';
 export const saveProduct = async (productData: any) => {
   const response = await api.post('/product/save', productData);
   return response.data;
@@ -67,7 +68,7 @@ export const uploadProductPhoto = async (fileUri: string) => {
   return response.data;
 };
 export const searchProducts = async (keyword: string) => {
-  const response = await api.get('/product/search', {params: {keyword}});
+  const response = await api.get('/product/search', { params: { keyword } });
   return response.data;
 };
 export const updateProductFormData = async (
@@ -93,20 +94,21 @@ export const updateProductFormData = async (
   const response = await api.put(`/product/update/${id}`, formData);
   return response.data;
 };
-export const getProductImageUrl = (fileName?: string | null): string | null => {
+export const getProductImageUrl = (fileName?: string | null, width?: number): string | null => {
   if (!fileName || fileName === 'null' || fileName.trim() === '') return null;
   const clean = fileName.trim();
   const activeBase = resolveBaseUrl();
+  let resolved: string | null = null;
   if (clean.startsWith('http://') || clean.startsWith('https://')) {
-    return resolveMediaUrl(clean);
+    resolved = resolveMediaUrl(clean);
+  } else if (clean.startsWith('uploads/') || clean.startsWith('/uploads/')) {
+    resolved = resolveMediaUrl(clean);
+  } else if (clean.startsWith('product/')) {
+    resolved = `${activeBase}/${clean}`;
+  } else {
+    resolved = `${activeBase}/product/image/${clean}`;
   }
-  if (clean.startsWith('uploads/') || clean.startsWith('/uploads/')) {
-    return resolveMediaUrl(clean);
-  }
-  if (clean.startsWith('product/')) {
-    return `${activeBase}/${clean}`;
-  }
-  return `${activeBase}/product/image/${clean}`;
+  return optimizeImageUrl(resolved, width);
 };
 export const getProductVideoUrl = (fileName?: string | null): string | null => {
   if (!fileName || fileName === 'null' || fileName.trim() === '') return null;

@@ -194,6 +194,11 @@ export default function CategoryDashboardScreen({ route, navigation }: any) {
           numColumns={2}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          updateCellsBatchingPeriod={50}
+          removeClippedSubviews={true}
           renderItem={({ item }) => (
             <ProductCard
               product={item}

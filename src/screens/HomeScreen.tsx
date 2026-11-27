@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Image,
   TextInput,
@@ -839,37 +840,46 @@ const CustomerDashboard = ({ navigation }: any) => {
               <Text style={styles.loadingText}>Loading products...</Text>
             </View>
           ) : (
-            <ScrollView
+            <FlatList
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.bleedingScroll}
               contentContainerStyle={styles.productsContentContainer}
-            >
-              {(displayedProducts.length > 0 ? displayedProducts : [
-                {
-                  productId: 'sample-1',
-                  productName: 'Desi cauliflower',
-                  unit: 'KG',
-                  price: 65,
-                  averageRating: 4.0,
-                  category: 'Vegetable',
-                  status: 'ACTIVE',
-                },
-                {
-                  productId: 'sample-2',
-                  productName: 'Methi',
-                  unit: 'BUNDLE',
-                  price: 20,
-                  averageRating: 4.6,
-                  category: 'Vegetable',
-                  status: 'ACTIVE',
-                },
-              ] as ProductItem[]).map((product) => {
+              data={
+                displayedProducts.length > 0
+                  ? displayedProducts
+                  : ([
+                      {
+                        productId: 'sample-1',
+                        productName: 'Desi cauliflower',
+                        unit: 'KG',
+                        price: 65,
+                        averageRating: 4.0,
+                        category: 'Vegetable',
+                        status: 'ACTIVE',
+                      },
+                      {
+                        productId: 'sample-2',
+                        productName: 'Methi',
+                        unit: 'BUNDLE',
+                        price: 20,
+                        averageRating: 4.6,
+                        category: 'Vegetable',
+                        status: 'ACTIVE',
+                      },
+                    ] as ProductItem[])
+              }
+              keyExtractor={(product) => String(product.productId)}
+              initialNumToRender={5}
+              maxToRenderPerBatch={4}
+              windowSize={5}
+              removeClippedSubviews={true}
+              renderItem={({ item: product }) => {
                 const wishlisted = isInWishlist(product.productId);
+                const homeImgUrl = getProductImageUrl(product.productPhoto, 400);
 
                 return (
                   <TouchableOpacity
-                    key={product.productId}
                     style={styles.productCard}
                     onPress={() => openProduct(product.productId)}
                     activeOpacity={0.9}
@@ -900,11 +910,13 @@ const CustomerDashboard = ({ navigation }: any) => {
                       </Svg>
 
                       {/* Product Image */}
-                      {getProductImageUrl(product.productPhoto) ? (
+                      {homeImgUrl ? (
                         <Image
-                          source={{ uri: getProductImageUrl(product.productPhoto)! }}
+                          source={{ uri: homeImgUrl }}
                           style={styles.productImage}
                           resizeMode="contain"
+                          resizeMethod="resize"
+                          fadeDuration={0}
                         />
                       ) : (
                         <Text style={{ fontSize: 52 }}>🥬</Text>
@@ -965,8 +977,8 @@ const CustomerDashboard = ({ navigation }: any) => {
                     </View>
                   </TouchableOpacity>
                 );
-              })}
-            </ScrollView>
+              }}
+            />
           )}
 
           {/* ─── 8) FREE DELIVERY BANNER ───────────────────────────── */}

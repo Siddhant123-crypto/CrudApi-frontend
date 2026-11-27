@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "node --experimental-strip-types --test --test-concurrency=1 src/utils/orderReuseUtils.test.ts src/utils/paymentHelpers.test.ts src/utils/aiAnswerParser.test.ts src/utils/aiChatHelpers.test.ts src/utils/customerAiAnswerParser.test.ts src/utils/addressSyncUtils.test.ts src/utils/googleAuthUtils.test.ts src/utils/messagingRecipientsUtils.test.ts src/utils/blockDateUtils.test.ts src/utils/mediumSecurity.test.ts src/utils/adminDashboardUtils.test.ts src/utils/registrationUtils.test.ts src/services/authSession.test.ts src/i18n/i18n.test.ts",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 src/utils/orderReuseUtils.test.ts src/utils/paymentHelpers.test.ts src/utils/aiAnswerParser.test.ts src/utils/aiChatHelpers.test.ts src/utils/customerAiAnswerParser.test.ts src/utils/addressSyncUtils.test.ts src/utils/googleAuthUtils.test.ts src/utils/messagingRecipientsUtils.test.ts src/utils/blockDateUtils.test.ts src/utils/mediumSecurity.test.ts src/utils/adminDashboardUtils.test.ts src/utils/registrationUtils.test.ts src/utils/imageUrlUtils.test.ts src/services/authSession.test.ts src/i18n/i18n.test.ts",
     "i18n:audit": "node scripts/audit-i18n.js",
     "postinstall": "patch-package"
   },

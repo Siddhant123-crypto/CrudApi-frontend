@@ -133,11 +133,13 @@ export default function FarmerCategoryDashboardScreen({ route, navigation }: any
             end={{ x: 0.9, y: 0.9 }}
             style={styles.imageGradient}
           >
-            {getProductImageUrl(item.productPhoto) ? (
+            {getProductImageUrl(item.productPhoto, 400) ? (
               <Image
-                source={{ uri: getProductImageUrl(item.productPhoto)! }}
+                source={{ uri: getProductImageUrl(item.productPhoto, 400)! }}
                 style={styles.productImage}
                 resizeMode="cover"
+                resizeMethod="resize"
+                fadeDuration={0}
               />
             ) : (
               <Ionicons name="leaf-outline" size={36} color={FARMER_THEME.colors.emeraldPrimary} />

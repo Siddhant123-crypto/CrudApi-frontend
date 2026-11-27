@@ -80,12 +80,14 @@ const WishlistProductCard: React.FC<WishlistProductCardProps> = ({
 
         <Image
           source={
-            getProductImageUrl(item.productPhoto)
-              ? { uri: getProductImageUrl(item.productPhoto)! }
+            getProductImageUrl(item.productPhoto, 400)
+              ? { uri: getProductImageUrl(item.productPhoto, 400)! }
               : { uri: 'https://placehold.co/200x200/FFF1DE/B8470F?text=Fresh' }
           }
           style={styles.image}
           resizeMode="contain"
+          resizeMethod="resize"
+          fadeDuration={0}
         />
 
         <TouchableOpacity

@@ -13,6 +13,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import api, { BASE_URL, hasActiveAuthToken, isAuthOrCanceledError } from '../../services/api';
+import { getProductImageUrl } from '../../services/productService';
 import { AdminProductTab, filterAdminProducts } from '../../utils/adminDashboardUtils';
 import { ADMIN_THEME, AdminFonts } from '../../constants/adminTheme';
 import {
@@ -60,12 +61,8 @@ export const AdminProductsScreen: React.FC = () => {
   const filteredProducts = filterAdminProducts(products, activeTab, searchQuery);
 
   const getProductImage = (item: any) => {
-    if (item.productPhoto) {
-      if (item.productPhoto.startsWith('http')) {
-        return item.productPhoto;
-      }
-      return `${BASE_URL}/product/image/${item.productPhoto}`;
-    }
+    const resolved = getProductImageUrl(item.productPhoto, 300);
+    if (resolved) return resolved;
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.productName || 'Product')}&background=F1F3FA&color=4F5BD5`;
   };
 
@@ -91,7 +88,12 @@ export const AdminProductsScreen: React.FC = () => {
         style={styles.imageTile}
       >
         {item.productPhoto ? (
-          <Image source={{ uri: getProductImage(item) }} style={styles.productImage} />
+          <Image
+            source={{ uri: getProductImage(item) }}
+            style={styles.productImage}
+            resizeMethod="resize"
+            fadeDuration={0}
+          />
         ) : (
           <LeafIcon size={26} color={ADMIN_THEME.colors.indigo} />
         )}
@@ -165,6 +167,10 @@ export const AdminProductsScreen: React.FC = () => {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          removeClippedSubviews={true}
           refreshControl={
             <RefreshControl
               refreshing={loading}

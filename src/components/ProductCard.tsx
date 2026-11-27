@@ -10,6 +10,7 @@ import {
 import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getProductImageUrl } from '../services/productService';
+import { isFrescoPoolExhaustedError } from '../utils/imageUrlUtils';
 import { Product } from '../types';
 import { formatAddedTime } from '../utils/dateUtils';
 import { THEME } from '../constants/theme';
@@ -44,7 +45,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [imgError, setImgError] = React.useState(false);
   const [retryCount, setRetryCount] = React.useState(0);
   const photoField = product.productPhoto || product.imageUrl || product.photo;
-  const imageUrl = photoField ? getProductImageUrl(photoField) : null;
+  const imageUrl = photoField ? getProductImageUrl(photoField, 400) : null;
   const addedTimeStr = formatAddedTime(product.createdOn, product.addedTime);
 
   React.useEffect(() => {
@@ -53,7 +54,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }, [imageUrl, product?.productId]);
 
   const handleImageError = (e: any) => {
-    if (retryCount < 2) {
+    if (isFrescoPoolExhaustedError(e?.nativeEvent)) {
+      // Do not retry bitmap pool OOM errors; fallback immediately to avoid compounding memory pressure
+      setImgError(true);
+      return;
+    }
+    if (retryCount < 1) {
       setTimeout(() => {
         setRetryCount(prev => prev + 1);
       }, 1500);
@@ -101,6 +107,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
               source={{ uri: imageUrl }}
               style={styles.customerProductImage}
               resizeMode="contain"
+              resizeMethod="resize"
+              fadeDuration={0}
               onError={handleImageError}
             />
           ) : (
@@ -187,6 +195,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
             key={`${imageUrl}-${retryCount}`}
             source={{ uri: imageUrl }}
             style={styles.image}
+            resizeMethod="resize"
+            fadeDuration={0}
             onError={handleImageError}
           />
         ) : (
