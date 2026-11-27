@@ -45,6 +45,7 @@ import RegistrationSuccessModal from '../components/RegistrationSuccessModal';
 import { useTranslation } from 'react-i18next';
 import { GoogleRegistrationPasswordHelper } from '../components/GoogleRegistrationPasswordHelper';
 import { mapApiError } from '../utils/errorUtils';
+import { buildProfilePhotoFormPart } from '../utils/registrationUtils';
 
 // ─── SVG ICONS ─────────────────────────────────────────────────────────────
 
@@ -509,18 +510,23 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
 
   const validate = () => {
     const newErrors: Record<string, string | null> = {};
+    const trimmedEmail = formData.email.trim();
+    const trimmedMobile = formData.mobile.trim();
     if (!formData.name.trim()) {
       newErrors.name = t('validation.nameRequired', 'Name is required');
     }
-    if (!formData.email.trim()) {
+    if (!trimmedEmail) {
       newErrors.email = t('validation.emailRequired', 'Email is required');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
       newErrors.email = t('validation.emailInvalid', 'Enter a valid email');
     }
-    if (!formData.mobile.trim()) {
+    if (!trimmedMobile) {
       newErrors.mobile = t('validation.mobileRequired', 'Mobile number is required');
-    } else if (!/^[6-9]\d{9}$/.test(formData.mobile)) {
+    } else if (!/^[6-9]\d{9}$/.test(trimmedMobile)) {
       newErrors.mobile = t('validation.mobileInvalid', 'Enter a valid mobile number');
+    }
+    if (!formData.state.trim()) {
+      newErrors.state = t('validation.stateRequired', 'State is required');
     }
     if (!formData.password.trim()) {
       newErrors.password = t('validation.passwordRequired', 'Password is required');
@@ -610,7 +616,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
   };
 
   const handleRegister = async () => {
-    if (!validate()) {
+    if (loading || !validate()) {
       return;
     }
     setLoading(true);
@@ -629,14 +635,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
       };
       data.append('data', JSON.stringify(registerData));
       if (photo) {
-        const filename = photo.uri.split('/').pop() || 'profile.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        data.append('photo', {
-          uri: photo.uri,
-          name: filename,
-          type: type,
-        } as any);
+        data.append('photo', buildProfilePhotoFormPart(photo) as any);
       }
       const result = await farmerRegister(data);
       if (
@@ -889,6 +888,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
             <View style={styles.halfField}>
               <FormField
                 label={t('auth.state', 'State')}
+                required
                 value={formData.state}
                 placeholder={t('auth.statePlaceholder', 'State')}
                 onChangeText={v => updateField('state', v)}
@@ -896,6 +896,7 @@ const FarmerRegisterScreen = ({ route, navigation }: any) => {
                 returnKeyType="next"
                 inputRef={stateRef}
                 onSubmitEditing={() => passwordRef.current?.focus()}
+                error={errors.state}
               />
             </View>
           </View>

@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { Alert, NativeModules, Platform } from 'react-native';
 import { isJwtExpired } from './authSessionCore';
+import { isAuthPublicEndpoint } from '../utils/registrationUtils';
 import {
   clearStoredAuthTokens,
   getAccessToken,
@@ -231,13 +232,7 @@ api.interceptors.request.use(
       config.baseURL = activeBase;
     }
     const url = config?.url || '';
-    const isAuthPublicCall =
-      url.startsWith('/auth/') ||
-      url.includes('/login') ||
-      url.includes('/register') ||
-      url.includes('/forgot-password') ||
-      url.includes('/reset-password') ||
-      url === '/health';
+    const isAuthPublicCall = isAuthPublicEndpoint(url);
     const isPublicCatalogCall =
       isAuthPublicCall ||
       url === '/product/getAll' ||
