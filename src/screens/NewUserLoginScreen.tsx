@@ -61,6 +61,10 @@ type UserData = {
   farmerId?: string;
   userId?: string;
   profilePhoto?: string;
+  status?: string;
+  isActive?: boolean;
+  blockReason?: string | null;
+  blockedUntil?: string | null;
 };
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -325,6 +329,10 @@ const NewUserLoginScreen = ({ navigation }: any) => {
           farmerId: isFarmer ? response.farmerId || response.id : undefined,
           userId: !isFarmer && !isAdmin ? response.userId || response.id : undefined,
           profilePhoto: response.profilePhoto,
+          status: response.status,
+          isActive: response.isActive,
+          blockReason: response.blockReason ?? null,
+          blockedUntil: response.blockedUntil ?? null,
         };
         if (!result.accessToken) {
           Alert.alert(t('auth.loginError', 'Login Error'), t('auth.tokenNotReceived', 'Login successful but access token was not received.'));
@@ -389,6 +397,10 @@ const NewUserLoginScreen = ({ navigation }: any) => {
           farmerId: isFarmer ? response.farmerId || response.id : undefined,
           userId: !isFarmer && !isAdmin ? response.userId || response.id : undefined,
           profilePhoto: response.profilePhoto,
+          status: response.status,
+          isActive: response.isActive,
+          blockReason: response.blockReason ?? null,
+          blockedUntil: response.blockedUntil ?? null,
         };
         if (!backendResult.accessToken) {
           Alert.alert(t('auth.googleLoginError', 'Google Login Error'), t('auth.backendTokenNotReceived', 'Backend login successful but JWT token was not received.'));
@@ -471,6 +483,10 @@ const NewUserLoginScreen = ({ navigation }: any) => {
           farmerId: isFarmer ? response.farmerId || response.id : undefined,
           userId: !isFarmer && !isAdmin ? response.userId || response.id : undefined,
           profilePhoto: response.profilePhoto,
+          status: response.status,
+          isActive: response.isActive,
+          blockReason: response.blockReason ?? null,
+          blockedUntil: response.blockedUntil ?? null,
         };
         setShowLinkModal(false);
         setLinkPassword('');

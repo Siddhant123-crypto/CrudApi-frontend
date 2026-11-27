@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sseNotificationClient } from '../services/sseNotificationClient';
 import { isSessionLoggedOutInMemory } from '../services/tokenStorage';
+import { isAdminBlockedFarmer } from '../utils/farmerBlockUtils';
 import { NotificationResponse } from '../types';
 
 interface NotificationContextType {
@@ -48,6 +49,12 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setHasNewAdminGroupMsg(false);
       setFarmerNewOrdersCount(0);
       setLatestAddressChangeEvent(null);
+      return;
+    }
+
+    if (user.role === 'FARMER' && isAdminBlockedFarmer(user)) {
+      setUnreadCount(0);
+      setFarmerNewOrdersCount(0);
       return;
     }
 
@@ -131,9 +138,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       refreshUnreadCount();
     }, 30000);
 
-    // Setup real-time SSE stream for Farmers
+    // Setup real-time SSE stream only for active (non-blocked) Farmers
     let unsubscribeSse: (() => void) | null = null;
-    if (user?.role === 'FARMER') {
+    if (user?.role === 'FARMER' && !isAdminBlockedFarmer(user)) {
       sseNotificationClient.start();
       unsubscribeSse = sseNotificationClient.subscribe((notif: NotificationResponse) => {
         // Ignore internal handshake and connection ping events (not real notifications)

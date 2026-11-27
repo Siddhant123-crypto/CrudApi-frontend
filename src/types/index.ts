@@ -12,6 +12,11 @@ export interface User {
   postalCode?: string;
   latitude?: number | null;
   longitude?: number | null;
+  status?: string;
+  isActive?: boolean;
+  blockReason?: string | null;
+  blockedUntil?: string | null;
+  inactiveSource?: string | null;
 }
 export interface Farmer {
   farmerId: string;

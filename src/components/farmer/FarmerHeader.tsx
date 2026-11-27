@@ -51,6 +51,7 @@ export interface FarmerHeaderProps {
   onSearchSubmit?: () => void;
   searchLoading?: boolean;
   weatherRefreshTrigger?: number;
+  hideWeather?: boolean;
 }
 
 export const FarmerHeader: React.FC<FarmerHeaderProps> = React.memo(({
@@ -76,6 +77,7 @@ export const FarmerHeader: React.FC<FarmerHeaderProps> = React.memo(({
   onSearchSubmit,
   searchLoading = false,
   weatherRefreshTrigger,
+  hideWeather = false,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -373,7 +375,7 @@ export const FarmerHeader: React.FC<FarmerHeaderProps> = React.memo(({
                 </TouchableOpacity>
 
                 {/* Weather Pill (Right) */}
-                <FarmerWeatherPill refreshTrigger={weatherRefreshTrigger} />
+                {!hideWeather && <FarmerWeatherPill refreshTrigger={weatherRefreshTrigger} />}
               </View>
             ) : (
               /* Expanding Search Field */

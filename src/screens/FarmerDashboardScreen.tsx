@@ -22,7 +22,9 @@ import { useNotification } from '../context/NotificationContext';
 import { getAllProducts, getProductsByFarmer, getProductImageUrl } from '../services/productService';
 import { getFarmerOrders, getFarmerItemsStatus } from '../services/orderService';
 import { getFarmerById } from '../services/farmerService';
-import api, { BASE_URL, resolveMediaUrl } from '../services/api';
+import { getCurrentUserProfile } from '../services/userService';
+import { extractBlockedFarmerInfo } from '../utils/farmerBlockUtils';
+import api, { BASE_URL, hasActiveAuthToken, resolveMediaUrl } from '../services/api';
 
 import { FARMER_THEME } from '../constants/farmerTheme';
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
@@ -55,7 +57,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotification();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserData } = useAuth();
 
   const [products, setProducts] = useState<any[]>([]);
   const [allGlobalProducts, setAllGlobalProducts] = useState<any[]>([]);
@@ -102,33 +104,80 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   };
 
   const fetchData = async () => {
+    if (!hasActiveAuthToken()) {
+      setLoading(false);
+      return;
+    }
     try {
-      const currentFarmerId = user?.farmerId || (user as any)?.id || (user as any)?.userId;
-      const [allProducts, farmerOrders, farmerDetails, myFarmerProducts] = await Promise.all([
-        getAllProducts().catch(() => []),
-        getFarmerOrders().catch(() => []),
-        currentFarmerId ? getFarmerById(currentFarmerId).catch(() => null) : Promise.resolve(null),
-        currentFarmerId ? getProductsByFarmer(currentFarmerId).catch(() => []) : Promise.resolve([]),
-      ]);
+      // Immediately show blocked state if login payload already carried block info
+      const localBlockInfo = extractBlockedFarmerInfo(user);
+      if (localBlockInfo.blocked) {
+        setBlockReason(localBlockInfo.reason);
+        setBlockedUntil(localBlockInfo.blockedUntilText);
+        setIsBlockedModalVisible(true);
+        setLoading(false);
+      }
 
-      if (farmerDetails) {
-        if (farmerDetails.status === 'INACTIVE' && farmerDetails.blockReason) {
-          setBlockReason(farmerDetails.blockReason);
-          if (farmerDetails.blockedUntil) {
-            setBlockedUntil(new Date(farmerDetails.blockedUntil).toLocaleDateString());
+      const currentFarmerId = user?.farmerId || (user as any)?.id || (user as any)?.userId;
+
+      // Verify live block status via /user/me and /farmer/getById BEFORE loading restricted dashboard data
+      const [meRes, farmerDetails] = await Promise.all([
+        getCurrentUserProfile().catch(() => null),
+        currentFarmerId ? getFarmerById(currentFarmerId).catch(() => null) : Promise.resolve(null),
+      ]);
+      const meProfile = meRes?.response || meRes;
+      const mergedProfile = {
+        ...(user || {}),
+        ...(meProfile || {}),
+        ...(farmerDetails || {}),
+      };
+      const liveBlockInfo = extractBlockedFarmerInfo(mergedProfile);
+
+      if (liveBlockInfo.blocked) {
+        setBlockReason(liveBlockInfo.reason);
+        setBlockedUntil(liveBlockInfo.blockedUntilText);
+        setIsBlockedModalVisible(true);
+        await updateUserData({
+          status: mergedProfile.status || 'INACTIVE',
+          isActive: false,
+          blockReason: mergedProfile.blockReason ?? null,
+          blockedUntil: mergedProfile.blockedUntil ?? null,
+        });
+        try {
+          const unreadRes = await api.get('/support/unread-count');
+          const countVal = unreadRes?.data?.data ?? unreadRes?.data;
+          if (typeof countVal === 'number') {
+            setSupportUnreadCount(countVal);
           }
-          try {
-            const unreadRes = await api.get('/support/unread-count');
-            if (unreadRes.data && unreadRes.data.data) {
-              setSupportUnreadCount(unreadRes.data.data);
-            }
-          } catch (e) {
-            console.log('Error fetching unread support count', e);
-          }
-          setIsBlockedModalVisible(true);
-          return;
+        } catch (e) {
+          console.log('Error fetching unread support count', e);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // If previously blocked (or expired block cleared by backend), clear blocked modal & load dashboard
+      if (localBlockInfo.blocked || isBlockedModalVisible) {
+        setIsBlockedModalVisible(false);
+        setBlockReason('');
+        setBlockedUntil(null);
+        if (meProfile) {
+          await updateUserData({
+            status: meProfile.status || 'ACTIVE',
+            isActive: true,
+            blockReason: null,
+            blockedUntil: null,
+          });
         }
       }
+
+      const [allProducts, farmerOrders, myFarmerProducts] = await Promise.all([
+        getAllProducts().catch(() => []),
+        getFarmerOrders().catch(() => []),
+        currentFarmerId ? getProductsByFarmer(currentFarmerId).catch(() => []) : Promise.resolve([]),
+        fetchCategories(),
+        fetchFarmShorts(),
+      ]);
 
       setAllGlobalProducts(allProducts || []);
       let farmerProductsList: any[] = [];
@@ -154,19 +203,19 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       fetchData();
-      fetchCategories();
-      fetchFarmShorts();
-    }, [user?.farmerId])
+    }, [user?.farmerId, user?.status, user?.blockReason, user?.blockedUntil])
   );
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isBlockedModalVisible) {
       interval = setInterval(async () => {
+        if (!hasActiveAuthToken()) return;
         try {
           const unreadRes = await api.get('/support/unread-count');
-          if (unreadRes.data && unreadRes.data.data !== undefined) {
-            setSupportUnreadCount(unreadRes.data.data);
+          const countVal = unreadRes?.data?.data ?? unreadRes?.data;
+          if (typeof countVal === 'number') {
+            setSupportUnreadCount(countVal);
           }
         } catch (e) {
           console.log('Error fetching unread support count', e);
@@ -181,7 +230,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setWeatherRefreshTrigger((prev) => prev + 1);
-    await Promise.all([fetchData(), fetchCategories(), fetchFarmShorts()]);
+    await fetchData();
     setRefreshing(false);
   }, []);
 
@@ -237,6 +286,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
           onSearchSubmit={handleSearchSubmit}
           searchLoading={loading}
           weatherRefreshTrigger={weatherRefreshTrigger}
+          hideWeather={isBlockedModalVisible || extractBlockedFarmerInfo(user).blocked}
         />
 
         {/* 2) CONTENT AREA */}

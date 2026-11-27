@@ -21,7 +21,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isLoggedIn, user } = useAuth();
   const refreshCart = useCallback(async () => {
-    if (!isLoggedIn || user?.role === 'ADMIN') {
+    if (!isLoggedIn || user?.role === 'ADMIN' || user?.role === 'FARMER') {
       setCart(null);
       setIsLoading(false);
       return;
@@ -41,7 +41,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, user?.role, user?.userId]);
   useEffect(() => {
     refreshCart();
   }, [refreshCart]);
