@@ -1,6 +1,7 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { refreshAccessTokenSingleFlight, resolveBaseUrl } from './api';
-import { getAccessToken } from './tokenStorage';
+import { isJwtExpired } from './authSessionCore';
+import { getAccessToken, isSessionLoggedOutInMemory } from './tokenStorage';
 import { NotificationResponse } from '../types';
 
 export type NotificationEventListener = (notification: NotificationResponse) => void;
@@ -68,14 +69,24 @@ class SseNotificationClient {
   };
 
   private async connect() {
-    if (!this.shouldRun || this.isConnecting || this.isConnected) return;
+    if (!this.shouldRun || this.isConnecting || this.isConnected || isSessionLoggedOutInMemory()) return;
     this.isConnecting = true;
 
     try {
-      const token = await getAccessToken();
-      if (!token) {
+      let token = await getAccessToken();
+      if (!token || isSessionLoggedOutInMemory()) {
         this.isConnecting = false;
         return;
+      }
+      if (isJwtExpired(token, 15_000)) {
+        token = await refreshAccessTokenSingleFlight();
+        if (!token || !this.shouldRun || isSessionLoggedOutInMemory()) {
+          this.isConnecting = false;
+          if (!token) {
+            this.stop();
+          }
+          return;
+        }
       }
 
       const baseUrl = resolveBaseUrl();

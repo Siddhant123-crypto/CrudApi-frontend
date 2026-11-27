@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { Alert, NativeModules, Platform } from 'react-native';
+import { isJwtExpired } from './authSessionCore';
 import {
   clearStoredAuthTokens,
   getAccessToken,
@@ -237,14 +238,64 @@ api.interceptors.request.use(
       url.includes('/forgot-password') ||
       url.includes('/reset-password') ||
       url === '/health';
+    const isPublicCatalogCall =
+      isAuthPublicCall ||
+      url === '/product/getAll' ||
+      url.startsWith('/product/getById/') ||
+      url.startsWith('/product/category/') ||
+      url.startsWith('/product/search/') ||
+      url.startsWith('/farmer/state/') ||
+      url.startsWith('/farmer/nearby') ||
+      url.startsWith('/farm-details/get') ||
+      url.startsWith('/markets') ||
+      url.startsWith('/weather') ||
+      url === '/categories';
+
     if (isSessionLoggedOutInMemory() && !isAuthPublicCall) {
       return Promise.reject(new axios.CanceledError('Skipped request after logout'));
     }
-    const token =
+    let token =
       activeAuthToken || (isSessionLoggedOutInMemory() ? null : await getAccessToken());
     if (token && !activeAuthToken && !isSessionLoggedOutInMemory()) {
       activeAuthToken = token;
     }
+
+    // Proactively refresh an expired access token via single-flight BEFORE dispatching protected calls
+    if (token && isJwtExpired(token, 15_000)) {
+      if (isAuthPublicCall) {
+        token = null;
+      } else {
+        const rotated = await refreshAccessTokenSingleFlight();
+        if (rotated && !isSessionLoggedOutInMemory()) {
+          token = rotated;
+        } else {
+          token = null;
+          if (!isPublicCatalogCall) {
+            if (!isHandling401 && !isSessionLoggedOutInMemory()) {
+              isHandling401 = true;
+              try {
+                invalidateSessionEpoch();
+                activeAuthToken = null;
+                lastLoginTimestamp = 0;
+                refreshInFlight = null;
+                await clearStoredAuthTokens(true);
+                if (unauthorizedHandler) {
+                  unauthorizedHandler();
+                }
+              } catch {
+                // ignore
+              } finally {
+                setTimeout(() => {
+                  isHandling401 = false;
+                }, 3000);
+              }
+            }
+            return Promise.reject(new axios.CanceledError('Session expired before request'));
+          }
+        }
+      }
+    }
+
     if (!token) {
       const isStrictAuthPoll =
         url.includes('/support/admin/') ||
@@ -256,7 +307,7 @@ api.interceptors.request.use(
         return Promise.reject(new axios.CanceledError('Skipped unauthenticated request after logout'));
       }
     }
-    if (token && config.headers) {
+    if (token && config.headers && !config.headers['Authorization']) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     if (__DEV__) {

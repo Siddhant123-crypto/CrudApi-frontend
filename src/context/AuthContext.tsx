@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
-import api, { setUnauthorizedHandler, setAuthToken } from '../services/api';
+import api, { refreshAccessTokenSingleFlight, setUnauthorizedHandler, setAuthToken } from '../services/api';
 import {
   ACCESS_TOKEN_KEY,
   LEGACY_TOKEN_KEY,
@@ -114,6 +114,7 @@ export const AuthProvider: React.FC<{
       fetchCurrentProfile: getCurrentUserProfile,
       clearChatHistoryOnLogout: clearChatTimestampOnLogout,
       stopSse: () => sseNotificationClient.stop(),
+      refreshBeforeRestore: refreshAccessTokenSingleFlight,
       onUserState: (nextUser) => setUserSafely(nextUser as User | null),
       onInitialAuthRoute: (route) => setInitialAuthRoute(route),
     }),

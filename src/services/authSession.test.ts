@@ -10,6 +10,7 @@ import {
   USER_DATA_KEY,
   createAuthSessionController,
   createTokenStore,
+  isJwtExpired,
   type AsyncStorageLike,
   type AuthRouteTarget,
   type SecureStoreLike,
@@ -87,6 +88,7 @@ function bootAppProcess(
       options?.postBackendLogout ?? (async () => {}),
     fetchCurrentProfile: options?.fetchCurrentProfile,
     clearChatHistoryOnLogout: options?.clearChatHistoryOnLogout,
+    refreshBeforeRestore: (options as any)?.refreshBeforeRestore,
     stopSse: () => {
       sseStopped += 1;
     },
@@ -339,4 +341,53 @@ test('Static wiring check: api.ts enforces sessionEpoch guards and never retries
   assert.match(apiSource, /isSessionLoggedOutInMemory/);
   assert.match(apiSource, /invalidateSessionEpoch/);
   assert.match(apiSource, /_skipRetry/);
+  assert.match(apiSource, /isJwtExpired/);
+});
+
+function buildUnsignedJwt(expOffsetSeconds: number): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const exp = Math.floor(Date.now() / 1000) + expOffsetSeconds;
+  const payload = Buffer.from(JSON.stringify({ sub: 'farmer@test.com', role: 'FARMER', exp })).toString('base64url');
+  return `${header}.${payload}.sig`;
+}
+
+test('isJwtExpired detects expired JWTs vs future JWTs accurately', () => {
+  const expired = buildUnsignedJwt(-3600);
+  const future = buildUnsignedJwt(900);
+  assert.equal(isJwtExpired(expired, 0), true);
+  assert.equal(isJwtExpired(future, 15_000), false);
+  assert.equal(isJwtExpired('opaque-mock-token', 15_000), false);
+});
+
+test('restoreSession proactively refreshes an expired access JWT before mounting UI, and wipes expired refresh sessions', async () => {
+  const disk = createPersistentDeviceDisk();
+  const expiredJwt = buildUnsignedJwt(-3600);
+  const freshJwt = buildUnsignedJwt(900);
+
+  const p1 = bootAppProcess(disk);
+  await p1.controller.login({ farmerId: 'f-exp', name: 'Farmer', role: 'FARMER' }, expiredJwt, 'valid-refresh');
+
+  // Restart with valid refresh token -> proactive refresh occurs BEFORE dashboard mounts
+  let refreshCalls = 0;
+  const p2 = bootAppProcess(disk, {
+    refreshBeforeRestore: async () => {
+      refreshCalls += 1;
+      return freshJwt;
+    },
+  } as any);
+  const restored = await p2.controller.restoreSession();
+  assert.equal(refreshCalls, 1);
+  assert.equal(restored.authenticated, true);
+  assert.equal(p2.getState().activeInMemoryToken, freshJwt);
+
+  // Restart when BOTH access & refresh tokens are expired -> fails cleanly to NewUserLogin with 0 expired dashboard calls
+  const p3 = bootAppProcess(disk, {
+    refreshBeforeRestore: async () => null,
+  } as any);
+  const failedRestore = await p3.controller.restoreSession();
+  assert.equal(failedRestore.authenticated, false);
+  assert.equal(p3.getState().currentUser, null);
+  assert.equal(p3.getState().initialRoute, 'NewUserLogin');
+  assert.equal(disk.secureMap.get(ACCESS_TOKEN_KEY) ?? null, null);
+  assert.equal(disk.secureMap.get(REFRESH_TOKEN_KEY) ?? null, null);
 });

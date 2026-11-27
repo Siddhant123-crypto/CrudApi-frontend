@@ -312,6 +312,53 @@ export function createTokenStore(deps: {
   };
 }
 
+export function decodeJwtExpiryMs(token: string): number | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3 || !parts[1]) {
+      return null;
+    }
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padLen = (4 - (base64.length % 4)) % 4;
+    const padded = base64 + '='.repeat(padLen);
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    let bytes: number[] = [];
+    for (let i = 0; i < padded.length; i += 4) {
+      const n1 = chars.indexOf(padded[i]);
+      const n2 = chars.indexOf(padded[i + 1]);
+      const n3 = padded[i + 2] === '=' ? -1 : chars.indexOf(padded[i + 2]);
+      const n4 = padded[i + 3] === '=' ? -1 : chars.indexOf(padded[i + 3]);
+      if (n1 < 0 || n2 < 0) return null;
+      bytes.push((n1 << 2) | (n2 >> 4));
+      if (n3 >= 0) bytes.push(((n2 & 15) << 4) | (n3 >> 2));
+      if (n4 >= 0) bytes.push(((n3 & 3) << 6) | n4);
+    }
+    let jsonStr = '';
+    for (const b of bytes) {
+      jsonStr += String.fromCharCode(b);
+    }
+    const payload = JSON.parse(jsonStr);
+    return typeof payload?.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isJwtExpired(
+  token?: string | null,
+  bufferMs = 15_000,
+): boolean {
+  if (!token) {
+    return true;
+  }
+  const expMs = decodeJwtExpiryMs(token);
+  if (expMs === null) {
+    // Non-JWT / test fixture token: rely on server 401 handling
+    return false;
+  }
+  return Date.now() + bufferMs >= expMs;
+}
+
 export interface SessionUser {
   userId?: string;
   farmerId?: string;
@@ -335,6 +382,7 @@ export interface AuthSessionControllerDeps {
   fetchCurrentProfile?: () => Promise<any>;
   clearChatHistoryOnLogout?: (userId?: string | null) => Promise<void>;
   stopSse?: () => void;
+  refreshBeforeRestore?: () => Promise<string | null>;
   onUserState: (user: SessionUser | null) => void;
   onInitialAuthRoute: (route: AuthRouteTarget) => void;
   onProfileMerge?: (
@@ -448,7 +496,23 @@ export function createAuthSessionController(deps: AuthSessionControllerDeps) {
         return { authenticated: false, user: null };
       }
 
-      setAuthToken(storedToken, false);
+      let effectiveToken = storedToken;
+      if (isJwtExpired(storedToken, 30_000) && deps.refreshBeforeRestore) {
+        const refreshed = await deps.refreshBeforeRestore();
+        if (!isEpochCurrent(restoreEpoch)) {
+          return { authenticated: false, user: null };
+        }
+        if (!refreshed) {
+          await tokenStore.clearStoredAuthTokens(true);
+          setAuthToken(null);
+          onUserState(null);
+          onInitialAuthRoute('NewUserLogin');
+          return { authenticated: false, user: null };
+        }
+        effectiveToken = refreshed;
+      }
+
+      setAuthToken(effectiveToken, isJwtExpired(storedToken, 30_000));
       onUserState(parsedUser);
 
       // Fire background sync only while restoreEpoch remains active

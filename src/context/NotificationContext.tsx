@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { NotificationService } from '../services/NotificationService';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sseNotificationClient } from '../services/sseNotificationClient';
+import { isSessionLoggedOutInMemory } from '../services/tokenStorage';
 import { NotificationResponse } from '../types';
 
 interface NotificationContextType {
@@ -32,11 +33,13 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [farmerNewOrdersCount, setFarmerNewOrdersCount] = useState(0);
   const [latestAddressChangeEvent, setLatestAddressChangeEvent] = useState<NotificationResponse | null>(null);
   const { user } = useAuth();
+  const unreadRefreshInFlightRef = useRef<Promise<void> | null>(null);
+  const lastUnreadFetchAtRef = useRef<number>(0);
 
   const clearAddressChangeEvent = () => setLatestAddressChangeEvent(null);
 
-  const refreshUnreadCount = async () => {
-    if (!user) {
+  const refreshUnreadCount = async (force = false) => {
+    if (!user || isSessionLoggedOutInMemory()) {
       setUnreadCount(0);
       setAdminSupportUnreadCount(0);
       setAdminSupportUnassignedCount(0);
@@ -48,6 +51,16 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    if (unreadRefreshInFlightRef.current) {
+      return unreadRefreshInFlightRef.current;
+    }
+    const now = Date.now();
+    if (!force && now - lastUnreadFetchAtRef.current < 2000) {
+      return;
+    }
+    lastUnreadFetchAtRef.current = now;
+
+    const run = (async () => {
     try {
       const count = await NotificationService.getUnreadCount();
       setUnreadCount(count);
@@ -100,6 +113,14 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       } catch (e) {
         console.log('Failed to fetch admin support counts or group messages', e);
       }
+    }
+    })();
+
+    unreadRefreshInFlightRef.current = run;
+    try {
+      await run;
+    } finally {
+      unreadRefreshInFlightRef.current = null;
     }
   };
   useEffect(() => {
