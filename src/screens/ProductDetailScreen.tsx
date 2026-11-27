@@ -38,7 +38,7 @@ import { ThemedHeader } from '../components/ui/ThemedHeader';
 import { Card } from '../components/ui/Card';
 import { PrimaryButton, MaroonButton } from '../components/ui/Buttons';
 import { ThemedBadge } from '../components/ui/ThemedBadge';
-import { HeartIcon, ShareIcon } from '../components/CustomerIcons';
+import { HeartIcon, ShareIcon, CartIcon } from '../components/CustomerIcons';
 import ProductCard from '../components/ProductCard';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '../utils/formatters';
@@ -130,10 +130,10 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
   const insets = useSafeAreaInsets();
   const { product } = route.params;
   const { user } = useAuth();
-  const { addToCart, cart } = useCart();
+  const { addToCart, cartCount } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(0);
-  const [goToCartLoading, setGoToCartLoading] = useState(false);
+  const [addToCartLoading, setAddToCartLoading] = useState(false);
   const [buyNowLoading, setBuyNowLoading] = useState(false);
   const [productData, setProductData] = useState<any>(product);
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
@@ -216,7 +216,7 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
   }, [imageUrl]);
   const isFarmerInactive = productData.farmerActive === false || productData.farmerStatus === 'INACTIVE';
 
-  const handleGoToCart = async () => {
+  const handleAddToCart = async () => {
     if (!user) {
       Alert.alert(
         t('auth.loginRequired', 'Login Required'),
@@ -237,23 +237,37 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
       return;
     }
     const finalQuantity = quantity === 0 ? 1 : quantity;
-    if (quantity === 0) setQuantity(1);
 
-    const alreadyInCart = cart?.items?.some((i: any) => i.productId === productData.productId);
-
-    if (alreadyInCart) {
-      navigation.navigate('Cart');
-      return;
-    }
-
-    setGoToCartLoading(true);
+    setAddToCartLoading(true);
     try {
-      await addToCart(productData.productId, finalQuantity, false);
-    } catch (err) {
-      console.log('Error adding to cart before navigating:', err);
+      const success = await addToCart(productData.productId, finalQuantity, false);
+      if (success) {
+        setQuantity(0);
+        Alert.alert(
+          t('common.success', 'Success'),
+          t('cart.productAdded', 'Product added to cart!'),
+          [
+            {
+              text: t('checkout.continueShopping', 'Continue Shopping'),
+              style: 'cancel',
+            },
+            {
+              text: t('cart.myCart', 'My Cart'),
+              onPress: () => navigation.navigate('Cart'),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          t('common.error', 'Error'),
+          t('cart.addToCartFailed', 'Failed to add product to cart')
+        );
+      }
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || t('cart.addToCartFailed', 'Failed to add product to cart');
+      Alert.alert(t('common.error', 'Error'), errMsg);
     } finally {
-      setGoToCartLoading(false);
-      navigation.navigate('Cart');
+      setAddToCartLoading(false);
     }
   };
 
@@ -336,6 +350,22 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
         titleStyle={styles.headerTitle}
         rightAction={
           <View style={styles.headerGlassActions}>
+            {isCustomer && (
+              <TouchableOpacity
+                style={styles.headerGlassBtn}
+                onPress={() => navigation.navigate('Cart')}
+                activeOpacity={0.8}
+              >
+                <CartIcon size={20} color={THEME.colors.white} strokeWidth={1.9} />
+                {cartCount > 0 && (
+                  <View style={styles.headerCartBadge}>
+                    <Text style={styles.headerCartBadgeText}>
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
             {isCustomer && (
               <TouchableOpacity
                 style={styles.headerGlassBtn}
@@ -716,9 +746,9 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
               {/* Add to Cart Button */}
               <View style={{ flex: 1.15 }}>
                 <PrimaryButton
-                  title={goToCartLoading ? t('common.loading', 'Adding...') : t('product.addToCart', 'Add to Cart')}
-                  onPress={handleGoToCart}
-                  loading={goToCartLoading}
+                  title={addToCartLoading ? t('common.loading', 'Adding...') : t('product.addToCart', 'Add to Cart')}
+                  onPress={handleAddToCart}
+                  loading={addToCartLoading}
                   style={{ height: 46 }}
                   contentStyle={{ paddingHorizontal: 6 }}
                   textStyle={{ fontSize: 13, letterSpacing: 0 }}
@@ -834,6 +864,23 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.headerGlassBg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerCartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 19,
+    height: 19,
+    borderRadius: 9.5,
+    backgroundColor: THEME.colors.notificationDot,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  headerCartBadgeText: {
+    fontFamily: THEME.fonts.bold,
+    fontSize: 10,
+    color: THEME.colors.white,
   },
   heroCardWrapper: {
     paddingHorizontal: THEME.spacing.pageHorizontal,

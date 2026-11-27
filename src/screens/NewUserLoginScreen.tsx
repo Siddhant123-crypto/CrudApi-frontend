@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,7 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../i18n';
@@ -47,6 +48,7 @@ import {
   linkGoogleAccount,
   adminLogin,
 } from '../services/authService';
+import { warmUpBackend } from '../services/api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 GoogleSignin.configure({
@@ -236,6 +238,12 @@ const NewUserLoginScreen = ({ navigation }: any) => {
     password?: string | null;
   }>({});
 
+  useFocusEffect(
+    useCallback(() => {
+      void warmUpBackend();
+    }, [])
+  );
+
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
@@ -346,11 +354,16 @@ const NewUserLoginScreen = ({ navigation }: any) => {
       if (__DEV__) {
         console.log('Login error:', error?.message);
       }
-      const msg =
-        error?.response?.data?.message ||
-        error?.response?.data ||
-        error?.message ||
-        t('errors.networkError', 'Unable to connect to server.');
+      const isNetworkIssue =
+        error?.code === 'SERVER_UNREACHABLE' ||
+        error?.code === 'ERR_NETWORK' ||
+        error?.code === 'ECONNABORTED';
+      const msg = isNetworkIssue
+        ? t('errors.networkError', 'Network error. Please check your internet connection and try again.')
+        : error?.response?.data?.message ||
+          error?.response?.data ||
+          error?.message ||
+          t('errors.networkError', 'Network error. Please check your internet connection and try again.');
       Alert.alert(t('auth.loginError', 'Login Error'), typeof msg === 'string' ? msg : t('auth.loginFailed', 'Login failed'));
     } finally {
       setLoading(false);

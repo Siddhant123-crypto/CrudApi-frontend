@@ -61,7 +61,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error: any) {
       console.log('Error adding to cart:', error);
       if (showNotification) {
-        Alert.alert(t('common.error', 'Error'), t('cart.addToCartFailed', 'Failed to add product to cart'));
+        const errMsg = error?.response?.data?.message || t('cart.addToCartFailed', 'Failed to add product to cart');
+        Alert.alert(t('common.error', 'Error'), errMsg);
       }
       return false;
     } finally {

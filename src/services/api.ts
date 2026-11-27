@@ -120,22 +120,34 @@ export const resolveMediaUrl = (path?: string | null): string | null => {
   return `${activeBase}/uploads/${cleanPath}`;
 };
 
-let hasWarmedUp = false;
-export const warmUpBackend = async (): Promise<void> => {
-  if (hasWarmedUp) return;
-  hasWarmedUp = true;
-  try {
-    const healthUrl = `${resolveBaseUrl()}/health`;
-    if (__DEV__) {
-      console.log(`[API] Triggering backend warm-up ping to ${healthUrl}`);
-    }
-    await axios.get(healthUrl, { timeout: 15000 });
-    if (__DEV__) {
-      console.log('[API] Backend warm-up ping acknowledged.');
-    }
-  } catch {
-    // Silent non-blocking catch — server will spin up on its own
+const WARM_UP_TTL_MS = 120_000;
+let lastWarmUpTimestamp = 0;
+let warmUpInFlight: Promise<void> | null = null;
+export const warmUpBackend = async (force = false): Promise<void> => {
+  if (!force && lastWarmUpTimestamp > 0 && Date.now() - lastWarmUpTimestamp < WARM_UP_TTL_MS) {
+    return;
   }
+  if (warmUpInFlight) {
+    return warmUpInFlight;
+  }
+  warmUpInFlight = (async () => {
+    try {
+      const healthUrl = `${resolveBaseUrl()}/health`;
+      if (__DEV__) {
+        console.log(`[API] Triggering backend warm-up ping to ${healthUrl}`);
+      }
+      await axios.get(healthUrl, { timeout: 25000 });
+      lastWarmUpTimestamp = Date.now();
+      if (__DEV__) {
+        console.log('[API] Backend warm-up ping acknowledged.');
+      }
+    } catch {
+      // Silent non-blocking catch — server will spin up on its own
+    } finally {
+      warmUpInFlight = null;
+    }
+  })();
+  return warmUpInFlight;
 };
 
 const MAX_RETRIES = 2;
@@ -219,9 +231,9 @@ export const hasActiveAuthToken = (): boolean => Boolean(activeAuthToken);
 export const isAuthOrCanceledError = (err: any): boolean =>
   Boolean(
     axios.isCancel(err) ||
-      err?.code === 'ERR_CANCELED' ||
-      err?._isStaleAuth === true ||
-      err?.response?.status === 401
+    err?.code === 'ERR_CANCELED' ||
+    err?._isStaleAuth === true ||
+    err?.response?.status === 401
   );
 
 api.interceptors.request.use(
@@ -364,15 +376,20 @@ api.interceptors.response.use(
       config?.url?.includes('/auth/google')
     );
     const isRateLimitOrUnavailable = status === 429 || status === 502 || status === 503 || (isLoginEndpoint && status === 500);
+    const maxRetries = isLoginEndpoint && (isNetworkError || isRateLimitOrUnavailable) ? 3 : MAX_RETRIES;
     const retryCount = config?._retryCount ?? 0;
-    if (!isAuthLifecycleEndpoint && (isNetworkError || isRateLimitOrUnavailable) && retryCount < MAX_RETRIES && config) {
+    if (!isAuthLifecycleEndpoint && (isNetworkError || isRateLimitOrUnavailable) && retryCount < maxRetries && config) {
       config._retryCount = retryCount + 1;
       const retryAfterHeader = Number(error?.response?.headers?.['retry-after']);
+      const baseDelay = isLoginEndpoint && isNetworkError ? 1500 * config._retryCount : RETRY_DELAY_MS * config._retryCount;
       const delayMs = isRateLimitOrUnavailable
         ? Math.min(Math.max((Number.isFinite(retryAfterHeader) && retryAfterHeader > 0 ? retryAfterHeader * 1000 : 2000 * config._retryCount), 1500), 6000)
-        : RETRY_DELAY_MS * config._retryCount;
+        : baseDelay;
       if (__DEV__) {
-        console.log(`[API] Transient ${status || error.code} on ${config.url} — auto-retrying (${config._retryCount}/${MAX_RETRIES}) in ${delayMs}ms...`);
+        console.log(`[API] Transient ${status || error.code} on ${config.url} — auto-retrying (${config._retryCount}/${maxRetries}) in ${delayMs}ms...`);
+      }
+      if (isLoginEndpoint && isNetworkError) {
+        void warmUpBackend(true);
       }
       await sleep(delayMs);
       return api(config);
