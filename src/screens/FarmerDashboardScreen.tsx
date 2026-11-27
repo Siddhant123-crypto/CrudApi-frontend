@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Alert,
   Modal,
   TouchableOpacity,
   Platform,
@@ -23,7 +22,7 @@ import { getAllProducts, getProductsByFarmer, getProductImageUrl } from '../serv
 import { getFarmerOrders, getFarmerItemsStatus } from '../services/orderService';
 import { getCurrentUserProfile } from '../services/userService';
 import { extractBlockedFarmerInfo } from '../utils/farmerBlockUtils';
-import api, { BASE_URL, hasActiveAuthToken, resolveMediaUrl } from '../services/api';
+import api, { hasActiveAuthToken } from '../services/api';
 
 import { FARMER_THEME } from '../constants/farmerTheme';
 import { FarmerHeader } from '../components/farmer/FarmerHeader';
@@ -59,7 +58,6 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   const { user, logout, updateUserData } = useAuth();
 
   const [products, setProducts] = useState<any[]>([]);
-  const [allGlobalProducts, setAllGlobalProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [farmShorts, setFarmShorts] = useState<FarmerShortItem[]>([]);
   const [loadingShorts, setLoadingShorts] = useState(true);
@@ -78,7 +76,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
   // Categories state
   const [categories, setCategories] = useState<any[]>([]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const res = await api.get('/categories');
       if (res.data && res.data.data) {
@@ -87,9 +85,9 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
     } catch (error) {
       console.log('Error fetching categories:', error);
     }
-  };
+  }, []);
 
-  const fetchFarmShorts = async () => {
+  const fetchFarmShorts = useCallback(async () => {
     try {
       setLoadingShorts(true);
       const res = await getFarmerShorts(0, 6);
@@ -100,9 +98,9 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
     } finally {
       setLoadingShorts(false);
     }
-  };
+  }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!hasActiveAuthToken()) {
       setLoading(false);
       return;
@@ -187,7 +185,6 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
         fetchFarmShorts(),
       ]);
 
-      setAllGlobalProducts(allProducts || []);
       let farmerProductsList: any[] = [];
       if (Array.isArray(myFarmerProducts) && myFarmerProducts.length > 0) {
         farmerProductsList = myFarmerProducts;
@@ -206,16 +203,16 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchCategories, fetchFarmShorts, isBlockedModalVisible, updateUserData, user]);
 
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [user?.farmerId, user?.status, user?.blockReason, user?.blockedUntil])
+    }, [fetchData])
   );
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (isBlockedModalVisible) {
       interval = setInterval(async () => {
         if (!hasActiveAuthToken()) return;
@@ -240,7 +237,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
     setWeatherRefreshTrigger((prev) => prev + 1);
     await fetchData();
     setRefreshing(false);
-  }, []);
+  }, [fetchData]);
 
   const openCategory = (categoryName: string) => {
     navigation.navigate('FarmerCategoryDashboard', { category: categoryName });
@@ -253,7 +250,6 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
     }
   };
 
-  const videoProducts = allGlobalProducts.filter((p) => !!p.productVideo);
   const pendingOrders = orders.filter((o) => getFarmerItemsStatus(o.items || []) === 'PENDING');
   const displayCategories = categories.length > 0 ? categories : SAMPLE_CATEGORIES;
 
@@ -429,7 +425,7 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
           {/* 6) MY PRODUCTS SECTION */}
           <FarmerSectionHeader
             title={t('farmer.myProducts', 'My products')}
-            linkText={products.length > 0 ? t('common.viewAll', 'View all') : undefined}
+            {...(products.length > 0 ? { linkText: t('common.viewAll', 'View all') } : {})}
             onLinkPress={() => navigation.navigate('MyProducts')}
           />
           {products.length === 0 ? (
@@ -698,25 +694,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
     paddingBottom: 4,
-  },
-  emptyShortsContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 20,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  emptyShortsText: {
-    fontFamily: FARMER_THEME.fonts.medium,
-    fontSize: 13,
-    color: '#8E9A90',
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 18,
   },
   ordersListContainer: {
     marginTop: 2,
