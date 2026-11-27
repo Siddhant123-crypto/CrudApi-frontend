@@ -5,17 +5,18 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Pressable,
   Alert,
   Platform,
   StatusBar,
   Modal,
   Image,
-  Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, {
   Path,
@@ -46,6 +47,7 @@ import { useTranslation } from 'react-i18next';
 import { GoogleRegistrationPasswordHelper } from '../components/GoogleRegistrationPasswordHelper';
 import { mapApiError } from '../utils/errorUtils';
 import { buildProfilePhotoFormPart } from '../utils/registrationUtils';
+import { useRegistrationKeyboard } from '../hooks/useRegistrationKeyboard';
 
 // ─── SVG ICONS ─────────────────────────────────────────────────────────────
 
@@ -378,6 +380,7 @@ interface FormFieldProps {
   onSubmitEditing?: () => void;
   blurOnSubmit?: boolean;
   inputRef?: React.RefObject<TextInput | null>;
+  onFocus?: () => void;
   error?: string | null;
   editable?: boolean;
 }
@@ -399,6 +402,7 @@ const FormField = ({
   onSubmitEditing,
   blurOnSubmit,
   inputRef,
+  onFocus,
   error,
   editable = true,
 }: FormFieldProps) => (
@@ -433,7 +437,8 @@ const FormField = ({
         textAlignVertical={multiline ? 'top' : 'center'}
         returnKeyType={returnKeyType}
         onSubmitEditing={onSubmitEditing}
-        blurOnSubmit={blurOnSubmit}
+        blurOnSubmit={blurOnSubmit !== undefined ? blurOnSubmit : (!multiline && returnKeyType !== 'next')}
+        onFocus={onFocus}
         underlineColorAndroid="transparent"
         editable={editable}
       />
@@ -501,6 +506,13 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
   const stateRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
+  const {
+    scrollViewRef,
+    scrollBottomPadding,
+    handleInputFocus,
+    handleScroll,
+    dismissKeyboard,
+  } = useRegistrationKeyboard();
 
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({
@@ -699,19 +711,28 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
         backgroundColor="transparent"
         translucent={true}
       />
-      <KeyboardAwareScrollView
+      <KeyboardAvoidingView
         style={styles.keyboardContainer}
-        contentContainerStyle={styles.scrollContent}
-        enableOnAndroid={true}
-        enableAutomaticScroll={true}
-        extraScrollHeight={30}
-        extraHeight={120}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-        bounces={false}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
       >
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.keyboardContainer}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: scrollBottomPadding },
+          ]}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+          bounces={false}
+        >
+          <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
+            <View style={styles.formWrapper}>
         {/* ─── 1) HERO SECTION (height 300 + statusBarHeight, SVG drawn) ─── */}
         <View style={[styles.heroContainer, { height: 300 + statusBarHeight }]}>
           <Svg
@@ -823,7 +844,8 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
             autoCapitalize="words"
             returnKeyType="next"
             inputRef={nameRef}
-            onSubmitEditing={() => emailRef.current?.focus()}
+            onFocus={() => handleInputFocus(nameRef)}
+            onSubmitEditing={() => (isGoogleSignUp ? mobileRef : emailRef).current?.focus()}
             error={errors.name}
           />
 
@@ -839,6 +861,7 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
             autoCorrect={false}
             returnKeyType="next"
             inputRef={emailRef}
+            onFocus={() => handleInputFocus(emailRef)}
             onSubmitEditing={() => mobileRef.current?.focus()}
             error={errors.email}
             editable={!isGoogleSignUp}
@@ -854,6 +877,7 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
             keyboardType="phone-pad"
             returnKeyType="next"
             inputRef={mobileRef}
+            onFocus={() => handleInputFocus(mobileRef)}
             onSubmitEditing={() => villageRef.current?.focus()}
             error={errors.mobile}
           />
@@ -869,6 +893,7 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
             icon={<HomeIcon />}
             returnKeyType="next"
             inputRef={villageRef}
+            onFocus={() => handleInputFocus(villageRef)}
             onSubmitEditing={() => addressRef.current?.focus()}
           />
 
@@ -882,6 +907,7 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
             blurOnSubmit={false}
             returnKeyType="default"
             inputRef={addressRef}
+            onFocus={() => handleInputFocus(addressRef)}
           />
 
           <View style={styles.rowFields}>
@@ -895,6 +921,7 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
                 keyboardType="number-pad"
                 returnKeyType="next"
                 inputRef={postalCodeRef}
+                onFocus={() => handleInputFocus(postalCodeRef)}
                 onSubmitEditing={() => stateRef.current?.focus()}
               />
             </View>
@@ -909,6 +936,7 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
                 icon={<FlagIcon />}
                 returnKeyType="next"
                 inputRef={stateRef}
+                onFocus={() => handleInputFocus(stateRef)}
                 onSubmitEditing={() => passwordRef.current?.focus()}
                 error={errors.state}
               />
@@ -927,8 +955,10 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
             icon={<LockIcon />}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
+            autoCorrect={false}
             returnKeyType="next"
             inputRef={passwordRef}
+            onFocus={() => handleInputFocus(passwordRef)}
             onSubmitEditing={() => confirmPasswordRef.current?.focus()}
             error={errors.password}
             rightElement={
@@ -953,9 +983,11 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
             icon={<ShieldCheckIcon />}
             secureTextEntry={!showConfirmPassword}
             autoCapitalize="none"
+            autoCorrect={false}
             returnKeyType="done"
             inputRef={confirmPasswordRef}
-            onSubmitEditing={() => Keyboard.dismiss()}
+            onFocus={() => handleInputFocus(confirmPasswordRef)}
+            onSubmitEditing={dismissKeyboard}
             error={errors.confirmPassword}
             rightElement={
               <TouchableOpacity
@@ -1007,7 +1039,10 @@ const CustomerRegisterScreen = ({ route, navigation }: any) => {
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAwareScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* ─── PHOTO OPTIONS MODAL ─── */}
       <Modal
@@ -1151,7 +1186,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     backgroundColor: '#EAF4EC',
-    paddingBottom: 120, // generous bottom padding so password & submit scroll above keyboard
+    paddingBottom: 44,
+  },
+  formWrapper: {
+    width: '100%',
   },
 
   // Hero Section
