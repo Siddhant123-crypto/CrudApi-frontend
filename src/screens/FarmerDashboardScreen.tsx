@@ -21,7 +21,6 @@ import { useTranslation } from 'react-i18next';
 import { useNotification } from '../context/NotificationContext';
 import { getAllProducts, getProductsByFarmer, getProductImageUrl } from '../services/productService';
 import { getFarmerOrders, getFarmerItemsStatus } from '../services/orderService';
-import { getFarmerById } from '../services/farmerService';
 import { getCurrentUserProfile } from '../services/userService';
 import { extractBlockedFarmerInfo } from '../utils/farmerBlockUtils';
 import api, { BASE_URL, hasActiveAuthToken, resolveMediaUrl } from '../services/api';
@@ -120,37 +119,46 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
 
       const currentFarmerId = user?.farmerId || (user as any)?.id || (user as any)?.userId;
 
-      // Verify live block status via /user/me and /farmer/getById BEFORE loading restricted dashboard data
-      const [meRes, farmerDetails] = await Promise.all([
-        getCurrentUserProfile().catch(() => null),
-        currentFarmerId ? getFarmerById(currentFarmerId).catch(() => null) : Promise.resolve(null),
-      ]);
+      // Verify live block status via /user/me BEFORE loading restricted dashboard data
+      const meRes = await getCurrentUserProfile().catch(() => null);
       const meProfile = meRes?.response || meRes;
       const mergedProfile = {
         ...(user || {}),
         ...(meProfile || {}),
-        ...(farmerDetails || {}),
       };
       const liveBlockInfo = extractBlockedFarmerInfo(mergedProfile);
+      const isBlocked = liveBlockInfo.blocked || (!meProfile && localBlockInfo.blocked);
 
-      if (liveBlockInfo.blocked) {
-        setBlockReason(liveBlockInfo.reason);
-        setBlockedUntil(liveBlockInfo.blockedUntilText);
+      if (isBlocked) {
+        const displayReason = liveBlockInfo.blocked ? liveBlockInfo.reason : localBlockInfo.reason;
+        const displayUntil = liveBlockInfo.blocked ? liveBlockInfo.blockedUntilText : localBlockInfo.blockedUntilText;
+        setBlockReason(displayReason);
+        setBlockedUntil(displayUntil);
         setIsBlockedModalVisible(true);
-        await updateUserData({
-          status: mergedProfile.status || 'INACTIVE',
-          isActive: false,
-          blockReason: mergedProfile.blockReason ?? null,
-          blockedUntil: mergedProfile.blockedUntil ?? null,
-        });
-        try {
-          const unreadRes = await api.get('/support/unread-count');
-          const countVal = unreadRes?.data?.data ?? unreadRes?.data;
-          if (typeof countVal === 'number') {
-            setSupportUnreadCount(countVal);
+        if (
+          meProfile &&
+          (user?.status !== (meProfile.status || 'INACTIVE') ||
+            user?.isActive !== false ||
+            (user?.blockReason ?? null) !== (meProfile.blockReason ?? null) ||
+            (user?.blockedUntil ?? null) !== (meProfile.blockedUntil ?? null))
+        ) {
+          await updateUserData({
+            status: meProfile.status || 'INACTIVE',
+            isActive: false,
+            blockReason: meProfile.blockReason ?? null,
+            blockedUntil: meProfile.blockedUntil ?? null,
+          });
+        }
+        if (hasActiveAuthToken()) {
+          try {
+            const unreadRes = await api.get('/support/unread-count');
+            const countVal = unreadRes?.data?.data ?? unreadRes?.data;
+            if (typeof countVal === 'number') {
+              setSupportUnreadCount(countVal);
+            }
+          } catch (e) {
+            console.log('Error fetching unread support count', e);
           }
-        } catch (e) {
-          console.log('Error fetching unread support count', e);
         }
         setLoading(false);
         return;
@@ -457,8 +465,8 @@ export const FarmerDashboardScreen = ({ navigation }: any) => {
                 const imgUri = item.productPhoto
                   ? getProductImageUrl(item.productPhoto)
                   : item.imageUrl
-                  ? getProductImageUrl(item.imageUrl)
-                  : null;
+                    ? getProductImageUrl(item.imageUrl)
+                    : null;
                 const isActive = item.status === 'ACTIVE' || item.isActive === true;
                 return (
                   <TouchableOpacity
