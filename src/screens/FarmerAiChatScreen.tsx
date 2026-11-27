@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   FlatList,
   Platform,
-  Keyboard,
   BackHandler,
   StatusBar,
 } from 'react-native';
@@ -20,6 +19,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { useAuth } from '../context/AuthContext';
 import { useAiChat } from '../hooks/useAiChat';
+import { useAiChatKeyboard } from '../hooks/useAiChatKeyboard';
 import { AiMessageItem } from '../components/ai/AiMessageItem';
 import { AiTypingIndicator } from '../components/ai/AiTypingIndicator';
 import { AiSuggestionChips } from '../components/ai/AiSuggestionChips';
@@ -47,49 +47,33 @@ export const FarmerAiChatScreen: React.FC = () => {
   } = useAiChat({ userId: user?.userId });
 
   const [inputText, setInputText] = useState('');
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmModalType, setConfirmModalType] = useState<AiModalType | null>(null);
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const isSelectionMode = selectedIds.length > 0;
 
-  const textInputRef = useRef<TextInput>(null);
-  const flatListRef = useRef<FlatList>(null);
-  const isKeyboardOpenRef = useRef(false);
-
-  // Keyboard listeners to toggle bottom padding and auto-scroll
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
-        setIsKeyboardOpen(true);
-        isKeyboardOpenRef.current = true;
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      }
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setIsKeyboardOpen(false);
-        isKeyboardOpenRef.current = false;
-      }
-    );
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+  const {
+    isKeyboardOpen,
+    isKeyboardOpenRef,
+    showScrollBottom,
+    textInputRef,
+    flatListRef,
+    handleScroll,
+    handleContentSizeChange,
+    scrollToBottom,
+    prepareSubmit,
+    dismissKeyboard,
+  } = useAiChatKeyboard({
+    messagesCount: messages.length,
+    isSending,
+  });
 
   // Dismiss keyboard when entering selection mode
   useEffect(() => {
     if (isSelectionMode) {
-      Keyboard.dismiss();
+      dismissKeyboard();
     }
-  }, [isSelectionMode]);
+  }, [isSelectionMode, dismissKeyboard]);
 
   // Back handling: close modal first, or cancel selection, or dismiss keyboard, or leave screen
   const handleBack = useCallback(() => {
@@ -102,65 +86,34 @@ export const FarmerAiChatScreen: React.FC = () => {
       return true;
     }
     if (isKeyboardOpenRef.current) {
-      Keyboard.dismiss();
+      dismissKeyboard();
       return true;
     }
     navigation.goBack();
     return true;
-  }, [confirmModalType, selectedIds.length, navigation]);
+  }, [confirmModalType, selectedIds.length, navigation, isKeyboardOpenRef, dismissKeyboard]);
 
   useEffect(() => {
     const backSub = BackHandler.addEventListener('hardwareBackPress', handleBack);
     return () => backSub.remove();
   }, [handleBack]);
 
-  // Auto-scroll when messages update or typing indicator appears
-  useEffect(() => {
-    if (messages.length > 0 || isSending) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 120);
-    }
-  }, [messages.length, isSending]);
-
-  // Scroll detection for ChatGPT-style scroll-to-bottom arrow
-  const handleScroll = useCallback(
-    (event: any) => {
-      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-      if (contentSize.height <= layoutMeasurement.height + 60) {
-        if (showScrollBottom) setShowScrollBottom(false);
-        return;
-      }
-      const distanceFromBottom =
-        contentSize.height - (layoutMeasurement.height + contentOffset.y);
-      const shouldShow = distanceFromBottom > 120;
-      if (shouldShow !== showScrollBottom) {
-        setShowScrollBottom(shouldShow);
-      }
-    },
-    [showScrollBottom]
-  );
-
-  const scrollToBottom = useCallback(() => {
-    flatListRef.current?.scrollToEnd({ animated: true });
-    setShowScrollBottom(false);
-  }, []);
-
   const handleSend = () => {
     const trimmed = inputText.trim();
     if (!trimmed || isSending || isAiAvailable === false) return;
+    prepareSubmit(true);
     setInputText('');
     sendMessage(trimmed);
-    setShowScrollBottom(false);
   };
 
   const handleSelectChip = (chip: string) => {
     if (isSending || isAiAvailable === false) return;
+    prepareSubmit(true);
     sendMessage(chip);
   };
 
   const handleNewChatPress = () => {
-    Keyboard.dismiss();
+    dismissKeyboard();
     setConfirmModalType('new_chat');
   };
 
@@ -179,9 +132,9 @@ export const FarmerAiChatScreen: React.FC = () => {
   // Trigger delete modal
   const handleConfirmDelete = useCallback(() => {
     if (selectedIds.length === 0) return;
-    Keyboard.dismiss();
+    dismissKeyboard();
     setConfirmModalType('delete');
-  }, [selectedIds.length]);
+  }, [selectedIds.length, dismissKeyboard]);
 
   // Confirm action inside highlighted modal
   const handleModalConfirm = useCallback(async () => {
@@ -262,13 +215,18 @@ export const FarmerAiChatScreen: React.FC = () => {
             <Ionicons name="chevron-back" size={24} color="#14532D" />
           </TouchableOpacity>
 
-          <View style={styles.headerTitleCenter}>
+          <TouchableOpacity
+            activeOpacity={1}
+            disabled={!isKeyboardOpen}
+            onPress={dismissKeyboard}
+            style={styles.headerTitleCenter}
+          >
             <Text style={styles.headerTitle}>Farm2Home AI</Text>
             <View style={styles.headerSubtitleRow}>
               <View style={styles.onlineDot} />
               <Text style={styles.headerSubtitle}>{t('farmer.khetiSalahkar', 'Farm Advisory')}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleNewChatPress}
@@ -315,9 +273,10 @@ export const FarmerAiChatScreen: React.FC = () => {
             messages.length === 0 && styles.emptyListContent,
           ]}
           onScroll={handleScroll}
+          onContentSizeChange={handleContentSizeChange}
           scrollEventThrottle={16}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="none"
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             loadingHistory ? (
@@ -412,7 +371,7 @@ export const FarmerAiChatScreen: React.FC = () => {
                 numberOfLines={1}
                 maxLength={1000}
                 blurOnSubmit={false}
-                editable={!isSending && isAiAvailable !== false}
+                editable={isAiAvailable !== false}
               />
 
               <TouchableOpacity
@@ -636,6 +595,7 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     marginTop: 4,
+    paddingBottom: 8,
   },
   scrollToBottomBtn: {
     position: 'absolute',
