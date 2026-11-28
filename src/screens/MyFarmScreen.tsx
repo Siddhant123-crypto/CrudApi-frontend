@@ -41,6 +41,8 @@ import {
   TrashIcon,
   EditIcon,
 } from '../components/farmer/FarmerIcons';
+import { FarmerPhotoPreviewModal } from '../components/farmer/FarmerPhotoPreviewModal';
+import { resolveFarmMediaUploadMeta } from '../utils/farmMediaUtils';
 import { useTranslation } from 'react-i18next';
 
 const VideoCard = ({ style, blurred }: { style: any; blurred: boolean }) => (
@@ -94,6 +96,7 @@ const MyFarmScreen = ({ navigation }: any) => {
   const [farmDetails, setFarmDetails] = useState<any>(null);
   const [gallery, setGallery] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [pendingMediaAsset, setPendingMediaAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedGalleryIds, setSelectedGalleryIds] = useState<string[]>([]);
   const [videoModalUrl, setVideoModalUrl] = useState<string | null>(null);
@@ -159,29 +162,23 @@ const MyFarmScreen = ({ navigation }: any) => {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos'],
-        allowsEditing: true,
-        quality: 0.8,
+        allowsEditing: false,
+        quality: 0.85,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        uploadFile(result.assets[0].uri);
+        setPendingMediaAsset(result.assets[0]);
       }
     } catch (error) {
       console.log('Image picker error:', error);
     }
   };
 
-  const uploadFile = async (uri: string) => {
+  const uploadFile = async (asset: ImagePicker.ImagePickerAsset | string) => {
     if (!user?.farmerId) return;
     try {
       setUploading(true);
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
-      let mimeType = 'image/jpeg';
-      if (['mp4', 'mov', 'webm'].includes(fileExt)) {
-        mimeType = `video/${fileExt}`;
-      } else if (fileExt === 'png') {
-        mimeType = 'image/png';
-      }
-      await uploadGalleryFile(user.farmerId, uri, mimeType, `gallery_file.${fileExt}`);
+      const { uri, mimeType, fileName } = resolveFarmMediaUploadMeta(asset);
+      await uploadGalleryFile(user.farmerId, uri, mimeType, fileName);
       Alert.alert(t('common.success', 'Success'), t('farmer.fileUploadedSuccess', 'File uploaded successfully'));
       const galleryResponse = await getMyGallery().catch(() => ({ data: [] }));
       if (galleryResponse && galleryResponse.data) {
@@ -914,6 +911,31 @@ const MyFarmScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+
+      <FarmerPhotoPreviewModal
+        visible={!!pendingMediaAsset}
+        mediaUri={pendingMediaAsset?.uri || null}
+        isVideo={pendingMediaAsset?.type === 'video'}
+        fileName={pendingMediaAsset?.fileName}
+        title={
+          pendingMediaAsset?.type === 'video'
+            ? t('farmer.videoSelected', 'Video Selected')
+            : t('farmer.selectedPhoto', 'Selected Photo')
+        }
+        subtitle={t('profile.previewPhoto', 'Preview Photo')}
+        onConfirm={() => {
+          const assetToUpload = pendingMediaAsset;
+          setPendingMediaAsset(null);
+          if (assetToUpload) {
+            uploadFile(assetToUpload);
+          }
+        }}
+        onChooseAnother={() => {
+          setPendingMediaAsset(null);
+          setTimeout(() => handleAddPhoto(), 150);
+        }}
+        onCancel={() => setPendingMediaAsset(null)}
+      />
     </FarmerPageBackground>
   );
 };

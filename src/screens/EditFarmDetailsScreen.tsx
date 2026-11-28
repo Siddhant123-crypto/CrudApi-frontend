@@ -25,7 +25,9 @@ import { FarmerCard } from '../components/farmer/FarmerCard';
 import { FarmerInput } from '../components/farmer/FarmerInput';
 import { FarmerDeepButton } from '../components/farmer/FarmerButtons';
 import { FarmerStickyBar } from '../components/farmer/FarmerUI';
+import { FarmerPhotoPreviewModal } from '../components/farmer/FarmerPhotoPreviewModal';
 import { CameraIcon, CheckmarkIcon, ChevronDownIcon } from '../components/farmer/FarmerIcons';
+import { resolveFarmMediaUploadMeta } from '../utils/farmMediaUtils';
 
 const EditFarmDetailsScreen = ({ route, navigation }: any) => {
   const { t } = useTranslation();
@@ -58,6 +60,8 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
   const [soilType, setSoilType] = useState(existingData.soilType || '');
   const [aboutFarm, setAboutFarm] = useState(existingData.aboutFarm || '');
   const [farmerPhotoUri, setFarmerPhotoUri] = useState<string | null>(null);
+  const [farmerPhotoAsset, setFarmerPhotoAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [pendingPhotoAsset, setPendingPhotoAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [farmVideoUri, setFarmVideoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
@@ -73,13 +77,21 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
 
   const handlePickImage = async () => {
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('validation.permissionDenied', 'Permission Denied'),
+          t('farmer.galleryPermissionRequired', 'Sorry, we need camera roll permissions to upload media.')
+        );
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.8,
+        allowsEditing: false,
+        quality: 0.85,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setFarmerPhotoUri(result.assets[0].uri);
+        setPendingPhotoAsset(result.assets[0]);
       }
     } catch (error) {
       console.log('Error picking image:', error);
@@ -88,9 +100,17 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
 
   const handlePickVideo = async () => {
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('validation.permissionDenied', 'Permission Denied'),
+          t('farmer.galleryPermissionRequired', 'Sorry, we need camera roll permissions to upload media.')
+        );
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos'],
-        allowsEditing: true,
+        allowsEditing: false,
         quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -148,19 +168,17 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
 
       const galleryUploads: Promise<any>[] = [];
       if (farmerPhotoUri) {
-        const ext = farmerPhotoUri.split('.').pop()?.toLowerCase() || 'jpg';
-        const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+        const meta = resolveFarmMediaUploadMeta(farmerPhotoAsset || farmerPhotoUri);
         galleryUploads.push(
-          uploadGalleryFile(user.farmerId, farmerPhotoUri, mime, `farm_photo.${ext}`).catch(
+          uploadGalleryFile(user.farmerId, meta.uri, meta.mimeType, meta.fileName).catch(
             (e) => console.log('Gallery photo upload error:', e)
           )
         );
       }
       if (farmVideoUri) {
-        const ext = farmVideoUri.split('.').pop()?.toLowerCase() || 'mp4';
-        const mime = `video/${ext}`;
+        const meta = resolveFarmMediaUploadMeta({ uri: farmVideoUri, type: 'video' });
         galleryUploads.push(
-          uploadGalleryFile(user.farmerId, farmVideoUri, mime, `farm_video.${ext}`).catch(
+          uploadGalleryFile(user.farmerId, meta.uri, meta.mimeType, meta.fileName).catch(
             (e) => console.log('Gallery video upload error:', e)
           )
         );
@@ -518,6 +536,26 @@ const EditFarmDetailsScreen = ({ route, navigation }: any) => {
           </TouchableOpacity>
         </Modal>
       )}
+
+      <FarmerPhotoPreviewModal
+        visible={!!pendingPhotoAsset}
+        mediaUri={pendingPhotoAsset?.uri || null}
+        fileName={pendingPhotoAsset?.fileName}
+        title={t('farmer.selectedPhoto', 'Selected Photo')}
+        subtitle={t('profile.previewPhoto', 'Preview Photo')}
+        onConfirm={() => {
+          if (pendingPhotoAsset) {
+            setFarmerPhotoUri(pendingPhotoAsset.uri);
+            setFarmerPhotoAsset(pendingPhotoAsset);
+          }
+          setPendingPhotoAsset(null);
+        }}
+        onChooseAnother={() => {
+          setPendingPhotoAsset(null);
+          setTimeout(() => handlePickImage(), 150);
+        }}
+        onCancel={() => setPendingPhotoAsset(null)}
+      />
     </FarmerPageBackground>
   );
 };

@@ -1,4 +1,5 @@
 import api from './api';
+import { resolveFarmMediaUploadMeta } from '../utils/farmMediaUtils';
 export const getFarmDetails = async (farmerId: string) => {
   const response = await api.get(`/farm-details/get/${farmerId}`);
   return response.data;
@@ -7,19 +8,19 @@ export const saveFarmDetails = async (farmerData: any, farmerPhotoUri?: string, 
   const formData = new FormData();
   formData.append('data', JSON.stringify(farmerData));
   if (farmerPhotoUri) {
-    const photoName = farmerPhotoUri.split('/').pop() || 'farmer_photo.jpg';
+    const meta = resolveFarmMediaUploadMeta(farmerPhotoUri);
     formData.append('farmerPhoto', {
-      uri: farmerPhotoUri,
-      name: photoName,
-      type: 'image/jpeg',
+      uri: meta.uri,
+      name: meta.fileName,
+      type: meta.mimeType,
     } as any);
   }
   if (farmVideoUri) {
-    const videoName = farmVideoUri.split('/').pop() || 'farm_video.mp4';
+    const meta = resolveFarmMediaUploadMeta({ uri: farmVideoUri, type: 'video' });
     formData.append('farmVideo', {
-      uri: farmVideoUri,
-      name: videoName,
-      type: 'video/mp4',
+      uri: meta.uri,
+      name: meta.fileName,
+      type: meta.mimeType,
     } as any);
   }
   const response = await api.post('/farm-details/save', formData, {
@@ -32,19 +33,19 @@ export const updateFarmDetails = async (farmerId: string, farmerData: any, farme
   const formData = new FormData();
   formData.append('data', JSON.stringify(farmerData));
   if (farmerPhotoUri) {
-    const photoName = farmerPhotoUri.split('/').pop() || 'farmer_photo.jpg';
+    const meta = resolveFarmMediaUploadMeta(farmerPhotoUri);
     formData.append('farmerPhoto', {
-      uri: farmerPhotoUri,
-      name: photoName,
-      type: 'image/jpeg',
+      uri: meta.uri,
+      name: meta.fileName,
+      type: meta.mimeType,
     } as any);
   }
   if (farmVideoUri) {
-    const videoName = farmVideoUri.split('/').pop() || 'farm_video.mp4';
+    const meta = resolveFarmMediaUploadMeta({ uri: farmVideoUri, type: 'video' });
     formData.append('farmVideo', {
-      uri: farmVideoUri,
-      name: videoName,
-      type: 'video/mp4',
+      uri: meta.uri,
+      name: meta.fileName,
+      type: meta.mimeType,
     } as any);
   }
   const response = await api.put(`/farm-details/update/${farmerId}`, formData, {
