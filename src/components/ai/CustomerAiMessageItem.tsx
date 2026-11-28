@@ -153,8 +153,9 @@ export const CustomerAiMessageItem: React.FC<CustomerAiMessageItemProps> = React
                 <View style={styles.productCardsList}>
                   {parsed.productCards.map((card, idx) => (
                     <TouchableOpacity
-                      key={`card-${idx}-${card.productName}`}
-                      activeOpacity={card.id || onProductPress ? 0.75 : 1}
+                      key={`card-${idx}-${card.productName}-${card.priceDisplay}`}
+                      activeOpacity={onProductPress && !isSelectionMode ? 0.78 : 1}
+                      disabled={isSelectionMode || !onProductPress}
                       onPress={() => onProductPress?.(card)}
                       style={styles.productCardItem}
                     >
@@ -165,25 +166,6 @@ export const CustomerAiMessageItem: React.FC<CustomerAiMessageItemProps> = React
                         >
                           {card.productName}
                         </Text>
-                        <View
-                          style={[
-                            styles.stockPill,
-                            card.isOutOfStock
-                              ? styles.stockPillOos
-                              : styles.stockPillInStock,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.stockPillText,
-                              card.isOutOfStock
-                                ? styles.stockPillTextOos
-                                : styles.stockPillTextInStock,
-                            ]}
-                          >
-                            {card.stockDisplay}
-                          </Text>
-                        </View>
                       </View>
 
                       {card.farmName ? (
@@ -196,15 +178,23 @@ export const CustomerAiMessageItem: React.FC<CustomerAiMessageItemProps> = React
                         <Text style={styles.productCardPrice}>
                           {card.priceDisplay}
                         </Text>
-                        {card.id ? (
-                          <View style={styles.viewProductPill}>
+                        {onProductPress && (card.id || card.productName) ? (
+                          <TouchableOpacity
+                            style={styles.viewProductPill}
+                            onPress={() => onProductPress(card)}
+                            disabled={isSelectionMode}
+                            activeOpacity={0.75}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={`View ${card.productName}`}
+                          >
                             <Text style={styles.viewProductText}>{t('common.view', 'View')}</Text>
                             <Ionicons
                               name="chevron-forward"
                               size={12}
                               color="#B24A14"
                             />
-                          </View>
+                          </TouchableOpacity>
                         ) : null}
                       </View>
                     </TouchableOpacity>
@@ -460,30 +450,6 @@ const styles = StyleSheet.create({
     color: '#2A1710',
     flex: 1,
     marginRight: 8,
-  },
-  stockPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  stockPillInStock: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#BBF7D0',
-  },
-  stockPillOos: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
-  },
-  stockPillText: {
-    fontSize: 11,
-    fontFamily: THEME.fonts.semiBold,
-  },
-  stockPillTextInStock: {
-    color: '#15803D',
-  },
-  stockPillTextOos: {
-    color: '#6B7280',
   },
   productCardFarm: {
     fontSize: 12.5,

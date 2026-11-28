@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   parseProductLine,
   parseCustomerAiAnswer,
+  findMatchingProductForAiCard,
 } from './customerAiAnswerParser.ts';
 
 test('parseProductLine: parses full product line with farm name and stock', () => {
@@ -13,6 +14,8 @@ test('parseProductLine: parses full product line with farm name and stock', () =
   assert.equal(card.productName, 'Tomato');
   assert.equal(card.farmName, 'mr wang farm, Sinner');
   assert.equal(card.priceDisplay, 'Rs. 50 / KG');
+  assert.equal(card.price, 50);
+  assert.equal(card.unit, 'KG');
   assert.equal(card.stockDisplay, '10 KG in stock');
   assert.equal(card.isOutOfStock, false);
 });
@@ -163,4 +166,63 @@ test('parseCustomerAiAnswer: handles null, undefined, empty safely', () => {
 
   const parsed3 = parseCustomerAiAnswer('');
   assert.equal(parsed3.isProductCatalog, false);
+});
+
+test('findMatchingProductForAiCard: resolves by id first, then disambiguates same-name products by price and farmName', () => {
+  const catalog = [
+    {
+      productId: 'tomato-40-id',
+      productName: 'Tomato',
+      price: 40,
+      farmName: 'Sthaniya Farm',
+      productPhoto: 'tomato-40.jpg',
+    },
+    {
+      productId: 'tomato-50-deleted',
+      productName: 'Tomato',
+      price: 50,
+      farmName: 'mr wang farm',
+      isDelete: true,
+      productPhoto: 'deleted.jpg',
+    },
+    {
+      productId: 'tomato-50-id',
+      productName: 'Tomato',
+      price: 50,
+      farmName: 'mr wang farm',
+      productPhoto: 'tomato-50.jpg',
+    },
+  ];
+
+  // 1. Direct id match wins even if price/name differ
+  const byId = findMatchingProductForAiCard(catalog, {
+    id: 'tomato-40-id',
+    productName: 'Tomato',
+    priceDisplay: 'Rs. 40 / KG',
+    stockDisplay: 'In Stock',
+    isOutOfStock: false,
+  });
+  assert.equal(byId?.productId, 'tomato-40-id');
+
+  // 2. History-parsed card without id disambiguates Rs. 50 Tomato from Rs. 40 Tomato and ignores deleted match
+  const historyCard50 = parseProductLine('• Tomato (mr wang farm, Sinner): Rs. 50.00 per KG (Available Stock: 10.0 KG)');
+  assert.ok(historyCard50);
+  const resolved50 = findMatchingProductForAiCard(catalog, historyCard50);
+  assert.equal(resolved50?.productId, 'tomato-50-id');
+  assert.equal(resolved50?.productPhoto, 'tomato-50.jpg');
+
+  // 3. History-parsed card for Rs. 40 resolves Sthaniya Farm Tomato
+  const historyCard40 = parseProductLine('• Tomato (Sthaniya Farm): Rs. 40.00 per KG (Available Stock: 5.0 KG)');
+  assert.ok(historyCard40);
+  const resolved40 = findMatchingProductForAiCard(catalog, historyCard40);
+  assert.equal(resolved40?.productId, 'tomato-40-id');
+
+  // 4. Non-existent product returns null
+  const missing = findMatchingProductForAiCard(catalog, {
+    productName: 'Dragon Fruit',
+    priceDisplay: 'Rs. 100 / KG',
+    stockDisplay: 'In Stock',
+    isOutOfStock: false,
+  });
+  assert.equal(missing, null);
 });

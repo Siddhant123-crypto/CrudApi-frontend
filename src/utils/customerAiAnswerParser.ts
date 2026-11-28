@@ -2,6 +2,9 @@ export interface CustomerProductCard {
   id?: string;
   productName: string;
   farmName?: string;
+  price?: number;
+  unit?: string;
+  location?: string;
   priceDisplay: string;
   stockDisplay: string;
   isOutOfStock: boolean;
@@ -70,12 +73,16 @@ export const parseProductLine = (line: string): CustomerProductCard | null => {
     const stock = match[5]?.trim();
     const stockUnit = match[6]?.trim() || unit;
 
+    const parsedPrice = parseFloat(price.replace(/,/g, ''));
+    const normalizedUnit = unit ? unit.toUpperCase().trim() : 'KG';
     const parsedStockNum = stock ? parseFloat(stock) : null;
     const isOutOfStock = parsedStockNum !== null && parsedStockNum <= 0;
 
     return {
       productName: rawName,
       farmName: farmName || undefined,
+      price: isNaN(parsedPrice) ? undefined : parsedPrice,
+      unit: normalizedUnit,
       priceDisplay: formatPrice(price, unit),
       stockDisplay: formatStock(stock || '0', stockUnit, isOutOfStock),
       isOutOfStock,
@@ -121,10 +128,13 @@ export const parseCustomerAiAnswer = (
         id: p.productId || p.id,
         productName: p.productName || p.name || 'Product',
         farmName: p.farmName || p.farmer?.farmName || undefined,
+        price: !isNaN(price) ? price : undefined,
+        unit,
+        location: p.location || undefined,
         priceDisplay: `Rs. ${Number.isInteger(price) ? price : price.toFixed(2)} / ${unit}`,
         stockDisplay,
         isOutOfStock: isOos,
-        productPhoto: p.productPhoto || undefined,
+        productPhoto: p.productPhoto || p.imageUrl || undefined,
       };
     });
 
@@ -218,4 +228,66 @@ export const parseCustomerAiAnswer = (
     isProductCatalog: false,
     isNumberedSteps: false,
   };
+};
+
+/**
+ * Matches a parsed CustomerProductCard (from live AI DTO or parsed history text)
+ * against catalog products so clicking "View" always resolves the exact price/farm item.
+ */
+export const findMatchingProductForAiCard = (
+  products: any[],
+  card: CustomerProductCard
+): any | null => {
+  if (!Array.isArray(products) || products.length === 0 || !card) {
+    return null;
+  }
+
+  if (card.id) {
+    const byId = products.find(
+      (p) => p?.productId === card.id || p?.id === card.id
+    );
+    if (byId) return byId;
+  }
+
+  const targetName = (card.productName || '').trim().toLowerCase();
+  if (!targetName) return null;
+
+  const activeCandidates = products.filter(
+    (p) =>
+      p &&
+      p.isDelete !== true &&
+      p.status !== 'DELETED' &&
+      (p.productName || p.name || '').trim().toLowerCase() === targetName
+  );
+  const candidates =
+    activeCandidates.length > 0
+      ? activeCandidates
+      : products.filter(
+          (p) =>
+            p &&
+            (p.productName || p.name || '').trim().toLowerCase() === targetName
+        );
+
+  if (candidates.length === 0) return null;
+
+  const targetPrice = typeof card.price === 'number' ? card.price : null;
+  const priceMatches =
+    targetPrice !== null
+      ? candidates.filter(
+          (p) => p.price !== undefined && p.price !== null && Math.abs(Number(p.price) - targetPrice) < 0.01
+        )
+      : candidates;
+
+  const pool = priceMatches.length > 0 ? priceMatches : candidates;
+
+  const targetFarm = (card.farmName || '').split(',')[0].trim().toLowerCase();
+  if (targetFarm) {
+    const farmMatch = pool.find((p) => {
+      const fName = (p.farmName || p.farmerName || '').trim().toLowerCase();
+      return fName && (fName.includes(targetFarm) || targetFarm.includes(fName));
+    });
+    if (farmMatch) return farmMatch;
+  }
+
+  return pool[0] || null;
 };

@@ -24,7 +24,11 @@ import { CustomerAiMessageItem } from '../components/ai/CustomerAiMessageItem';
 import { AiTypingIndicator } from '../components/ai/AiTypingIndicator';
 import { AiSuggestionChips } from '../components/ai/AiSuggestionChips';
 import { AiConfirmModal, AiModalType } from '../components/ai/AiConfirmModal';
-import { CustomerProductCard } from '../utils/customerAiAnswerParser';
+import {
+  CustomerProductCard,
+  findMatchingProductForAiCard,
+} from '../utils/customerAiAnswerParser';
+import { getAllProducts } from '../services/productService';
 import { THEME } from '../constants/theme';
 
 export const CustomerAiChatScreen: React.FC = () => {
@@ -155,13 +159,40 @@ export const CustomerAiChatScreen: React.FC = () => {
     setConfirmModalType(null);
   }, []);
 
-  // Tap on product card in AI response
+  // Tap on product card / View button in AI response
   const handleProductPress = useCallback(
-    (card: CustomerProductCard) => {
+    async (card: CustomerProductCard) => {
       if (card.id) {
         navigation.navigate('ProductDetail', {
-          product: { id: card.id, name: card.productName },
+          product: {
+            productId: card.id,
+            id: card.id,
+            productName: card.productName,
+            price: card.price,
+            unit: card.unit || 'KG',
+            productPhoto: card.productPhoto || null,
+            farmerName: card.farmName,
+            isActive: !card.isOutOfStock,
+          },
         });
+        return;
+      }
+      try {
+        const allProducts = await getAllProducts();
+        const matched = findMatchingProductForAiCard(
+          Array.isArray(allProducts) ? allProducts : [],
+          card,
+        );
+        if (matched && (matched.productId || matched.id)) {
+          navigation.navigate('ProductDetail', {
+            product: {
+              ...matched,
+              productId: matched.productId || matched.id,
+            },
+          });
+        }
+      } catch (err) {
+        console.log('Error resolving product from AI card:', err);
       }
     },
     [navigation]

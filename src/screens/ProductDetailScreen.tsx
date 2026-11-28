@@ -185,14 +185,21 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
       setSimilarLoading(false);
     }
   };
+  const targetProductId = product?.productId || product?.id;
   const fetchProductAndReviews = async () => {
+    if (!targetProductId) {
+      setReviewsLoading(false);
+      return;
+    }
     try {
-      const updatedProduct = await getProductById(product.productId);
-      setProductData(updatedProduct);
-      const reviews = await getProductReviews(product.productId);
+      const updatedProduct = await getProductById(targetProductId);
+      if (updatedProduct) {
+        setProductData(updatedProduct);
+      }
+      const reviews = await getProductReviews(targetProductId);
       setReviewsList(reviews);
       if (updatedProduct) {
-        fetchSimilarProducts(product.productId);
+        fetchSimilarProducts(targetProductId);
       }
     } catch (error) {
       console.log('Error fetching product details/reviews:', error);
@@ -203,7 +210,7 @@ const ProductDetailScreen = ({ route, navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       fetchProductAndReviews();
-    }, [product.productId])
+    }, [targetProductId])
   );
   const imageUrl = productData.productPhoto
     ? getProductImageUrl(productData.productPhoto)
